@@ -1,0 +1,99 @@
+<div class="page">
+  <wizard-header
+    [steps]="steps"
+    [step]="step"
+    [pct]="pct()"
+    (goTo)="goTo($event)"
+  >
+  </wizard-header>
+
+  <main class="main">
+    <section class="card">
+      <div class="cardHead">
+        <h2>{{ steps[step].title }}</h2>
+        <p class="hint">
+          Compila i campi essenziali. Il referto mantiene solo le sezioni
+          attivate.
+        </p>
+      </div>
+
+      <div class="cardBody">
+        @if (step === 0) {
+          <step-anagrafica
+            [form]="form"
+            [control]="control.bind(this)"
+            [hasError]="hasError.bind(this)"
+          >
+          </step-anagrafica>
+        }
+
+        @if (step === 1) {
+          <step-visita
+            [form]="form"
+            [doctorSearch]="doctorSearch"
+            [doctorResults]="doctorResults"
+            [control]="control.bind(this)"
+            [hasError]="hasError.bind(this)"
+            (selectDoctorEvent)="selectDoctor($event)"
+            (clearDoctorEvent)="clearDoctor()"
+          >
+          </step-visita>
+        }
+
+        @if (step === 2) {
+          <step-sezioni
+            [sectionKeys]="sectionKeys"
+            [mandatorySections]="mandatorySections"
+            [section]="section.bind(this)"
+            [sectionLabel]="sectionLabel.bind(this)"
+            [sectionDescription]="sectionDescription.bind(this)"
+            [modeControl]="control('modalitaReferto')"
+          >
+          </step-sezioni>
+        }
+
+        @if (step === 3) {
+          <step-contenuti
+            [sections]="sections"
+            [control]="control.bind(this)"
+            [hasError]="hasError.bind(this)"
+            [mode]="control('modalitaReferto').value"
+          >
+          </step-contenuti>
+        }
+      </div>
+
+      <div class="cardFooter">
+        <div class="left-buttons">
+          <button
+            type="button"
+            class="btn danger ghost"
+            (click)="openResetModal()"
+          >
+            Cancella tutto
+          </button>
+
+          <button
+            type="button"
+            class="btn ghost"
+            (click)="prev()"
+            [disabled]="step === 0"
+          >
+            Indietro
+          </button>
+        </div>
+
+        <div class="spacer"></div>
+
+        <button type="button" class="btn primary" (click)="primaryAction()">
+          {{ canProceedLabel() }}
+        </button>
+      </div>
+    </section>
+  </main>
+
+  @if (showResetModal) {
+    <reset-modal (cancel)="closeResetModal()" (confirm)="confirmReset()">
+    </reset-modal>
+  }
+</div>

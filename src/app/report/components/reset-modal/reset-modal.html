@@ -1,0 +1,21 @@
+<div class="modalBackdrop">
+  <div class="modal">
+    <h3>Conferma cancellazione</h3>
+
+    <p>
+      Stai per cancellare <strong>tutti i dati inseriti</strong> nel referto.
+      <br />
+      Questa operazione non può essere annullata.
+    </p>
+
+    <div class="modalActions">
+      <button type="button" class="btn ghost" (click)="cancel.emit()">
+        Annulla
+      </button>
+
+      <button type="button" class="btn danger" (click)="confirm.emit()">
+        Sì, cancella tutto
+      </button>
+    </div>
+  </div>
+</div>

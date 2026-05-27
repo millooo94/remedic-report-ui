@@ -1,0 +1,28 @@
+<div class="field">
+  <label>Cerca medico *</label>
+  <input
+    type="text"
+    placeholder="Digita nome, cognome o specialità"
+    [formControl]="doctorSearch"
+    autocomplete="off"
+  />
+
+  @if (selectedDoctorInvalid) {
+    <div class="err">Seleziona un medico dalla lista</div>
+  }
+
+  @if (doctorResults.length) {
+    <ul class="autocomplete">
+      @for (m of doctorResults; track m.id) {
+        <li (click)="selectDoctor.emit(m)">
+          <div class="line1">
+            <strong>{{ m.cognome }} {{ m.nome }}</strong>
+          </div>
+          <div class="line2">
+            <small>{{ m.specialita || "—" }}</small>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</div>

@@ -1,0 +1,91 @@
+<!-- DATI VISITA -->
+<div class="section">
+  <h3 class="sectionTitle">Dati visita</h3>
+
+  <div class="grid2">
+    <div class="field">
+      <label>Data visita *</label>
+      <input
+        type="text"
+        inputmode="numeric"
+        autocomplete="off"
+        placeholder="gg/mm/aaaa"
+        maxlength="10"
+        [formControl]="control('dataVisitaDisplay')"
+        (input)="onVisitDateInput($event)"
+        (keydown)="onVisitDateKeydown($event)"
+        (blur)="onVisitDateBlur()"
+        class="date-input"
+      />
+      @if (hasError("dataVisitaDisplay", "required")) {
+        <div class="err">Campo obbligatorio</div>
+      } @else if (hasError("dataVisitaDisplay", "invalidDate")) {
+        <div class="err">Inserisci una data valida nel formato gg/mm/aaaa</div>
+      } @else if (hasError("dataVisitaDisplay", "futureDate")) {
+        <div class="err">La data visita non può essere futura</div>
+      }
+    </div>
+
+    <div class="field">
+      <label>Titolo visita *</label>
+      <input
+        type="text"
+        placeholder="Es. Prima visita cardiologica"
+        [formControl]="control('titoloVisita')"
+      />
+      @if (hasError("titoloVisita", "required")) {
+        <div class="err">Campo obbligatorio</div>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- SEPARATORE -->
+<div class="divider"></div>
+
+<!-- MEDICO -->
+<div class="section">
+  <div class="sectionHead">
+    <h3 class="sectionTitle">Medico</h3>
+
+    <button
+      type="button"
+      class="btn tiny ghost"
+      (click)="clearDoctorEvent.emit()"
+    >
+      Svuota
+    </button>
+  </div>
+
+  <doctor-autocomplete
+    style="margin-bottom: 16px"
+    [doctorSearch]="doctorSearch"
+    [doctorResults]="doctorResults"
+    [selectedDoctorInvalid]="selectedDoctorInvalid"
+    (selectDoctor)="selectDoctorEvent.emit($event)"
+  >
+  </doctor-autocomplete>
+
+  <div class="grid2" style="margin-top: 16px">
+    <div class="field">
+      <label>Nome</label>
+      <input type="text" [formControl]="control('medico.nome')" readonly />
+    </div>
+
+    <div class="field">
+      <label>Cognome</label>
+      <input type="text" [formControl]="control('medico.cognome')" readonly />
+    </div>
+
+    <div class="field">
+      <label>Specialità</label>
+      <input
+        type="text"
+        [formControl]="control('medico.specialita')"
+        readonly
+      />
+    </div>
+  </div>
+
+  <input type="hidden" [formControl]="control('medico.id')" />
+</div>

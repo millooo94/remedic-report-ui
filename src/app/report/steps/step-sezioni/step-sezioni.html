@@ -1,0 +1,80 @@
+<div class="stack">
+  <section class="panel">
+    <div class="panelHead">
+      <h3>Come vuoi compilare il referto?</h3>
+      <p>
+        Scegli se usare una struttura guidata per sezioni oppure un unico campo
+        a testo libero.
+      </p>
+    </div>
+
+    <div class="modeGrid">
+      <label class="modeCard">
+        <input type="radio" [formControl]="modeControl" value="sezioni" />
+
+        <span>
+          <strong>Referto guidato per sezioni</strong>
+          <small> Ideale per referti ordinati e standardizzati. </small>
+        </span>
+      </label>
+
+      <label class="modeCard">
+        <input type="radio" [formControl]="modeControl" value="libero" />
+
+        <span>
+          <strong>Referto a testo libero</strong>
+          <small>
+            Ideale per scrivere tutto il referto in un unico blocco.
+          </small>
+        </span>
+      </label>
+    </div>
+  </section>
+
+  @if (modeControl.value === "sezioni") {
+    <section class="panel secondary">
+      <div class="panelHead">
+        <h3>Quali sezioni vuoi includere?</h3>
+        <p>Attiva solo le sezioni che devono comparire nel referto finale.</p>
+      </div>
+
+      <div class="sectionsColumns">
+        <div class="sectionColumn">
+          @for (k of mandatorySectionKeys(); track k) {
+            <label class="toggle">
+              <input type="checkbox" [formControl]="section(k)" />
+
+              <span>
+                <strong>{{ sectionLabel(k) }}</strong>
+                <small>{{ sectionDescription(k) }}</small>
+              </span>
+            </label>
+          }
+        </div>
+
+        <div class="sectionColumn">
+          @for (k of optionalSectionKeys(); track k) {
+            <label class="toggle">
+              <input type="checkbox" [formControl]="section(k)" />
+
+              <span>
+                <strong>{{ sectionLabel(k) }}</strong>
+                <small>{{ sectionDescription(k) }}</small>
+              </span>
+            </label>
+          }
+        </div>
+      </div>
+    </section>
+  } @else {
+    <section class="panel secondary">
+      <div class="freeModeInfo">
+        <strong>Hai scelto il testo libero</strong>
+        <p>
+          Nel prossimo passaggio potrai scrivere il referto completo in un unico
+          campo, senza suddivisione in sezioni.
+        </p>
+      </div>
+    </section>
+  }
+</div>

@@ -1,0 +1,261 @@
+<div class="stack">
+  @if (mode === "libero") {
+    <div class="field freeReportField">
+      <label>Referto completo</label>
+      <p class="fieldHint">Scrivi qui l’intero referto in forma libera.</p>
+
+      <div class="freeEditorWrap">
+        <rich-text-field [control]="control('testoLibero')"></rich-text-field>
+      </div>
+
+      <div class="metaRow">
+        <span
+          class="charCount"
+          [class.overLimit]="isOverLimit('testoLibero', limits.testoLibero.max)"
+        >
+          {{ plainTextLength("testoLibero") }} / {{ limits.testoLibero.max }}
+          caratteri
+        </span>
+      </div>
+
+      @if (hasError("testoLibero", "required")) {
+        <div class="err">Campo obbligatorio</div>
+      }
+      <!-- @if (hasError("testoLibero", "plainTextMaxLength")) {
+        <div class="err">
+          Hai superato il limite massimo di {{ limits.testoLibero.max }}
+          caratteri.
+        </div>
+      } -->
+    </div>
+  } @else {
+    @if (!sections.value.anamnesiRemota) {
+      <div class="field">
+        <label>Anamnesi</label>
+        <rich-text-field [control]="control('anamnesiPatologicaProssima')">
+        </rich-text-field>
+
+        <div class="metaRow">
+          <span
+            class="charCount"
+            [class.overLimit]="
+              isOverLimit(
+                'anamnesiPatologicaProssima',
+                limits.anamnesiPatologicaProssima.max
+              )
+            "
+          >
+            {{ plainTextLength("anamnesiPatologicaProssima") }} /
+            {{ limits.anamnesiPatologicaProssima.max }} caratteri
+          </span>
+        </div>
+
+        @if (hasError("anamnesiPatologicaProssima", "required")) {
+          <div class="err">Campo obbligatorio</div>
+        }
+        <!-- @if (hasError("anamnesiPatologicaProssima", "plainTextMaxLength")) {
+          <div class="err">
+            Hai superato il limite massimo di
+            {{ limits.anamnesiPatologicaProssima.max }} caratteri.
+          </div>
+        } -->
+      </div>
+    }
+
+    @if (sections.value.anamnesiRemota) {
+      <div class="field">
+        <label>Anamnesi patologica remota</label>
+        <rich-text-field [control]="control('anamnesiPatologicaRemota')">
+        </rich-text-field>
+
+        <div class="metaRow">
+          <span
+            class="charCount"
+            [class.overLimit]="
+              isOverLimit(
+                'anamnesiPatologicaRemota',
+                limits.anamnesiPatologicaRemota.max
+              )
+            "
+          >
+            {{ plainTextLength("anamnesiPatologicaRemota") }} /
+            {{ limits.anamnesiPatologicaRemota.max }} caratteri
+          </span>
+        </div>
+
+        <!-- @if (hasError("anamnesiPatologicaRemota", "plainTextMaxLength")) {
+          <div class="err">
+            Hai superato il limite massimo di
+            {{ limits.anamnesiPatologicaRemota.max }} caratteri.
+          </div>
+        } -->
+      </div>
+
+      <div class="field">
+        <label>Anamnesi patologica prossima</label>
+        <rich-text-field [control]="control('anamnesiPatologicaProssima')">
+        </rich-text-field>
+
+        <div class="metaRow">
+          <span
+            class="charCount"
+            [class.overLimit]="
+              isOverLimit(
+                'anamnesiPatologicaProssima',
+                limits.anamnesiPatologicaProssima.max
+              )
+            "
+          >
+            {{ plainTextLength("anamnesiPatologicaProssima") }} /
+            {{ limits.anamnesiPatologicaProssima.max }} caratteri
+          </span>
+        </div>
+
+        @if (hasError("anamnesiPatologicaProssima", "required")) {
+          <div class="err">Campo obbligatorio</div>
+        }
+        <!-- @if (hasError("anamnesiPatologicaProssima", "plainTextMaxLength")) {
+          <div class="err">
+            Hai superato il limite massimo di
+            {{ limits.anamnesiPatologicaProssima.max }} caratteri.
+          </div>
+        } -->
+      </div>
+    }
+
+    @if (sections.value.portaInVisione) {
+      <div class="field">
+        <label>Porta in visione</label>
+        <rich-text-field
+          [control]="control('portaInVisione')"
+        ></rich-text-field>
+
+        <div class="metaRow">
+          <span
+            class="charCount"
+            [class.overLimit]="
+              isOverLimit('portaInVisione', limits.portaInVisione.max)
+            "
+          >
+            {{ plainTextLength("portaInVisione") }} /
+            {{ limits.portaInVisione.max }} caratteri
+          </span>
+        </div>
+
+        <!-- @if (hasError("portaInVisione", "plainTextMaxLength")) {
+          <div class="err">
+            Hai superato il limite massimo di
+            {{ limits.portaInVisione.max }} caratteri.
+          </div>
+        } -->
+      </div>
+    }
+
+    @if (sections.value.esamiInLoco) {
+      <div class="field">
+        <label>Esami eseguiti</label>
+        <rich-text-field [control]="control('esamiEseguitiInLoco')">
+        </rich-text-field>
+
+        <div class="metaRow">
+          <span
+            class="charCount"
+            [class.overLimit]="
+              isOverLimit('esamiEseguitiInLoco', limits.esamiEseguitiInLoco.max)
+            "
+          >
+            {{ plainTextLength("esamiEseguitiInLoco") }} /
+            {{ limits.esamiEseguitiInLoco.max }} caratteri
+          </span>
+        </div>
+
+        <!-- @if (hasError("esamiEseguitiInLoco", "plainTextMaxLength")) {
+          <div class="err">
+            Hai superato il limite massimo di
+            {{ limits.esamiEseguitiInLoco.max }} caratteri.
+          </div>
+        } -->
+      </div>
+    }
+
+    <div class="divider"></div>
+
+    <div class="field">
+      <label>Esame obiettivo</label>
+      <rich-text-field [control]="control('esameObiettivo')"></rich-text-field>
+
+      <div class="metaRow">
+        <span
+          class="charCount"
+          [class.overLimit]="
+            isOverLimit('esameObiettivo', limits.esameObiettivo.max)
+          "
+        >
+          {{ plainTextLength("esameObiettivo") }} /
+          {{ limits.esameObiettivo.max }} caratteri
+        </span>
+      </div>
+
+      @if (hasError("esameObiettivo", "required")) {
+        <div class="err">Campo obbligatorio</div>
+      }
+      <!-- @if (hasError("esameObiettivo", "plainTextMaxLength")) {
+        <div class="err">
+          Hai superato il limite massimo di {{ limits.esameObiettivo.max }}
+          caratteri.
+        </div>
+      } -->
+    </div>
+
+    <div class="field">
+      <label>Diagnosi</label>
+      <rich-text-field [control]="control('diagnosi')"></rich-text-field>
+
+      <div class="metaRow">
+        <span
+          class="charCount"
+          [class.overLimit]="isOverLimit('diagnosi', limits.diagnosi.max)"
+        >
+          {{ plainTextLength("diagnosi") }} /
+          {{ limits.diagnosi.max }} caratteri
+        </span>
+      </div>
+
+      @if (hasError("diagnosi", "required")) {
+        <div class="err">Campo obbligatorio</div>
+      }
+      <!-- @if (hasError("diagnosi", "plainTextMaxLength")) {
+        <div class="err">
+          Hai superato il limite massimo di {{ limits.diagnosi.max }} caratteri.
+        </div>
+      } -->
+    </div>
+
+    <div class="field">
+      <label>Prescrizione</label>
+      <rich-text-field [control]="control('prescrizione')"></rich-text-field>
+
+      <div class="metaRow">
+        <span
+          class="charCount"
+          [class.overLimit]="
+            isOverLimit('prescrizione', limits.prescrizione.max)
+          "
+        >
+          {{ plainTextLength("prescrizione") }} /
+          {{ limits.prescrizione.max }} caratteri
+        </span>
+      </div>
+
+      @if (hasError("prescrizione", "required")) {
+        <div class="err">Campo obbligatorio</div>
+      }
+      <!-- @if (hasError("prescrizione", "plainTextMaxLength")) {
+        <div class="err">
+          Hai superato il limite massimo di {{ limits.prescrizione.max }}
+          caratteri.
+        </div>
+      } -->
+    </div>
+  }
+</div>

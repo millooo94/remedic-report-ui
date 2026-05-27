@@ -1,0 +1,109 @@
+/* ================== TOP BAR ================== */
+
+.topbar {
+  height: 80px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 50px;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.brand .logo {
+  width: 140px;
+}
+
+.brand .subtitle {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ================== PROGRESS ================== */
+
+.progressWrap {
+  flex: 1;
+  max-width: 420px;
+}
+
+.progressMeta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.progress {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress .bar {
+  height: 100%;
+  background: #1c9ebd;
+  transition: width 0.3s ease;
+}
+
+/* ================== STEPPER ================== */
+
+.stepper {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 8px 16px;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.stepPill {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  padding: 6px 12px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.stepPill .idx {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  font-size: 12px;
+  display: grid;
+  place-items: center;
+}
+
+.stepPill.active {
+  border-color: #1c9ebd;
+  color: #1c9ebd;
+}
+
+.stepPill.active .idx {
+  background: #1c9ebd;
+  color: #ffffff;
+}
+
+.stepPill.done {
+  border-color: #aeca20;
+  color: #6b7280;
+}
+
+.stepPill.done .idx {
+  background: #aeca20;
+  color: #ffffff;
+}

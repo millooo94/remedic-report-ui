@@ -1,0 +1,133 @@
+import { DoctorInfo } from '../models/doctor-info';
+
+export const REPORT_DOCTORS: DoctorInfo[] = [
+  {
+    id: '1',
+    nome: 'Giovanni Mario',
+    cognome: 'Rapisarda',
+    specialita: 'Medicina Interna',
+  },
+  {
+    id: '2',
+    nome: 'Rosario',
+    cognome: 'Scuderi',
+    specialita: 'Medicina Interna',
+  },
+  { id: '3', nome: 'Andrea', cognome: 'Crafa', specialita: 'Endocrinologia' },
+  { id: '4', nome: 'Agata', cognome: 'Di Dio', specialita: 'Urologia' },
+  {
+    id: '5',
+    nome: 'Antonio',
+    cognome: 'Di Salvo',
+    specialita: 'Dermatologia',
+  },
+  { id: '6', nome: 'Livia', cognome: 'Liguori', specialita: 'Dermatologia' },
+  {
+    id: '7',
+    nome: 'Bruna',
+    cognome: "D'Amico",
+    specialita: 'Medicina Estetica',
+  },
+  {
+    id: '7',
+    nome: 'Simona Raffaela',
+    cognome: 'Zappalà',
+    specialita: 'Medicina Estetica',
+  },
+  {
+    id: '8',
+    nome: 'Simona Raffaela',
+    cognome: 'Zappalà',
+    specialita: 'Dietologia',
+  },
+  {
+    id: '9',
+    nome: 'Rosario Emanuele Carlo',
+    cognome: 'Distefano',
+    specialita: 'Ginecologia',
+  },
+  {
+    id: '10',
+    nome: 'Saveria Maria',
+    cognome: 'Cantone',
+    specialita: 'Ginecologia',
+  },
+  {
+    id: '11',
+    nome: 'Giovanni',
+    cognome: "D'Agosta",
+    specialita: 'Chirurgia Plastica',
+  },
+  {
+    id: '12',
+    nome: 'Giuseppe',
+    cognome: 'Bottaro',
+    specialita: 'Cardiologia',
+  },
+  {
+    id: '13',
+    nome: 'Matteo',
+    cognome: 'Cavallo',
+    specialita: 'Chirurgia Vascolare',
+  },
+  {
+    id: '14',
+    nome: 'Vincenzo',
+    cognome: 'Maccarrone',
+    specialita: 'Reumatologia',
+  },
+  {
+    id: '15',
+    nome: 'Pietro',
+    cognome: 'Palamidessi',
+    specialita: 'Pneumologia',
+  },
+  {
+    id: '16',
+    nome: 'Pietro',
+    cognome: 'Palamidessi',
+    specialita: 'Medicina Generale',
+  },
+  {
+    id: '17',
+    nome: 'Barbara',
+    cognome: 'Martino',
+    specialita: 'Senologia',
+  },
+  {
+    id: '18',
+    nome: 'Sebastiano',
+    cognome: 'Arena',
+    specialita: 'Neurologia',
+  },
+  {
+    id: '19',
+    nome: 'Giacomo',
+    cognome: 'Di Mulo',
+    specialita: 'Biologia nutrizionale',
+  },
+  {
+    id: '20',
+    nome: 'Ilenia',
+    cognome: 'Russo',
+    specialita: 'Ostetricia',
+  },
+  {
+    id: '21',
+    nome: 'Ilenia',
+    cognome: 'Russo',
+    specialita: 'Dietistica',
+  },
+  {
+    id: '22',
+    nome: 'Claudia',
+    cognome: 'Maugeri',
+    specialita: 'Chirurgia maxillo-facciale',
+  },
+  {
+    id: '23',
+    nome: 'Morena',
+    cognome: 'Porto',
+    specialita: 'Allergologia',
+  },
+];

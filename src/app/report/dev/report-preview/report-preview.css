@@ -1,0 +1,22 @@
+.previewPage {
+  min-height: 100vh;
+  background: #f3f4f6;
+  padding: 24px;
+}
+
+.previewToolbar {
+  max-width: 900px;
+  margin: 0 auto 20px;
+}
+
+.previewToolbar h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.previewCanvas {
+  max-width: 900px;
+  margin: 0 auto;
+  background: white;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}

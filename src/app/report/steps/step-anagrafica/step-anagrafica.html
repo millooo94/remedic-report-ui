@@ -1,0 +1,81 @@
+<div class="grid2">
+  <div class="field">
+    <label>Nome *</label>
+    <input type="text" [formControl]="control('anagrafica.nome')" />
+    @if (hasError("anagrafica.nome", "required")) {
+      <div class="err">Campo obbligatorio</div>
+    }
+  </div>
+
+  <div class="field">
+    <label>Cognome *</label>
+    <input type="text" [formControl]="control('anagrafica.cognome')" />
+    @if (hasError("anagrafica.cognome", "required")) {
+      <div class="err">Campo obbligatorio</div>
+    }
+  </div>
+
+  <div class="field">
+    <label>Sesso *</label>
+    <select [formControl]="control('anagrafica.sesso')">
+      <option [ngValue]="null">—</option>
+      <option [ngValue]="'M'">M</option>
+      <option [ngValue]="'F'">F</option>
+      <option [ngValue]="'Altro'">Altro</option>
+    </select>
+    @if (hasError("anagrafica.sesso", "required")) {
+      <div class="err">Campo obbligatorio</div>
+    }
+  </div>
+
+  <div class="field">
+    <label>Data di nascita *</label>
+    <input
+      type="text"
+      inputmode="numeric"
+      autocomplete="bday"
+      placeholder="gg/mm/aaaa"
+      maxlength="10"
+      [formControl]="control('anagrafica.dataNascitaDisplay')"
+      (input)="onBirthDateInput($event)"
+      (keydown)="onBirthDateKeydown($event)"
+      (blur)="onBirthDateBlur()"
+      class="date-input"
+    />
+
+    @if (hasError("anagrafica.dataNascitaDisplay", "required")) {
+      <div class="err">Campo obbligatorio</div>
+    } @else if (hasError("anagrafica.dataNascitaDisplay", "invalidDate")) {
+      <div class="err">Inserisci una data valida nel formato gg/mm/aaaa</div>
+    } @else if (hasError("anagrafica.dataNascitaDisplay", "futureDate")) {
+      <div class="err">La data di nascita non può essere futura</div>
+    }
+  </div>
+
+  <div class="field">
+    <label>Codice fiscale</label>
+    <input
+      type="text"
+      class="uppercase-input"
+      autocomplete="off"
+      spellcheck="false"
+      [formControl]="control('anagrafica.codiceFiscale')"
+      (input)="onCodiceFiscaleInput($event)"
+    />
+  </div>
+
+  <div class="field">
+    <label>Telefono</label>
+    <input type="text" [formControl]="control('anagrafica.telefono')" />
+  </div>
+
+  <div class="field">
+    <label>Email</label>
+    <input type="email" [formControl]="control('anagrafica.email')" />
+  </div>
+
+  <div class="field">
+    <label>Indirizzo</label>
+    <input type="text" [formControl]="control('anagrafica.indirizzo')" />
+  </div>
+</div>

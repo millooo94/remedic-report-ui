@@ -1,0 +1,167 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+/* ================== TOOLBAR ================== */
+
+.toolbar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.toolbar button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 8px;
+  font-weight: 700;
+  min-width: 38px;
+  min-height: 38px;
+  color: #111827;
+  transition:
+    border 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.toolbar button:hover {
+  background: #f3f4f6;
+}
+
+.toolbar button:focus-visible {
+  outline: none;
+  border-color: #1c9ebd;
+  box-shadow: 0 0 0 2px rgba(28, 158, 189, 0.15);
+}
+
+.toolbar button.active {
+  background: #1c9ebd;
+  color: #fff;
+  border-color: #1c9ebd;
+}
+
+.toolbar button:nth-child(2) {
+  font-style: italic;
+}
+
+.toolbar button:nth-child(3) {
+  text-decoration: underline;
+}
+
+.toolbar button svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+/* ================== EDITOR ================== */
+
+.editor-container {
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #fff;
+  cursor: text;
+  transition:
+    border 0.15s ease,
+    box-shadow 0.15s ease;
+  width: 100%;
+  overflow: hidden;
+}
+
+.editor-container:focus-within {
+  border-color: #1c9ebd;
+  box-shadow: 0 0 0 2px rgba(28, 158, 189, 0.15);
+}
+
+.editor-host {
+  min-height: 180px;
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.editor-host :deep(.ProseMirror) {
+  min-height: 156px;
+  outline: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  color: #111827;
+}
+
+.editor-host :deep(.ProseMirror p) {
+  margin: 0 0 8px;
+}
+
+.editor-host :deep(.ProseMirror p:last-child) {
+  margin-bottom: 0;
+}
+
+.editor-host :deep(.ProseMirror ul) {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.editor-host :deep(.ProseMirror li) {
+  margin-bottom: 4px;
+}
+
+.editor-host :deep(.ProseMirror strong) {
+  font-weight: 700;
+}
+
+.editor-host :deep(.ProseMirror em) {
+  font-style: italic;
+}
+
+.editor-host :deep(.ProseMirror u) {
+  text-decoration: underline;
+}
+
+/* ================== RESPONSIVE ================== */
+
+@media (max-width: 1024px) {
+  .editor-host {
+    min-height: 170px;
+  }
+
+  .editor-host :deep(.ProseMirror) {
+    min-height: 146px;
+  }
+}
+
+@media (max-width: 640px) {
+  .toolbar {
+    gap: 5px;
+  }
+
+  .toolbar button {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 6px 8px;
+  }
+
+  .editor-host {
+    min-height: 150px;
+    padding: 10px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .editor-host :deep(.ProseMirror) {
+    min-height: 130px;
+  }
+}

@@ -1,0 +1,46 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: "Open Sans", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+  font-variation-settings: "wdth" 100;
+  background: #f4f7fb;
+  color: #1f2933;
+
+  overflow-y: hidden;
+}
+
+/* Forza il font su tutti gli input, inclusi quelli date */
+input[type="date"],
+input[type="date"]::-webkit-inner-spin-button,
+input[type="date"]::-webkit-calendar-picker-indicator {
+  font-family: "Open Sans", sans-serif !important;
+}
+
+/* Stile globale per l'editor Tiptap */
+.ProseMirror {
+  margin: 0 0 10px 0 !important;
+  border: 1px solid black;
+  border-radius: 6px;
+
+  padding: 12px !important;
+  min-height: 150px !important;
+  outline: none !important;
+  background: white !important;
+}
+
+/* Assicurati che i paragrafi si vedano correttamente */
+.ProseMirror p {
+  margin-top: 0;
+}
+
+/* Se vuoi vedere un bordo per capire dove cliccare */
+.editor-container .ProseMirror {
+}

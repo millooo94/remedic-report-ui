@@ -1,0 +1,33 @@
+<!-- Top bar -->
+<header class="topbar">
+  <div class="brand">
+    <img src="remedic-logo.png" alt="logo" class="logo" />
+    <div class="subtitle">Report</div>
+  </div>
+
+  <div class="progressWrap">
+    <div class="progressMeta">
+      <div class="stepTitle">{{ steps[step].title }}</div>
+      <div class="pct">{{ pct }}%</div>
+    </div>
+    <div class="progress">
+      <div class="bar" [style.width.%]="pct"></div>
+    </div>
+  </div>
+</header>
+
+<!-- Stepper -->
+<nav class="stepper">
+  @for (s of steps; track $index) {
+    <button
+      type="button"
+      class="stepPill"
+      [class.active]="$index === step"
+      [class.done]="$index < step"
+      (click)="goTo.emit($index)"
+    >
+      <span class="idx">{{ $index + 1 }}</span>
+      <span class="txt">{{ s.title }}</span>
+    </button>
+  }
+</nav>
