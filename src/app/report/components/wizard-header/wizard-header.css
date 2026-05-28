@@ -32,6 +32,27 @@
   max-width: 420px;
 }
 
+.resumeBtn {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.resumeBtn:hover {
+  border-color: #1c9ebd;
+  background: #f0f9fc;
+  color: #0f5f74;
+}
+
 .progressMeta {
   display: flex;
   justify-content: space-between;

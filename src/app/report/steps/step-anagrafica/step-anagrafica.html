@@ -79,3 +79,29 @@
     <input type="text" [formControl]="control('anagrafica.indirizzo')" />
   </div>
 </div>
+
+@if (showPsgCard) {
+  <div class="psgAnamnesiCard">
+    <div class="psgAnamnesiCardContent">
+      <div>
+        <div class="psgAnamnesiCardEyebrow">PSG</div>
+        <h3>Anamnesi del sonno e Scala Epworth</h3>
+        <p>Raccogli la scheda anamnestica telefonica del paziente prima della refertazione.</p>
+      </div>
+
+      <div class="psgAnamnesiCardMeta">
+        <span class="statusBadge">{{ psgStatusLabel }}</span>
+        <button
+          type="button"
+          class="actionBtn"
+          [disabled]="draftSaving"
+          (click)="openPsgAnamnesis.emit()"
+        >
+          {{ currentDraftStatus === 'anamnesi_raccolta' || currentDraftStatus === 'in_refertazione' || currentDraftStatus === 'completato'
+            ? 'Modifica anamnesi PSG'
+            : 'Compila anamnesi PSG' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

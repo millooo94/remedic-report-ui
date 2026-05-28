@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormGroup, FormControl, ReactiveFormsModule } from '@angular/forms';
+import { ReportDraftStatus } from '../../models/report-draft';
+import { ReportType } from '../../types/report-type';
 
 @Component({
   selector: 'step-anagrafica',
@@ -15,6 +17,30 @@ export class StepAnagrafica {
     path: string,
     error: string,
   ) => boolean;
+  @Input({ required: true }) reportType!: ReportType;
+  @Input() currentDraftStatus: ReportDraftStatus | null = null;
+  @Input() draftSaving = false;
+  @Output() openPsgAnamnesis = new EventEmitter<void>();
+
+  get showPsgCard(): boolean {
+    return this.reportType === 'psg';
+  }
+
+  get psgStatusLabel(): string {
+    if (this.currentDraftStatus === 'anamnesi_raccolta') {
+      return 'Anamnesi salvata';
+    }
+
+    if (this.currentDraftStatus === 'in_refertazione') {
+      return 'Referto in lavorazione';
+    }
+
+    if (this.currentDraftStatus === 'completato') {
+      return 'Referto completato';
+    }
+
+    return 'Anamnesi da compilare';
+  }
 
   onBirthDateInput(event: Event): void {
     const input = event.target as HTMLInputElement;

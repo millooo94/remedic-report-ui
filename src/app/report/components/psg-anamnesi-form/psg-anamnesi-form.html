@@ -1,0 +1,178 @@
+<div class="psgAnamnesiStack">
+  <section class="panelCard">
+    <div class="panelTitleRow">
+      <div>
+        <h3>Anamnesi mirata del sonno</h3>
+        <p>Registra per ogni voce una risposta obbligatoria e, se necessario, una nota.</p>
+      </div>
+    </div>
+
+    <div class="psgTableWrap">
+      <div class="psgTableHeader sleepTableHeader">
+        <div>Voce</div>
+        <div>Risposta</div>
+        <div>Note</div>
+      </div>
+
+      @for (item of psgSleepHistoryItems; track item.key) {
+        <div class="psgTableRow sleepTableRow">
+          <div class="factorLabel">{{ item.label }}</div>
+
+          <div class="choiceGroup">
+            <button
+              type="button"
+              class="choiceBtn"
+              [class.active]="isPsgSleepOutcomeSelected(item.key, 'no')"
+              [class.error]="psgSleepOutcomeHasRequiredError(item.key)"
+              (click)="setPsgSleepOutcome(item.key, 'no')"
+            >
+              No
+            </button>
+            <button
+              type="button"
+              class="choiceBtn"
+              [class.active]="isPsgSleepOutcomeSelected(item.key, 'si')"
+              [class.error]="psgSleepOutcomeHasRequiredError(item.key)"
+              (click)="setPsgSleepOutcome(item.key, 'si')"
+            >
+              Si
+            </button>
+            <button
+              type="button"
+              class="choiceBtn"
+              [class.active]="isPsgSleepOutcomeSelected(item.key, 'non_noto')"
+              [class.error]="psgSleepOutcomeHasRequiredError(item.key)"
+              (click)="setPsgSleepOutcome(item.key, 'non_noto')"
+            >
+              Non noto
+            </button>
+          </div>
+
+          <input
+            type="text"
+            class="noteInput"
+            placeholder="Note"
+            [formControl]="psgSleepNoteControl(item.key)"
+          />
+
+          @if (psgSleepOutcomeHasRequiredError(item.key)) {
+            <div class="rowError fullRowError">Seleziona No, Si oppure Non noto.</div>
+          }
+        </div>
+      }
+    </div>
+  </section>
+
+  <div class="dualPanelGrid">
+    <section class="panelCard selectionPanel">
+      <div class="panelTitleRow">
+        <div>
+          <h3>Farmaci rilevanti</h3>
+          <p>Seleziona almeno una voce.</p>
+        </div>
+      </div>
+
+      <div class="selectionPanelBody">
+        <div class="optionChecklist optionChecklistAligned">
+          @for (option of psgFarmaciOptions; track option.key) {
+            <label class="checkboxCard">
+              <input type="checkbox" [formControl]="psgFarmacoControl(option.key)" />
+              <span>{{ option.label }}</span>
+            </label>
+          }
+        </div>
+
+        <div class="field noteFieldAligned">
+          <label>Note farmaci</label>
+          <textarea rows="3" [formControl]="control('psg.anamnesiSonno.farmaciRilevanti.note')"></textarea>
+        </div>
+      </div>
+
+      @if (hasError('psg.anamnesiSonno.farmaciRilevanti', 'selectionRequired')) {
+        <div class="err">Seleziona almeno una voce per i farmaci rilevanti.</div>
+      }
+    </section>
+
+    <section class="panelCard selectionPanel">
+      <div class="panelTitleRow">
+        <div>
+          <h3>Comorbidita rilevanti</h3>
+          <p>Seleziona almeno una voce.</p>
+        </div>
+      </div>
+
+      <div class="selectionPanelBody">
+        <div class="optionChecklist optionChecklistAligned">
+          @for (option of psgComorbiditaOptions; track option.key) {
+            <label class="checkboxCard">
+              <input type="checkbox" [formControl]="psgComorbiditaControl(option.key)" />
+              <span>{{ option.label }}</span>
+            </label>
+          }
+        </div>
+
+        <div class="field noteFieldAligned">
+          <label>Note comorbidita</label>
+          <textarea rows="3" [formControl]="control('psg.anamnesiSonno.comorbiditaRilevanti.note')"></textarea>
+        </div>
+      </div>
+
+      @if (hasError('psg.anamnesiSonno.comorbiditaRilevanti', 'selectionRequired')) {
+        <div class="err">Seleziona almeno una voce per le comorbidita rilevanti.</div>
+      }
+    </section>
+  </div>
+
+  <section class="panelCard">
+    <div class="panelTitleRow essHeaderRow">
+      <div>
+        <h3>Scala di Epworth - ESS</h3>
+        <p>Indicare per ciascuna situazione la probabilita di addormentarsi: 0 = nessuna, 1 = lieve, 2 = moderata, 3 = elevata.</p>
+      </div>
+
+      <div class="essSummaryCard">
+        <strong>{{ control('psg.essTotale').value }} / 24</strong>
+        <small>{{ control('psg.interpretazioneEss').value || 'Interpretazione ESS non disponibile' }}</small>
+      </div>
+    </div>
+
+    <div class="psgTableWrap">
+      <div class="psgTableHeader essTableHeader">
+        <div>Situazione</div>
+        <div>0</div>
+        <div>1</div>
+        <div>2</div>
+        <div>3</div>
+      </div>
+
+      @for (item of psgEssItems; track item.key) {
+        <div class="psgTableRow essTableRow">
+          <div class="factorLabel">{{ item.label }}</div>
+
+          @for (score of [0, 1, 2, 3]; track score) {
+            <button
+              type="button"
+              class="scoreBtn"
+              [class.active]="isPsgEssSelected(item.key, score)"
+              [class.error]="psgEssHasRequiredError(item.key)"
+              (click)="setPsgEssScore(item.key, score)"
+            >
+              {{ score }}
+            </button>
+          }
+
+          @if (psgEssHasRequiredError(item.key)) {
+            <div class="rowError fullRowError">Seleziona un punteggio da 0 a 3.</div>
+          }
+        </div>
+      }
+    </div>
+  </section>
+
+  <section class="panelCard">
+    <div class="field">
+      <label>Note anamnestiche ulteriori</label>
+      <textarea rows="4" [formControl]="control('psg.anamnesiSonno.noteAnamnesticheUlteriori')"></textarea>
+    </div>
+  </section>
+</div>

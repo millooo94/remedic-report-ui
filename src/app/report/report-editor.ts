@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener } from '@angular/core';
 import {
+  FormsModule,
   ReactiveFormsModule,
   FormBuilder,
   AbstractControl,
@@ -10,12 +11,21 @@ import {
   ValidationErrors,
   ValidatorFn,
 } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+import { PsgAnamnesiForm } from './components/psg-anamnesi-form/psg-anamnesi-form';
 import { WizardHeader } from './components/wizard-header/wizard-header';
 import { StepAnagrafica } from './steps/step-anagrafica/step-anagrafica';
 import { StepSezioni } from './steps/step-sezioni/step-sezioni';
 import { StepVisita } from './steps/step-visita/step-visita';
 import { ResetModal } from './components/reset-modal/reset-modal';
 import { DoctorInfo } from './models/doctor-info';
+import {
+  ReportDraftDetail,
+  ReportDraftFilters,
+  ReportDraftPayload,
+  ReportDraftStatus,
+  ReportDraftSummary,
+} from './models/report-draft';
 import {
   EMG_REPORT_STEPS,
   PSG_REPORT_STEPS,
@@ -54,6 +64,7 @@ type SectionKey = (typeof REPORT_SECTION_KEYS)[number];
   selector: 'report-editor',
   imports: [
     CommonModule,
+    FormsModule,
     ReactiveFormsModule,
     WizardHeader,
     StepAnagrafica,
@@ -61,6 +72,7 @@ type SectionKey = (typeof REPORT_SECTION_KEYS)[number];
     StepSezioni,
     ResetModal,
     StepContenuti,
+    PsgAnamnesiForm,
   ],
   templateUrl: './report-editor.html',
   styleUrl: './report-editor.css',
@@ -77,12 +89,46 @@ export class ReportEditor {
 
   doctorResults: DoctorInfo[] = [];
   technicalResults: DoctorInfo[] = [];
+  drafts: ReportDraftSummary[] = [];
   doctorSearch!: FormControl<string>;
   technicalSearch!: FormControl<string>;
   sections!: ReturnType<typeof createReportSectionsForm>;
   form!: ReturnType<typeof createReportForm>;
 
   showResetModal = false;
+  showDraftsModal = false;
+  showPsgAnamnesisModal = false;
+  draftSaving = false;
+  draftLoaded = false;
+  draftError = '';
+  draftMessage = '';
+  draftMessageType: 'success' | 'error' | 'warning' | 'info' = 'info';
+  currentDraftId: string | null = null;
+  currentDraftStatus: ReportDraftStatus | null = null;
+  draftLoadingId: string | null = null;
+  deletingDraftId: string | null = null;
+  draftsLoading = false;
+  draftsError = '';
+  attachmentsReloadNotice = '';
+  draftFilters: ReportDraftFilters = {
+    tipo_referto: '',
+    stato: '',
+    q: '',
+    limit: 20,
+    offset: 0,
+  };
+  draftListTotal = 0;
+  readonly draftStatusOptions: Array<{ value: ReportDraftStatus; label: string }> = [
+    { value: 'bozza', label: 'Bozza' },
+    { value: 'anamnesi_raccolta', label: 'Anamnesi raccolta' },
+    { value: 'in_refertazione', label: 'In refertazione' },
+    { value: 'completato', label: 'Completato' },
+  ];
+  readonly draftTypeOptions: Array<{ value: ReportType; label: string }> = [
+    { value: 'standard', label: 'Standard' },
+    { value: 'emg', label: 'EMG / ENG' },
+    { value: 'psg', label: 'PSG' },
+  ];
 
   constructor(
     private fb: FormBuilder,
@@ -215,6 +261,15 @@ export class ReportEditor {
     return this.standardSteps;
   }
 
+  get hasSavedPsgAnamnesis(): boolean {
+    return (
+      this.reportType === 'psg' &&
+      (this.currentDraftStatus === 'anamnesi_raccolta' ||
+        this.currentDraftStatus === 'in_refertazione' ||
+        this.currentDraftStatus === 'completato')
+    );
+  }
+
   stepHint(): string {
     if (this.reportType === 'psg') {
       switch (this.step) {
@@ -223,7 +278,7 @@ export class ReportEditor {
         case 2:
           return 'Compila il quesito clinico e la refertazione medica che accompagneranno il report strumentale.';
         case 3:
-          return "Raccogli anamnesi del sonno, scala ESS e carica il report strumentale da unire al PDF finale.";
+          return "Carica il report strumentale da unire al PDF finale. L'anamnesi del sonno e la Scala ESS vengono richiamate automaticamente dalla scheda PSG.";
         default:
           return "Compila l'anagrafica una sola volta: verra riutilizzata sia nel referto PSG sia nella scheda anamnestica.";
       }
@@ -591,12 +646,7 @@ export class ReportEditor {
         }
 
         if (this.reportType === 'psg') {
-          this.markPsgSleepHistoryTouched();
-          this.markPsgEssTouched();
-          mark(this.form.get('psg.anamnesiSonno.farmaciRilevanti'));
-          mark(this.form.get('psg.anamnesiSonno.comorbiditaRilevanti'));
           mark(this.control('psg.reportStrumentalePdf'));
-          mark(this.control('psg.anamnesiSonno.noteAnamnesticheUlteriori'));
           break;
         }
 
@@ -1059,148 +1109,12 @@ export class ReportEditor {
     this.technicalSearch.reset('');
     this.doctorResults = [];
     this.technicalResults = [];
-
-    const now = new Date();
-    const isoToday = now.toISOString().slice(0, 10);
-    const displayToday = this.formatDateDisplay(now);
-
-    this.form.reset({
-      tipoReferto: 'standard',
-      dataVisitaDisplay: displayToday,
-      dataVisita: isoToday,
-      titoloVisita: '',
-      prestazione: '',
-      modalitaReferto: 'sezioni',
-      testoLibero: '',
-
-      anagrafica: {
-        nome: '',
-        cognome: '',
-        sesso: null,
-        dataNascitaDisplay: '',
-        dataNascita: '',
-        codiceFiscale: '',
-        telefono: '',
-        email: '',
-        indirizzo: '',
-      },
-
-      anamnesiPatologicaRemota: '',
-      anamnesiPatologicaProssima: '',
-      portaInVisione: '',
-      esamiEseguitiInLoco: '',
-      esameObiettivo: '',
-      diagnosi: '',
-      prescrizione: '',
-
-      medico: {
-        id: '',
-        nome: '',
-        cognome: '',
-        specialita: '',
-      },
-
-      emg: {
-        tecnicoEsecutoreId: '',
-        tecnicoEsecutore: '',
-        tecnicoRuolo: '',
-        medicoInviante: '',
-        quesitoDiagnostico: '',
-        sintomatologiaRiferita: '',
-        distrettoEsaminato: '',
-        esameEseguito: '',
-        repertiElettrofisiologici: '',
-        conclusioni: '',
-        consensoInformatoTesto: '',
-        dataOraAcquisizioneTecnica: '',
-        materialeProdotto: '',
-        noteTecnicheEsecutore: '',
-        attestazioneTecnico: '',
-        tracciati: [],
-        firmaTecnico: null,
-        checklistNeuropatie: {
-          diabete: { esito: null, note: '' },
-          insufficienza_renale: { esito: null, note: '' },
-          ipotiroidismo: { esito: null, note: '' },
-          abuso_alcol: { esito: null, note: '' },
-          carenze_vitaminiche_note: { esito: null, note: '' },
-          pregresse_chemioterapie: { esito: null, note: '' },
-          malattie_autoimmuni: { esito: null, note: '' },
-          traumi_recenti_distretto: { esito: null, note: '' },
-          terapia_anticoagulante_antiaggregante: { esito: null, note: '' },
-          pacemaker_icd: { esito: null, note: '' },
-        },
-      },
-
-      psg: {
-        dataRegistrazioneInizio: '',
-        dataRegistrazioneFine: '',
-        sistemaRegistrazione: '',
-        staturaCm: '',
-        pesoKg: '',
-        bmi: '',
-        consensoInformato: '',
-        dataRefertazione: '',
-        anamnesiRaccolta: '',
-        reportTecnico: '',
-        modalitaRaccolta: '',
-        operatore: '',
-        quesitoClinico: '',
-        interpretazioneMedico: '',
-        conclusioneDiagnostica: '',
-        indicazioniCliniche: '',
-        notaDocumentale: '',
-        reportStrumentalePdf: null,
-        anamnesiSonno: {
-          russamentoAbituale: { esito: null, note: '' },
-          pauseRespiratorieOsservate: { esito: null, note: '' },
-          risvegliSoffocamento: { esito: null, note: '' },
-          sonnolenzaDiurna: { esito: null, note: '' },
-          sonnoNonRistoratore: { esito: null, note: '' },
-          cefaleaMattutina: { esito: null, note: '' },
-          nicturia: { esito: null, note: '' },
-          farmaciRilevanti: {
-            nessuno: false,
-            sedativi_ipnotici: false,
-            oppioidi: false,
-            altro: false,
-            note: '',
-          },
-          comorbiditaRilevanti: {
-            ipertensione: false,
-            cardiopatia: false,
-            bpco: false,
-            diabete: false,
-            aritmie: false,
-            altro: false,
-            note: '',
-          },
-          noteAnamnesticheUlteriori: '',
-        } as any,
-        ess: {
-          sedutoLeggere: null,
-          guardandoTv: null,
-          sedutoInattivoLuogoPubblico: null,
-          passeggeroAutoUnOra: null,
-          sdraiatoPomeriggio: null,
-          sedutoParlare: null,
-          sedutoDopoPranzo: null,
-          autoFermoTraffico: null,
-        },
-        essTotale: 0,
-        interpretazioneEss: '',
-      },
-    });
-
-    this.sections.reset({
-      anamnesiRemota: false,
-      portaInVisione: false,
-      esamiInLoco: false,
-      anamnesiProssima: true,
-      esameObiettivo: true,
-      diagnosi: true,
-      prescrizione: true,
-    });
+    this.currentDraftId = null;
+    this.currentDraftStatus = null;
+    this.draftLoaded = false;
+    this.resetTransientUiState();
+    this.form.reset(this.getFreshFormState() as any);
+    this.sections.reset(this.getFreshSectionsState() as any);
 
     for (const k of this.sectionKeys) {
       this.section(k).enable({ emitEvent: false });
@@ -1319,16 +1233,159 @@ export class ReportEditor {
     this.next();
   }
 
+  async saveDraft(status?: ReportDraftStatus): Promise<void> {
+    const nextStatus = status ?? this.resolveDraftStatusForSave();
+    await this.persistDraft(nextStatus, 'Bozza salvata.');
+  }
+
+  async savePsgAnamnesis(closeAfterSave = false): Promise<void> {
+    if (this.reportType !== 'psg') {
+      return;
+    }
+
+    this.markPsgAnamnesisTouched();
+
+    if (!this.isPsgAnamnesisReadyForSave()) {
+      this.setDraftMessage(
+        'Compila completamente anamnesi del sonno, farmaci, comorbidita e Scala ESS prima di salvare.',
+        'error',
+      );
+      return;
+    }
+
+    const savedDraft = await this.persistDraft(
+      'anamnesi_raccolta',
+      'Anamnesi PSG salvata.',
+    );
+
+    if (savedDraft && closeAfterSave) {
+      this.showPsgAnamnesisModal = false;
+    }
+  }
+
+  openResumeDraftModal(): void {
+    this.showDraftsModal = true;
+    void this.refreshDraftList();
+  }
+
+  closeResumeDraftModal(): void {
+    this.showDraftsModal = false;
+    this.draftsError = '';
+  }
+
+  openPsgAnamnesisModal(): void {
+    this.showPsgAnamnesisModal = true;
+  }
+
+  closePsgAnamnesisModal(): void {
+    this.showPsgAnamnesisModal = false;
+  }
+
+  async applyDraftFilters(resetOffset = false): Promise<void> {
+    if (resetOffset) {
+      this.draftFilters.offset = 0;
+    }
+
+    await this.refreshDraftList();
+  }
+
+  async loadDraft(id: string): Promise<void> {
+    this.draftLoadingId = id;
+    this.draftError = '';
+    this.draftsError = '';
+
+    try {
+      const draft = await firstValueFrom(this.api.getDraft(id));
+      this.hydrateDraft(draft);
+      this.showDraftsModal = false;
+      this.setDraftMessage('Referto ripreso.', 'success');
+    } catch (error) {
+      console.error('Errore caricamento bozza:', error);
+      this.draftsError =
+        'Impossibile caricare la bozza selezionata. Riprova tra qualche istante.';
+    } finally {
+      this.draftLoadingId = null;
+    }
+  }
+
+  async deleteDraftRecord(id: string): Promise<void> {
+    this.deletingDraftId = id;
+    this.draftsError = '';
+
+    try {
+      await firstValueFrom(this.api.deleteDraft(id));
+      if (this.currentDraftId === id) {
+        this.currentDraftId = null;
+        this.currentDraftStatus = null;
+        this.draftLoaded = false;
+      }
+      await this.refreshDraftList();
+      this.setDraftMessage('Bozza eliminata.', 'success');
+    } catch (error) {
+      console.error('Errore eliminazione bozza:', error);
+      this.draftsError =
+        "Impossibile eliminare la bozza selezionata. Riprova tra qualche istante.";
+    } finally {
+      this.deletingDraftId = null;
+    }
+  }
+
+  hydrateDraft(draft: ReportDraftDetail): void {
+    const formData = draft.form_data?.form ?? {};
+    const sectionsData = draft.form_data?.sections ?? {};
+    const meta = draft.form_data?.meta;
+    const rawForm = this.getFreshFormState();
+    const rawSections = this.getFreshSectionsState();
+    const tipoReferto = draft.tipo_referto || formData.tipoReferto || 'standard';
+
+    this.resetTransientUiState();
+    this.form.reset(rawForm as any);
+    this.sections.reset(rawSections as any);
+    this.step = 0;
+
+    this.control('tipoReferto').setValue(tipoReferto);
+    this.form.patchValue(formData);
+    this.sections.patchValue(sectionsData);
+
+    this.currentDraftId = draft.id;
+    this.currentDraftStatus = draft.stato;
+    this.draftLoaded = true;
+    this.step = this.clampStep(meta?.currentStep ?? 0);
+
+    this.doctorSearch.setValue(
+      this.buildDoctorSearchLabel(
+        this.control('medico.nome').value,
+        this.control('medico.cognome').value,
+      ),
+      { emitEvent: false },
+    );
+    this.technicalSearch.setValue(this.control('emg.tecnicoEsecutore').value || '', {
+      emitEvent: false,
+    });
+    this.doctorResults = [];
+    this.technicalResults = [];
+
+    this.refreshDerivedStateAfterDraftLoad();
+    this.attachmentsReloadNotice = this.buildAttachmentsReloadNotice();
+  }
+
   async generatePdf(): Promise<void> {
     this.form.markAllAsTouched();
 
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      if (this.reportType === 'psg' && !this.isPsgAnamnesisReadyForSave()) {
+        this.setDraftMessage(
+          "Completa l'anamnesi PSG e la Scala ESS prima di generare il referto finale.",
+          'warning',
+        );
+        this.showPsgAnamnesisModal = true;
+      }
+      return;
+    }
 
     const formValue = this.form.getRawValue();
     const sectionsValue = this.sections.getRawValue();
     const payload = this.payloadBuilder.build(formValue, sectionsValue);
-
-    console.log(payload);
 
     const printWindow = window.open('', '_blank');
 
@@ -1583,6 +1640,7 @@ export class ReportEditor {
         printWindow?.document.open();
         printWindow?.document.write(htmlResponse);
         printWindow?.document.close();
+        void this.markDraftCompletedAfterPdfSuccess();
       },
       error: (err) => {
         console.error('Errore generazione PDF:', err);
@@ -1623,6 +1681,352 @@ export class ReportEditor {
         alert('Errore durante la generazione del PDF.');
       },
     });
+  }
+
+  private async persistDraft(
+    status: ReportDraftStatus,
+    successMessage: string,
+  ): Promise<ReportDraftDetail | null> {
+    this.draftSaving = true;
+    this.draftError = '';
+
+    try {
+      const payload = this.buildDraftPayload(status);
+      const savedDraft = this.currentDraftId
+        ? await firstValueFrom(this.api.updateDraft(this.currentDraftId, payload))
+        : await firstValueFrom(this.api.createDraft(payload));
+
+      this.currentDraftId = savedDraft.id;
+      this.currentDraftStatus = savedDraft.stato;
+      this.draftLoaded = true;
+      this.setDraftMessage(successMessage, 'success');
+      await this.refreshDraftList(false);
+      return savedDraft;
+    } catch (error) {
+      console.error('Errore salvataggio bozza:', error);
+      this.draftError = 'Errore durante il salvataggio della bozza.';
+      this.setDraftMessage(this.draftError, 'error');
+      return null;
+    } finally {
+      this.draftSaving = false;
+    }
+  }
+
+  private buildDraftPayload(status: ReportDraftStatus): ReportDraftPayload {
+    const rawForm = this.form.getRawValue();
+    const rawSections = this.sections.getRawValue();
+    const formSnapshot = JSON.parse(JSON.stringify(rawForm));
+
+    formSnapshot.emg = {
+      ...formSnapshot.emg,
+      tracciati: [],
+      firmaTecnico: null,
+    };
+
+    formSnapshot.psg = {
+      ...formSnapshot.psg,
+      reportStrumentalePdf: null,
+    };
+
+    return {
+      tipo_referto: this.reportType,
+      stato: status,
+      summary: this.buildDraftSummary(formSnapshot),
+      form_data: {
+        form: formSnapshot,
+        sections: JSON.parse(JSON.stringify(rawSections)),
+        meta: {
+          schemaVersion: 1,
+          currentStep: this.step,
+          draftStatus: status,
+        },
+      },
+    };
+  }
+
+  private buildDraftSummary(formValue: any) {
+    const pazienteNome = formValue.anagrafica?.nome?.trim() || null;
+    const pazienteCognome = formValue.anagrafica?.cognome?.trim() || null;
+    const nomeCompleto =
+      `${formValue.anagrafica?.nome ?? ''} ${formValue.anagrafica?.cognome ?? ''}`.trim() ||
+      null;
+    const medicoRefertatore =
+      `${formValue.medico?.nome ?? ''} ${formValue.medico?.cognome ?? ''}`.trim() ||
+      null;
+
+    return {
+      paziente_nome: pazienteNome,
+      paziente_cognome: pazienteCognome,
+      paziente_nome_completo: nomeCompleto,
+      data_nascita: formValue.anagrafica?.dataNascita || null,
+      codice_fiscale: formValue.anagrafica?.codiceFiscale?.trim() || null,
+      telefono: formValue.anagrafica?.telefono?.trim() || null,
+      email: formValue.anagrafica?.email?.trim() || null,
+      medico_refertatore: medicoRefertatore,
+      medico_refertatore_id: formValue.medico?.id || null,
+      specializzazione: formValue.medico?.specialita?.trim() || null,
+      prestazione: formValue.prestazione?.trim() || null,
+      data_esame:
+        formValue.tipoReferto === 'psg'
+          ? this.extractDatePart(formValue.psg?.dataRegistrazioneInizio)
+          : formValue.dataVisita || null,
+    };
+  }
+
+  private resolveDraftStatusForSave(): ReportDraftStatus {
+    if (this.reportType === 'psg') {
+      if (this.currentDraftStatus === 'completato') {
+        return 'in_refertazione';
+      }
+
+      if (this.step > 0) {
+        return 'in_refertazione';
+      }
+
+      if (this.currentDraftStatus === 'anamnesi_raccolta') {
+        return 'anamnesi_raccolta';
+      }
+    }
+
+    if (this.currentDraftStatus === 'completato') {
+      return 'in_refertazione';
+    }
+
+    return this.currentDraftStatus ?? 'bozza';
+  }
+
+  private async refreshDraftList(showModalIfEmpty = false): Promise<void> {
+    this.draftsLoading = true;
+    this.draftsError = '';
+
+    try {
+      const response = await firstValueFrom(this.api.listDrafts(this.draftFilters));
+      this.drafts = response.items;
+      this.draftListTotal = response.total;
+      if (showModalIfEmpty) {
+        this.showDraftsModal = true;
+      }
+    } catch (error) {
+      console.error('Errore caricamento elenco bozze:', error);
+      this.draftsError =
+        'Impossibile recuperare l’elenco delle bozze. Riprova tra qualche istante.';
+    } finally {
+      this.draftsLoading = false;
+    }
+  }
+
+  private async markDraftCompletedAfterPdfSuccess(): Promise<void> {
+    if (!this.currentDraftId) {
+      return;
+    }
+
+    try {
+      const updatedDraft = await firstValueFrom(
+        this.api.updateDraftStatus(this.currentDraftId, 'completato'),
+      );
+      this.currentDraftStatus = updatedDraft.stato;
+      this.setDraftMessage('Bozza aggiornata come completata.', 'success');
+    } catch (error) {
+      console.error('Errore aggiornamento stato bozza:', error);
+      this.setDraftMessage(
+        "Il PDF e stato generato, ma non sono riuscito a segnare la bozza come completata.",
+        'warning',
+      );
+    }
+  }
+
+  private setDraftMessage(
+    message: string,
+    type: 'success' | 'error' | 'warning' | 'info',
+  ): void {
+    this.draftMessage = message;
+    this.draftMessageType = type;
+  }
+
+  private resetTransientUiState(): void {
+    this.attachmentsReloadNotice = '';
+    this.draftError = '';
+    this.draftMessage = '';
+    this.draftMessageType = 'info';
+    this.showPsgAnamnesisModal = false;
+    this.form.get('emg.tracciati')?.setValue([], { emitEvent: false });
+    this.form.get('emg.firmaTecnico')?.setValue(null, { emitEvent: false });
+    this.form.get('psg.reportStrumentalePdf')?.setValue(null, { emitEvent: false });
+  }
+
+  private buildAttachmentsReloadNotice(): string {
+    if (this.reportType === 'emg') {
+      return 'Tracciati EMG e firma TNFP non vengono salvati nella bozza: vanno ricaricati nella sessione corrente.';
+    }
+
+    if (this.reportType === 'psg') {
+      return 'Il report strumentale PSG non viene salvato nella bozza: andra ricaricato prima della generazione PDF.';
+    }
+
+    return '';
+  }
+
+  private clampStep(step: number): number {
+    const safeStep = Number.isFinite(step) ? Math.trunc(step) : 0;
+    return Math.min(Math.max(safeStep, 0), this.steps.length - 1);
+  }
+
+  private buildDoctorSearchLabel(nome?: string | null, cognome?: string | null): string {
+    return `${cognome ?? ''} ${nome ?? ''}`.trim();
+  }
+
+  private getFreshFormState() {
+    const now = new Date();
+    const isoToday = now.toISOString().slice(0, 10);
+    const displayToday = this.formatDateDisplay(now);
+
+    return {
+      tipoReferto: 'standard',
+      dataVisitaDisplay: displayToday,
+      dataVisita: isoToday,
+      titoloVisita: '',
+      prestazione: '',
+      modalitaReferto: 'sezioni',
+      testoLibero: '',
+
+      anagrafica: {
+        nome: '',
+        cognome: '',
+        sesso: null,
+        dataNascitaDisplay: '',
+        dataNascita: '',
+        codiceFiscale: '',
+        telefono: '',
+        email: '',
+        indirizzo: '',
+      },
+
+      anamnesiPatologicaRemota: '',
+      anamnesiPatologicaProssima: '',
+      portaInVisione: '',
+      esamiEseguitiInLoco: '',
+      esameObiettivo: '',
+      diagnosi: '',
+      prescrizione: '',
+
+      medico: {
+        id: '',
+        nome: '',
+        cognome: '',
+        specialita: '',
+      },
+
+      emg: {
+        tecnicoEsecutoreId: '',
+        tecnicoEsecutore: '',
+        tecnicoRuolo: '',
+        medicoInviante: '',
+        quesitoDiagnostico: '',
+        sintomatologiaRiferita: '',
+        distrettoEsaminato: '',
+        esameEseguito: '',
+        repertiElettrofisiologici: '',
+        conclusioni: '',
+        consensoInformatoTesto: '',
+        dataOraAcquisizioneTecnica: '',
+        materialeProdotto: '',
+        noteTecnicheEsecutore: '',
+        attestazioneTecnico: '',
+        tracciati: [],
+        firmaTecnico: null,
+        checklistNeuropatie: {
+          diabete: { esito: null, note: '' },
+          insufficienza_renale: { esito: null, note: '' },
+          ipotiroidismo: { esito: null, note: '' },
+          abuso_alcol: { esito: null, note: '' },
+          carenze_vitaminiche_note: { esito: null, note: '' },
+          pregresse_chemioterapie: { esito: null, note: '' },
+          malattie_autoimmuni: { esito: null, note: '' },
+          traumi_recenti_distretto: { esito: null, note: '' },
+          terapia_anticoagulante_antiaggregante: { esito: null, note: '' },
+          pacemaker_icd: { esito: null, note: '' },
+        },
+      },
+
+      psg: {
+        dataRegistrazioneInizio: '',
+        dataRegistrazioneFine: '',
+        sistemaRegistrazione: '',
+        staturaCm: '',
+        pesoKg: '',
+        bmi: '',
+        consensoInformato: '',
+        dataRefertazione: '',
+        anamnesiRaccolta: '',
+        reportTecnico: '',
+        modalitaRaccolta: '',
+        operatore: '',
+        quesitoClinico: '',
+        interpretazioneMedico: '',
+        conclusioneDiagnostica: '',
+        indicazioniCliniche: '',
+        notaDocumentale: '',
+        reportStrumentalePdf: null,
+        anamnesiSonno: {
+          russamentoAbituale: { esito: null, note: '' },
+          pauseRespiratorieOsservate: { esito: null, note: '' },
+          risvegliSoffocamento: { esito: null, note: '' },
+          sonnolenzaDiurna: { esito: null, note: '' },
+          sonnoNonRistoratore: { esito: null, note: '' },
+          cefaleaMattutina: { esito: null, note: '' },
+          nicturia: { esito: null, note: '' },
+          farmaciRilevanti: {
+            nessuno: false,
+            sedativi_ipnotici: false,
+            oppioidi: false,
+            altro: false,
+            note: '',
+          },
+          comorbiditaRilevanti: {
+            ipertensione: false,
+            cardiopatia: false,
+            bpco: false,
+            diabete: false,
+            aritmie: false,
+            altro: false,
+            note: '',
+          },
+          noteAnamnesticheUlteriori: '',
+        } as any,
+        ess: {
+          sedutoLeggere: null,
+          guardandoTv: null,
+          sedutoInattivoLuogoPubblico: null,
+          passeggeroAutoUnOra: null,
+          sdraiatoPomeriggio: null,
+          sedutoParlare: null,
+          sedutoDopoPranzo: null,
+          autoFermoTraffico: null,
+        },
+        essTotale: 0,
+        interpretazioneEss: '',
+      },
+    };
+  }
+
+  private getFreshSectionsState() {
+    return {
+      anamnesiRemota: false,
+      portaInVisione: false,
+      esamiInLoco: false,
+      anamnesiProssima: true,
+      esameObiettivo: true,
+      diagnosi: true,
+      prescrizione: true,
+    };
+  }
+
+  private refreshDerivedStateAfterDraftLoad(): void {
+    this.updateModeValidators();
+    this.syncTechnicalAcquisitionDate(this.control('dataVisita').value);
+    this.syncPsgVisitDate(this.control('psg.dataRegistrazioneInizio').value);
+    this.updatePsgBmi();
+    this.updatePsgEssSummary();
   }
 
   private formatDateDisplay(date: Date): string {
@@ -1780,6 +2184,23 @@ export class ReportEditor {
     PSG_ESS_ITEMS.forEach((item) => {
       this.control(`psg.ess.${item.key}`).markAsTouched();
     });
+  }
+
+  private markPsgAnamnesisTouched(): void {
+    this.markPsgSleepHistoryTouched();
+    this.markPsgEssTouched();
+    this.form.get('psg.anamnesiSonno.farmaciRilevanti')?.markAllAsTouched();
+    this.form.get('psg.anamnesiSonno.comorbiditaRilevanti')?.markAllAsTouched();
+    this.control('psg.anamnesiSonno.noteAnamnesticheUlteriori').markAsTouched();
+  }
+
+  private isPsgAnamnesisReadyForSave(): boolean {
+    return (
+      this.isPsgSleepHistoryComplete() &&
+      this.isPsgEssComplete() &&
+      !!this.form.get('psg.anamnesiSonno.farmaciRilevanti')?.valid &&
+      !!this.form.get('psg.anamnesiSonno.comorbiditaRilevanti')?.valid
+    );
   }
 
   private selectionRequiredValidator(keys: string[]): ValidatorFn {

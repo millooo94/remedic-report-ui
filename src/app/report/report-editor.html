@@ -4,6 +4,8 @@
     [step]="step"
     [pct]="pct()"
     (goTo)="goTo($event)"
+    [showResumeButton]="true"
+    (resumeDraft)="openResumeDraftModal()"
   >
   </wizard-header>
 
@@ -12,14 +14,40 @@
       <div class="cardHead">
         <h2>{{ steps[step].title }}</h2>
         <p class="hint">{{ stepHint() }}</p>
+
+        @if (currentDraftId) {
+          <div class="draftMetaRow">
+            <span class="draftMetaPill">Bozza attiva</span>
+            <span class="draftMetaText">ID: {{ currentDraftId }}</span>
+            @if (currentDraftStatus) {
+              <span class="draftMetaPill muted">{{ currentDraftStatus }}</span>
+            }
+          </div>
+        }
       </div>
 
       <div class="cardBody">
+        @if (draftMessage) {
+          <div class="draftAlert" [class.error]="draftMessageType === 'error'" [class.success]="draftMessageType === 'success'" [class.warning]="draftMessageType === 'warning'">
+            {{ draftMessage }}
+          </div>
+        }
+
+        @if (attachmentsReloadNotice) {
+          <div class="draftAlert warning">
+            {{ attachmentsReloadNotice }}
+          </div>
+        }
+
         @if (step === 0) {
           <step-anagrafica
             [form]="form"
             [control]="control.bind(this)"
             [hasError]="hasError.bind(this)"
+            [reportType]="reportType"
+            [currentDraftStatus]="currentDraftStatus"
+            [draftSaving]="draftSaving"
+            (openPsgAnamnesis)="openPsgAnamnesisModal()"
           >
           </step-anagrafica>
         }
@@ -73,6 +101,15 @@
         <div class="left-buttons">
           <button
             type="button"
+            class="btn ghost"
+            (click)="saveDraft()"
+            [disabled]="draftSaving"
+          >
+            {{ draftSaving ? 'Salvataggio...' : 'Salva bozza' }}
+          </button>
+
+          <button
+            type="button"
             class="btn danger ghost"
             (click)="openResetModal()"
           >
@@ -101,5 +138,147 @@
   @if (showResetModal) {
     <reset-modal (cancel)="closeResetModal()" (confirm)="confirmReset()">
     </reset-modal>
+  }
+
+  @if (showPsgAnamnesisModal) {
+    <div class="modalBackdrop">
+      <div class="modalSheet modalSheetWide">
+        <div class="modalHead">
+          <div>
+            <div class="modalEyebrow">PSG</div>
+            <h3>Anamnesi del sonno e Scala Epworth</h3>
+            <p>Compila la scheda anamnestica telefonica del paziente e salva la bozza per la ripresa successiva.</p>
+          </div>
+          <button type="button" class="iconCloseBtn" (click)="closePsgAnamnesisModal()">Chiudi</button>
+        </div>
+
+        <div class="modalBody">
+          <psg-anamnesi-form
+            [control]="control.bind(this)"
+            [hasError]="hasError.bind(this)"
+          ></psg-anamnesi-form>
+        </div>
+
+        <div class="modalFooter">
+          <button type="button" class="btn ghost" (click)="closePsgAnamnesisModal()">
+            Annulla
+          </button>
+          <button type="button" class="btn ghost" [disabled]="draftSaving" (click)="savePsgAnamnesis(false)">
+            {{ draftSaving ? 'Salvataggio...' : 'Salva anamnesi' }}
+          </button>
+          <button type="button" class="btn primary" [disabled]="draftSaving" (click)="savePsgAnamnesis(true)">
+            {{ draftSaving ? 'Salvataggio...' : 'Salva e chiudi' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showDraftsModal) {
+    <div class="modalBackdrop">
+      <div class="modalSheet modalSheetWide">
+        <div class="modalHead">
+          <div>
+            <div class="modalEyebrow">Bozze</div>
+            <h3>Riprendi referto</h3>
+            <p>Filtra e riprendi una bozza salvata da qualunque postazione.</p>
+          </div>
+          <button type="button" class="iconCloseBtn" (click)="closeResumeDraftModal()">Chiudi</button>
+        </div>
+
+        <div class="modalBody">
+          <div class="draftFiltersGrid">
+            <div class="field">
+              <label>Ricerca paziente</label>
+              <input
+                type="text"
+                [(ngModel)]="draftFilters.q"
+                placeholder="Nome paziente o codice fiscale"
+              />
+            </div>
+
+            <div class="field">
+              <label>Tipo referto</label>
+              <select [(ngModel)]="draftFilters.tipo_referto">
+                <option value="">Tutti</option>
+                @for (item of draftTypeOptions; track item.value) {
+                  <option [value]="item.value">{{ item.label }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Stato</label>
+              <select [(ngModel)]="draftFilters.stato">
+                <option value="">Tutti</option>
+                @for (item of draftStatusOptions; track item.value) {
+                  <option [value]="item.value">{{ item.label }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="draftFiltersActions">
+              <button type="button" class="btn ghost" (click)="applyDraftFilters(true)">
+                Filtra
+              </button>
+            </div>
+          </div>
+
+          @if (draftsError) {
+            <div class="draftAlert error">{{ draftsError }}</div>
+          }
+
+          @if (draftsLoading) {
+            <div class="emptyStateCard">Sto caricando l'elenco delle bozze salvate...</div>
+          } @else if (!drafts.length) {
+            <div class="emptyStateCard">Nessuna bozza trovata con i filtri attuali.</div>
+          } @else {
+            <div class="draftTableWrap">
+              <div class="draftTable draftTableHead">
+                <div>Paziente</div>
+                <div>Tipo</div>
+                <div>Stato</div>
+                <div>Data nascita</div>
+                <div>Ultima modifica</div>
+                <div>Azioni</div>
+              </div>
+
+              @for (draft of drafts; track draft.id) {
+                <div class="draftTable draftTableRow">
+                  <div>
+                    <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
+                    @if (draft.codice_fiscale) {
+                      <small>{{ draft.codice_fiscale }}</small>
+                    }
+                  </div>
+                  <div>{{ draft.tipo_referto }}</div>
+                  <div><span class="draftRowStatus">{{ draft.stato }}</span></div>
+                  <div>{{ draft.data_nascita || '—' }}</div>
+                  <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+                  <div class="draftRowActions">
+                    <button
+                      type="button"
+                      class="btn tiny ghost"
+                      [disabled]="draftLoadingId === draft.id"
+                      (click)="loadDraft(draft.id)"
+                    >
+                      {{ draftLoadingId === draft.id ? 'Apro...' : 'Riprendi' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn tiny danger ghost"
+                      [disabled]="deletingDraftId === draft.id"
+                      (click)="deleteDraftRecord(draft.id)"
+                    >
+                      {{ deletingDraftId === draft.id ? 'Elimino...' : 'Elimina' }}
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
   }
 </div>

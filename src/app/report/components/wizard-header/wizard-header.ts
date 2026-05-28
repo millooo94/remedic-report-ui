@@ -11,6 +11,8 @@ export class WizardHeader {
   @Input({ required: true }) steps!: readonly { key: string; title: string }[];
   @Input({ required: true }) step!: number;
   @Input({ required: true }) pct!: number;
+  @Input() showResumeButton = false;
 
   @Output() goTo = new EventEmitter<number>();
+  @Output() resumeDraft = new EventEmitter<void>();
 }

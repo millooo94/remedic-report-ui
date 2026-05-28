@@ -58,3 +58,92 @@
   font-size: 12px;
   color: #dc2626;
 }
+
+.psgAnamnesiCard {
+  margin-top: 24px;
+  border: 1px solid #dbe7ee;
+  border-radius: 18px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #f8fcfe 0%, #eef8fc 100%);
+}
+
+.psgAnamnesiCardContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.psgAnamnesiCardEyebrow {
+  display: inline-flex;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(28, 158, 189, 0.12);
+  color: #0f5f74;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.psgAnamnesiCard h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.psgAnamnesiCard p {
+  margin: 0;
+  max-width: 560px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.psgAnamnesiCardMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #d8e5ec;
+  color: #0f5f74;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.actionBtn {
+  border: 1px solid #1c9ebd;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #1c9ebd;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.actionBtn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+@media (max-width: 840px) {
+  .psgAnamnesiCardContent {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .psgAnamnesiCardMeta {
+    align-items: flex-start;
+  }
+}

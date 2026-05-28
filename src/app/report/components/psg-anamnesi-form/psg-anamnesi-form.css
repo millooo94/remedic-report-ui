@@ -1,0 +1,272 @@
+.psgAnamnesiStack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panelCard {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 16px;
+  background: #fff;
+}
+
+.panelTitleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.panelTitleRow h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  line-height: 1.2;
+  color: #111827;
+}
+
+.panelTitleRow p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.psgTableWrap {
+  border: 1px solid #dbe7ee;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.psgTableHeader,
+.psgTableRow {
+  display: grid;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+}
+
+.psgTableHeader {
+  background: #f3f9fc;
+  font-size: 12px;
+  font-weight: 700;
+  color: #3b5561;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.psgTableRow {
+  border-top: 1px solid #edf3f7;
+}
+
+.sleepTableHeader,
+.sleepTableRow {
+  grid-template-columns: minmax(0, 44%) max-content minmax(0, 28%);
+}
+
+.essTableHeader,
+.essTableRow {
+  grid-template-columns: minmax(280px, 2fr) repeat(4, minmax(48px, 60px));
+}
+
+.factorLabel {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.choiceGroup {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.choiceBtn {
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  min-width: 52px;
+  cursor: pointer;
+  transition:
+    border 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.choiceBtn:hover {
+  border-color: #1c9ebd;
+  background: #f0f9fc;
+}
+
+.choiceBtn.active {
+  background: #1c9ebd;
+  border-color: #1c9ebd;
+  color: #fff;
+}
+
+.choiceBtn.error {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.1);
+}
+
+.noteInput,
+.field textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 13px;
+}
+
+.field textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.noteInput:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: #1c9ebd;
+  box-shadow: 0 0 0 2px rgba(28, 158, 189, 0.15);
+}
+
+.dualPanelGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.selectionPanel {
+  display: flex;
+  flex-direction: column;
+}
+
+.selectionPanelBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+
+.optionChecklist {
+  display: grid;
+  gap: 10px;
+}
+
+.optionChecklistAligned {
+  min-height: 204px;
+}
+
+.checkboxCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.checkboxCard input {
+  margin: 0;
+}
+
+.noteFieldAligned {
+  margin-top: auto;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.essHeaderRow {
+  align-items: center;
+}
+
+.essSummaryCard {
+  min-width: 150px;
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #f5fbfd 0%, #eef8fc 100%);
+  border: 1px solid #dbeaf0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: right;
+}
+
+.essSummaryCard strong {
+  font-size: 22px;
+  line-height: 1;
+  color: #0f5f74;
+}
+
+.essSummaryCard small {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+.scoreBtn {
+  width: 48px;
+  min-height: 40px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+}
+
+.scoreBtn.active {
+  background: #1c9ebd;
+  color: #fff;
+  border-color: #1c9ebd;
+}
+
+.scoreBtn.error {
+  border-color: #dc2626;
+}
+
+.rowError {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: #dc2626;
+}
+
+.err {
+  font-size: 12px;
+  color: #dc2626;
+  margin-top: 10px;
+}
+
+@media (max-width: 960px) {
+  .dualPanelGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sleepTableHeader,
+  .sleepTableRow {
+    grid-template-columns: 1fr;
+  }
+
+  .essTableHeader,
+  .essTableRow {
+    grid-template-columns: 1fr repeat(4, minmax(48px, 60px));
+  }
+}
