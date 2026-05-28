@@ -13,6 +13,21 @@ export class DoctorAutocomplete {
   @Input({ required: true }) doctorSearch!: FormControl;
   @Input({ required: true }) doctorResults!: DoctorInfo[];
   @Input({ required: true }) selectedDoctorInvalid!: boolean;
+  @Input() label = 'Cerca medico *';
+  @Input() placeholder = 'Digita nome, cognome o specialita';
+  @Input() invalidMessage = 'Seleziona un professionista dalla lista';
 
   @Output() selectDoctor = new EventEmitter<DoctorInfo>();
+
+  optionTitle(item: DoctorInfo): string {
+    if (item.tipo === 'tecnico') {
+      return item.displayName || `${item.nome} ${item.cognome}`.trim();
+    }
+
+    return `${item.cognome} ${item.nome}`.trim();
+  }
+
+  optionSubtitle(item: DoctorInfo): string {
+    return item.specialita || item.ruolo || '-';
+  }
 }

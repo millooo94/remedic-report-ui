@@ -11,10 +11,7 @@
     <section class="card">
       <div class="cardHead">
         <h2>{{ steps[step].title }}</h2>
-        <p class="hint">
-          Compila i campi essenziali. Il referto mantiene solo le sezioni
-          attivate.
-        </p>
+        <p class="hint">{{ stepHint() }}</p>
       </div>
 
       <div class="cardBody">
@@ -32,10 +29,15 @@
             [form]="form"
             [doctorSearch]="doctorSearch"
             [doctorResults]="doctorResults"
+            [technicalSearch]="technicalSearch"
+            [technicalResults]="technicalResults"
             [control]="control.bind(this)"
             [hasError]="hasError.bind(this)"
+            [reportType]="reportType"
             (selectDoctorEvent)="selectDoctor($event)"
             (clearDoctorEvent)="clearDoctor()"
+            (selectTechnicianEvent)="selectTechnician($event)"
+            (clearTechnicianEvent)="clearTechnician()"
           >
           </step-visita>
         }
@@ -48,6 +50,9 @@
             [sectionLabel]="sectionLabel.bind(this)"
             [sectionDescription]="sectionDescription.bind(this)"
             [modeControl]="control('modalitaReferto')"
+            [control]="control.bind(this)"
+            [hasError]="hasError.bind(this)"
+            [reportType]="reportType"
           >
           </step-sezioni>
         }
@@ -58,6 +63,7 @@
             [control]="control.bind(this)"
             [hasError]="hasError.bind(this)"
             [mode]="control('modalitaReferto').value"
+            [reportType]="reportType"
           >
           </step-contenuti>
         }

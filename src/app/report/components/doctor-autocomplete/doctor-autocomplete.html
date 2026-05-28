@@ -1,14 +1,14 @@
 <div class="field">
-  <label>Cerca medico *</label>
+  <label>{{ label }}</label>
   <input
     type="text"
-    placeholder="Digita nome, cognome o specialità"
+    [placeholder]="placeholder"
     [formControl]="doctorSearch"
     autocomplete="off"
   />
 
   @if (selectedDoctorInvalid) {
-    <div class="err">Seleziona un medico dalla lista</div>
+    <div class="err">{{ invalidMessage }}</div>
   }
 
   @if (doctorResults.length) {
@@ -16,10 +16,10 @@
       @for (m of doctorResults; track m.id) {
         <li (click)="selectDoctor.emit(m)">
           <div class="line1">
-            <strong>{{ m.cognome }} {{ m.nome }}</strong>
+            <strong>{{ optionTitle(m) }}</strong>
           </div>
           <div class="line2">
-            <small>{{ m.specialita || "—" }}</small>
+            <small>{{ optionSubtitle(m) }}</small>
           </div>
         </li>
       }

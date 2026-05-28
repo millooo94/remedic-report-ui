@@ -5,7 +5,9 @@ import {
   Component,
   ElementRef,
   Input,
+  OnChanges,
   OnDestroy,
+  SimpleChanges,
   ViewChild,
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
@@ -22,8 +24,10 @@ import Underline from '@tiptap/extension-underline';
   styleUrl: './rich-text-field.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class RichTextField implements AfterViewInit, OnDestroy {
+export class RichTextField implements AfterViewInit, OnChanges, OnDestroy {
   @Input({ required: true }) control!: FormControl<string | null>;
+  @Input() readonly = false;
+  @Input() stretch = false;
 
   @ViewChild('editorHost', { static: true })
   editorHost!: ElementRef<HTMLElement>;
@@ -57,10 +61,11 @@ export class RichTextField implements AfterViewInit, OnDestroy {
       ],
 
       content: initialContent,
+      editable: !this.readonly,
 
       editorProps: {
         attributes: {
-          class: 'tiptap-editor',
+          class: `tiptap-editor${this.readonly ? ' is-readonly' : ''}`,
           spellcheck: 'true',
           autocapitalize: 'sentences',
           autocomplete: 'on',
@@ -128,7 +133,13 @@ export class RichTextField implements AfterViewInit, OnDestroy {
   }
 
   focusEditor(): void {
+    if (this.readonly) return;
     this.editor?.chain().focus().run();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!changes['readonly'] || !this.editor) return;
+    this.editor.setEditable(!this.readonly);
   }
 
   private normalizeCurrentEditorContent(): void {

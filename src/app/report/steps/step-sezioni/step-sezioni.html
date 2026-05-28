@@ -1,80 +1,272 @@
 <div class="stack">
-  <section class="panel">
-    <div class="panelHead">
-      <h3>Come vuoi compilare il referto?</h3>
-      <p>
-        Scegli se usare una struttura guidata per sezioni oppure un unico campo
-        a testo libero.
-      </p>
-    </div>
-
-    <div class="modeGrid">
-      <label class="modeCard">
-        <input type="radio" [formControl]="modeControl" value="sezioni" />
-
-        <span>
-          <strong>Referto guidato per sezioni</strong>
-          <small> Ideale per referti ordinati e standardizzati. </small>
-        </span>
-      </label>
-
-      <label class="modeCard">
-        <input type="radio" [formControl]="modeControl" value="libero" />
-
-        <span>
-          <strong>Referto a testo libero</strong>
-          <small>
-            Ideale per scrivere tutto il referto in un unico blocco.
-          </small>
-        </span>
-      </label>
-    </div>
-  </section>
-
-  @if (modeControl.value === "sezioni") {
-    <section class="panel secondary">
+  @if (reportType === 'emg') {
+    <section class="panel">
       <div class="panelHead">
-        <h3>Quali sezioni vuoi includere?</h3>
-        <p>Attiva solo le sezioni che devono comparire nel referto finale.</p>
+        <h3>Dati clinici e quesito</h3>
+        <p>
+          Raccogli le informazioni cliniche minime da riportare nel referto
+          elettrofisiologico.
+        </p>
       </div>
 
-      <div class="sectionsColumns">
-        <div class="sectionColumn">
-          @for (k of mandatorySectionKeys(); track k) {
-            <label class="toggle">
-              <input type="checkbox" [formControl]="section(k)" />
+      <div class="clinicalGrid">
+        <div class="field">
+          <label>Medico inviante</label>
+          <input type="text" [formControl]="control('emg.medicoInviante')" />
+        </div>
 
-              <span>
-                <strong>{{ sectionLabel(k) }}</strong>
-                <small>{{ sectionDescription(k) }}</small>
-              </span>
-            </label>
+        <div class="field">
+          <label>Distretto esaminato *</label>
+          <input
+            type="text"
+            placeholder="Es. arto superiore destro"
+            [formControl]="control('emg.distrettoEsaminato')"
+          />
+          @if (hasError('emg.distrettoEsaminato', 'required')) {
+            <div class="err">Campo obbligatorio</div>
           }
         </div>
 
-        <div class="sectionColumn">
-          @for (k of optionalSectionKeys(); track k) {
-            <label class="toggle">
-              <input type="checkbox" [formControl]="section(k)" />
-
-              <span>
-                <strong>{{ sectionLabel(k) }}</strong>
-                <small>{{ sectionDescription(k) }}</small>
-              </span>
-            </label>
+        <div class="field full">
+          <label>Quesito diagnostico *</label>
+          <textarea
+            rows="4"
+            [formControl]="control('emg.quesitoDiagnostico')"
+          ></textarea>
+          @if (hasError('emg.quesitoDiagnostico', 'required')) {
+            <div class="err">Campo obbligatorio</div>
           }
+        </div>
+
+        <div class="field full">
+          <label>Sintomatologia riferita</label>
+          <textarea
+            rows="4"
+            [formControl]="control('emg.sintomatologiaRiferita')"
+          ></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel secondary">
+      <div class="panelHead">
+        <h3>Checklist anamnestica neuropatie</h3>
+        <p>
+          Ogni voce richiede una risposta obbligatoria. Seleziona sempre Si o No
+          per completare la checklist.
+        </p>
+      </div>
+
+      <div class="checklistTable">
+        <div class="checklistHeader">
+          <div>Fattore</div>
+          <div>Esito</div>
+          <div>Note</div>
+          <div></div>
+        </div>
+
+        @for (item of checklistItems; track item.key) {
+          <div class="checklistRow">
+            <div class="factorLabel">{{ item.label }}</div>
+
+            <div class="choiceGroup">
+              <button
+                type="button"
+                class="choiceBtn"
+                [class.active]="isChecklistOutcomeSelected(item.key, 'si')"
+                [class.error]="checklistOutcomeHasRequiredError(item.key)"
+                (click)="setEmgChecklistEsito(item.key, 'si')"
+              >
+                Si
+              </button>
+
+              <button
+                type="button"
+                class="choiceBtn"
+                [class.active]="isChecklistOutcomeSelected(item.key, 'no')"
+                [class.error]="checklistOutcomeHasRequiredError(item.key)"
+                (click)="setEmgChecklistEsito(item.key, 'no')"
+              >
+                No
+              </button>
+            </div>
+
+            <input
+              type="text"
+              class="noteInput"
+              placeholder="Note opzionali"
+              [formControl]="checklistNoteControl(item.key)"
+            />
+
+            <button
+              type="button"
+              class="resetRowBtn"
+              (click)="clearChecklistOutcome(item.key)"
+            >
+              Evidenzia
+            </button>
+
+            @if (checklistOutcomeHasRequiredError(item.key)) {
+              <div class="rowError">Seleziona Si o No per questa voce.</div>
+            }
+          </div>
+        }
+      </div>
+
+      @if (checklistHasMissingAnswers) {
+        <div class="err checklistSummaryError">
+          Completa la checklist anamnestica neuropatie: ogni voce richiede una
+          risposta Si o No.
+        </div>
+      }
+    </section>
+  } @else if (isPsg) {
+    <section class="panel">
+      <div class="panelHead">
+        <h3>Quesito e refertazione</h3>
+        <p>
+          Compila il quesito clinico e il testo della refertazione medica PSG che
+          comparira nelle prime pagine Remedic.
+        </p>
+      </div>
+
+      <div class="psgRefertoGrid">
+        <div class="field full">
+          <label>Quesito clinico *</label>
+          <textarea
+            rows="5"
+            placeholder="Inserisci il quesito clinico della registrazione PSG"
+            [formControl]="control('psg.quesitoClinico')"
+          ></textarea>
+          @if (hasError('psg.quesitoClinico', 'required')) {
+            <div class="err">Campo obbligatorio</div>
+          }
+        </div>
+
+        <div class="field full">
+          <label>Interpretazione del medico refertatore *</label>
+          <textarea
+            rows="7"
+            placeholder="Riporta l'interpretazione clinica del monitoraggio"
+            [formControl]="control('psg.interpretazioneMedico')"
+          ></textarea>
+          @if (hasError('psg.interpretazioneMedico', 'required')) {
+            <div class="err">Campo obbligatorio</div>
+          }
+        </div>
+
+        <div class="field full">
+          <label>Conclusione diagnostica *</label>
+          <textarea
+            rows="5"
+            placeholder="Inserisci la conclusione diagnostica"
+            [formControl]="control('psg.conclusioneDiagnostica')"
+          ></textarea>
+          @if (hasError('psg.conclusioneDiagnostica', 'required')) {
+            <div class="err">Campo obbligatorio</div>
+          }
+        </div>
+
+        <div class="field full">
+          <label>Indicazioni cliniche *</label>
+          <textarea
+            rows="5"
+            placeholder="Inserisci le indicazioni cliniche"
+            [formControl]="control('psg.indicazioniCliniche')"
+          ></textarea>
+          @if (hasError('psg.indicazioniCliniche', 'required')) {
+            <div class="err">Campo obbligatorio</div>
+          }
+        </div>
+
+        <div class="field full">
+          <label>Nota documentale</label>
+          <textarea
+            rows="4"
+            placeholder="Aggiungi eventuali note documentali"
+            [formControl]="control('psg.notaDocumentale')"
+          ></textarea>
         </div>
       </div>
     </section>
   } @else {
-    <section class="panel secondary">
-      <div class="freeModeInfo">
-        <strong>Hai scelto il testo libero</strong>
+    <section class="panel">
+      <div class="panelHead">
+        <h3>Come vuoi compilare il referto?</h3>
         <p>
-          Nel prossimo passaggio potrai scrivere il referto completo in un unico
-          campo, senza suddivisione in sezioni.
+          Scegli se usare una struttura guidata per sezioni oppure un unico campo
+          a testo libero.
         </p>
       </div>
+
+      <div class="modeGrid">
+        <label class="modeCard">
+          <input type="radio" [formControl]="modeControl" value="sezioni" />
+
+          <span>
+            <strong>Referto guidato per sezioni</strong>
+            <small> Ideale per referti ordinati e standardizzati. </small>
+          </span>
+        </label>
+
+        <label class="modeCard">
+          <input type="radio" [formControl]="modeControl" value="libero" />
+
+          <span>
+            <strong>Referto a testo libero</strong>
+            <small>
+              Ideale per scrivere tutto il referto in un unico blocco.
+            </small>
+          </span>
+        </label>
+      </div>
     </section>
+
+    @if (modeControl.value === 'sezioni') {
+      <section class="panel secondary">
+        <div class="panelHead">
+          <h3>Quali sezioni vuoi includere?</h3>
+          <p>Attiva solo le sezioni che devono comparire nel referto finale.</p>
+        </div>
+
+        <div class="sectionsColumns">
+          <div class="sectionColumn">
+            @for (k of mandatorySectionKeys(); track k) {
+              <label class="toggle">
+                <input type="checkbox" [formControl]="section(k)" />
+
+                <span>
+                  <strong>{{ sectionLabel(k) }}</strong>
+                  <small>{{ sectionDescription(k) }}</small>
+                </span>
+              </label>
+            }
+          </div>
+
+          <div class="sectionColumn">
+            @for (k of optionalSectionKeys(); track k) {
+              <label class="toggle">
+                <input type="checkbox" [formControl]="section(k)" />
+
+                <span>
+                  <strong>{{ sectionLabel(k) }}</strong>
+                  <small>{{ sectionDescription(k) }}</small>
+                </span>
+              </label>
+            }
+          </div>
+        </div>
+      </section>
+    } @else {
+      <section class="panel secondary">
+        <div class="freeModeInfo">
+          <strong>Hai scelto il testo libero</strong>
+          <p>
+            Nel prossimo passaggio potrai scrivere il referto completo in un unico
+            campo, senza suddivisione in sezioni.
+          </p>
+        </div>
+      </section>
+    }
   }
 </div>

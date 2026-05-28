@@ -6,4 +6,11 @@ export interface ReportPdfRequest {
   data_nascita: string;
   titolo_visita: string;
   data_visita: string;
+  attachments?: {
+    pdfs: Array<{
+      fileName: string;
+      mimeType: 'application/pdf';
+      base64: string;
+    }>;
+  };
 }

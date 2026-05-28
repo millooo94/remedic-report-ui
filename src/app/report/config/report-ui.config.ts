@@ -14,6 +14,20 @@ export const REPORT_STEPS = [
   { key: 'contenuti', title: 'Contenuti' },
 ] as const;
 
+export const EMG_REPORT_STEPS = [
+  { key: 'anagrafica', title: 'Anagrafica' },
+  { key: 'visita', title: 'Dati esame' },
+  { key: 'sezioni', title: 'Dati clinici' },
+  { key: 'contenuti', title: 'Contenuti' },
+] as const;
+
+export const PSG_REPORT_STEPS = [
+  { key: 'anagrafica', title: 'Anagrafica' },
+  { key: 'visita', title: 'Dati esame' },
+  { key: 'sezioni', title: 'Quesito e refertazione' },
+  { key: 'contenuti', title: 'Anamnesi, ESS e report' },
+] as const;
+
 export const REPORT_SECTION_KEYS: readonly SectionKey[] = [
   'anamnesiRemota',
   'anamnesiProssima',

@@ -8,7 +8,7 @@
 - Output directory: `dist/remedic-report/browser`
 - Install command: `npm ci`
 - Dominio frontend previsto: `report.remedic.it`
-- Backend da chiamare: `https://report-api.remedic.it`
+- Backend da chiamare: `https://report.remedic.it`
 
 Se in futuro il repository non includesse piu `package-lock.json`, usa `npm install`.
 

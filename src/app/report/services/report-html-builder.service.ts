@@ -1,39 +1,123 @@
 import { Injectable } from '@angular/core';
+import { EMG_CHECKLIST_ITEMS, EMG_DEFAULTS } from '../config/emg-checklist.config';
+import {
+  PSG_ESS_ITEMS,
+  PSG_SLEEP_HISTORY_ITEMS,
+} from '../config/psg-report.config';
+import { EmgUploadedAsset } from '../models/emg-uploaded-asset';
+
+type ReportBuildInput = {
+  tipoReferto?: 'standard' | 'emg' | 'psg';
+  titoloVisita: string;
+  dataVisitaDisplay: string;
+  prestazione?: string;
+  modalitaReferto?: 'sezioni' | 'libero';
+  paziente: {
+    nome: string;
+    cognome: string;
+    sesso?: string | null;
+    dataNascitaDisplay: string;
+    codiceFiscale?: string;
+    telefono?: string;
+    email?: string;
+    indirizzo?: string;
+  };
+  medico: {
+    nome: string;
+    cognome: string;
+    specialita?: string;
+  };
+  emg?: {
+    tecnicoEsecutore?: string;
+    tecnicoRuolo?: string;
+    medicoInviante?: string;
+    quesitoDiagnostico?: string;
+    sintomatologiaRiferita?: string;
+    distrettoEsaminato?: string;
+    esameEseguito?: string;
+    repertiElettrofisiologici?: string;
+    conclusioni?: string;
+    consensoInformatoTesto?: string;
+    dataOraAcquisizioneTecnica?: string;
+    materialeProdotto?: string;
+    noteTecnicheEsecutore?: string;
+    attestazioneTecnico?: string;
+    tracciati?: EmgUploadedAsset[];
+    firmaTecnico?: EmgUploadedAsset | null;
+    checklistNeuropatie?: Record<
+      string,
+      {
+        esito?: 'si' | 'no' | null;
+        note?: string;
+      }
+    >;
+  };
+  psg?: {
+    dataRegistrazioneInizio?: string;
+    dataRegistrazioneFine?: string;
+    sistemaRegistrazione?: string;
+    staturaCm?: string;
+    pesoKg?: string;
+    bmi?: string;
+    consensoInformato?: string;
+    dataRefertazione?: string;
+    anamnesiRaccolta?: string;
+    reportTecnico?: string;
+    modalitaRaccolta?: string;
+    operatore?: string;
+    quesitoClinico?: string;
+    interpretazioneMedico?: string;
+    conclusioneDiagnostica?: string;
+    indicazioniCliniche?: string;
+    notaDocumentale?: string;
+    reportStrumentalePdf?: EmgUploadedAsset | null;
+    anamnesiSonno?: {
+      noteAnamnesticheUlteriori?: string;
+      farmaciRilevanti?: Record<string, boolean | string>;
+      comorbiditaRilevanti?: Record<string, boolean | string>;
+    } & Record<
+      string,
+      | {
+          esito?: 'no' | 'si' | 'non_noto' | null;
+          note?: string;
+        }
+      | Record<string, boolean | string>
+      | string
+      | undefined
+    >;
+    ess?: Record<string, number | null | undefined>;
+    essTotale?: number;
+    interpretazioneEss?: string;
+  };
+  contenuti: {
+    testoLibero?: string;
+    anamnesiPatologicaRemota?: string;
+    anamnesiPatologicaProssima?: string;
+    portaInVisione?: string;
+    esamiEseguitiInLoco?: string;
+    esameObiettivo?: string;
+    diagnosi?: string;
+    prescrizione?: string;
+  };
+};
 
 @Injectable({
   providedIn: 'root',
 })
 export class ReportHtmlBuilderService {
-  build(report: {
-    titoloVisita: string;
-    dataVisitaDisplay: string;
-    modalitaReferto?: 'sezioni' | 'libero';
-    paziente: {
-      nome: string;
-      cognome: string;
-      sesso?: string | null;
-      dataNascitaDisplay: string;
-      codiceFiscale?: string;
-      telefono?: string;
-      email?: string;
-      indirizzo?: string;
-    };
-    medico: {
-      nome: string;
-      cognome: string;
-      specialita?: string;
-    };
-    contenuti: {
-      testoLibero?: string;
-      anamnesiPatologicaRemota?: string;
-      anamnesiPatologicaProssima?: string;
-      portaInVisione?: string;
-      esamiEseguitiInLoco?: string;
-      esameObiettivo?: string;
-      diagnosi?: string;
-      prescrizione?: string;
-    };
-  }): string {
+  build(report: ReportBuildInput): string {
+    if (report.tipoReferto === 'psg') {
+      return this.buildPsgHtml(report);
+    }
+
+    if (report.tipoReferto === 'emg') {
+      return this.buildEmgHtml(report);
+    }
+
+    return this.buildStandardHtml(report);
+  }
+
+  private buildStandardHtml(report: ReportBuildInput): string {
     const fullPatientName =
       `${report.paziente.nome} ${report.paziente.cognome}`.trim() ||
       'Non disponibile';
@@ -51,6 +135,870 @@ export class ReportHtmlBuilderService {
   <meta charset="UTF-8" />
   <title>${this.escape(report.titoloVisita || 'Referto')}</title>
   <style>
+${this.sharedStyles()}
+  </style>
+</head>
+<body>
+  <div class="page-frame"></div>
+
+  <div class="sheet">
+    <div class="container">
+      ${this.renderPatientCard(report)}
+      ${this.renderVisitRow({
+        title: report.titoloVisita,
+        dateLabel: 'Data',
+        dateValue: report.dataVisitaDisplay,
+        doctorLabel: 'Medico',
+        doctorName: fullDoctorName,
+        specialty: report.medico.specialita,
+      })}
+
+      ${
+        isFreeMode
+          ? this.renderFreeText(report.contenuti.testoLibero)
+          : this.renderGuidedPages(report.contenuti)
+      }
+    </div>
+  </div>
+</body>
+</html>
+    `;
+  }
+
+  private buildEmgHtml(report: ReportBuildInput): string {
+    const fullDoctorName =
+      `${report.medico.nome} ${report.medico.cognome}`.trim() ||
+      'Non disponibile';
+
+    const emg = report.emg ?? {};
+    const specialty = report.medico.specialita || 'Neurologia';
+    const prestazione = report.prestazione || '-';
+    const tracciati = emg.tracciati ?? [];
+
+    return `
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>${this.escape(
+    report.titoloVisita || 'Referto di Elettroneurografia / Elettromiografia',
+  )}</title>
+  <style>
+${this.sharedStyles()}
+
+.emg-meta-card {
+  width: 100%;
+  border: 0.35mm solid #cfd6de;
+  border-radius: 1.5mm;
+  padding: 3.2mm 3.6mm;
+  background: #ffffff;
+  margin-bottom: 3.4mm;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.emg-kv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2.8mm 6mm;
+}
+
+.emg-kv {
+  min-width: 0;
+}
+
+.emg-kv-label {
+  display: block;
+  font-size: 8.4pt;
+  color: #5a6872;
+  margin-bottom: 0.7mm;
+}
+
+.emg-kv-value {
+  display: block;
+  font-size: 10pt;
+  font-weight: 700;
+  color: #101820;
+  word-break: break-word;
+}
+
+.emg-section {
+  width: 100%;
+  border: 0.35mm solid #cfd6de;
+  border-radius: 1.5mm;
+  padding: 2.8mm 3.2mm;
+  margin-bottom: 3mm;
+  background: #ffffff;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.emg-section:last-child {
+  margin-bottom: 0;
+}
+
+.emg-section h3 {
+  font-size: 10.5pt;
+  font-weight: 700;
+  margin: 0 0 1.8mm 0;
+  color: #1c9ebd;
+  border-bottom: 0.25mm solid #d9dde3;
+  padding-bottom: 0.9mm;
+  line-height: 1.2;
+}
+
+.emg-section .content {
+  color: #1f2933;
+  word-break: break-word;
+}
+
+.emg-section .content p,
+.emg-section .content div,
+.emg-section .content li {
+  font-size: 9.6pt;
+  line-height: 1.35;
+}
+
+.emg-section .content p {
+  margin: 0 0 1.4mm 0;
+}
+
+.emg-section .content p:last-child,
+.emg-section .content ul:last-child,
+.emg-section .content ol:last-child {
+  margin-bottom: 0;
+}
+
+.emg-inline-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2mm 6mm;
+}
+
+.emg-inline-item {
+  font-size: 9.4pt;
+  line-height: 1.4;
+}
+
+.emg-inline-item strong {
+  color: #101820;
+}
+
+.signature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5mm;
+}
+
+.signature-card {
+  border: 0.3mm solid #d7dfe6;
+  border-radius: 1.3mm;
+  padding: 3mm;
+  min-height: 22mm;
+}
+
+.signature-label {
+  font-size: 8.5pt;
+  color: #5a6872;
+  margin-bottom: 8mm;
+}
+
+.signature-value {
+  border-top: 0.3mm solid #aeb9c3;
+  padding-top: 2mm;
+  font-size: 9.6pt;
+  font-weight: 700;
+  color: #111111;
+  word-break: break-word;
+}
+
+.signature-image {
+  display: block;
+  max-width: 100%;
+  max-height: 18mm;
+  object-fit: contain;
+}
+
+.attachment-page {
+  page-break-before: always;
+  break-before: page;
+  padding-top: 34mm;
+}
+
+.attachment-intro {
+  margin: 0 0 4mm 0;
+  font-size: 9.6pt;
+  color: #425466;
+  line-height: 1.5;
+}
+
+.attachment-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2mm 6mm;
+}
+
+.attachment-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.attachment-table th,
+.attachment-table td {
+  border: 0.3mm solid #cfd6de;
+  padding: 2.2mm 2.4mm;
+  vertical-align: top;
+  font-size: 8.9pt;
+  line-height: 1.35;
+}
+
+.attachment-table th {
+  background: #f3f9fc;
+  text-align: left;
+  font-weight: 700;
+  color: #29404d;
+}
+
+.attachment-table th.center,
+.attachment-table td.center {
+  text-align: center;
+}
+
+.attachment-table td.center {
+  font-weight: 700;
+}
+
+.mono-note {
+  white-space: pre-wrap;
+}
+
+.trace-gallery {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4mm;
+}
+
+.trace-figure {
+  border: 0.3mm solid #d8e0e8;
+  border-radius: 1.5mm;
+  padding: 2.4mm;
+  background: #fbfdff;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.trace-figure img {
+  display: block;
+  width: 100%;
+  max-height: 180mm;
+  object-fit: contain;
+  border-radius: 1mm;
+}
+
+.trace-caption {
+  margin-top: 2mm;
+  font-size: 8.8pt;
+  color: #4b5c6b;
+}
+
+.trace-pdf-list {
+  margin: 0;
+  padding-left: 5mm;
+}
+  </style>
+</head>
+<body>
+  <div class="page-frame"></div>
+
+  <div class="sheet">
+    <div class="container">
+      ${this.renderPatientCard(report)}
+      ${this.renderVisitRow({
+        title:
+          report.titoloVisita ||
+          'Referto di Elettroneurografia / Elettromiografia',
+        dateLabel: 'Data esame',
+        dateValue: report.dataVisitaDisplay,
+        doctorLabel: 'Medico refertatore',
+        doctorName: fullDoctorName,
+        specialty,
+      })}
+
+      <section class="emg-meta-card">
+        <div class="emg-kv-grid">
+          ${this.renderMetaItem('Prestazione', prestazione)}
+          ${this.renderMetaItem(
+            'Tecnico esecutore',
+            this.withFallback(emg.tecnicoEsecutore),
+          )}
+          ${this.renderMetaItem(
+            'Ruolo tecnico',
+            this.withFallback(emg.tecnicoRuolo),
+          )}
+          ${this.renderMetaItem('Specialita', specialty)}
+          ${this.renderMetaItem(
+            'Data e ora acquisizione tecnica',
+            this.withFallback(
+              this.formatDateTimeLocal(emg.dataOraAcquisizioneTecnica),
+            ),
+          )}
+        </div>
+      </section>
+
+      ${this.renderHtmlSection(
+        'Modalita di esecuzione e refertazione',
+        EMG_DEFAULTS.testoStandardEsecuzione,
+      )}
+
+      <section class="emg-section">
+        <h3>Dati clinici e quesito</h3>
+        <div class="content">
+          <div class="emg-inline-grid">
+            <div class="emg-inline-item"><strong>Medico inviante:</strong> ${this.escape(
+              this.withFallback(emg.medicoInviante),
+            )}</div>
+            <div class="emg-inline-item"><strong>Distretto esaminato:</strong> ${this.escape(
+              this.withFallback(emg.distrettoEsaminato),
+            )}</div>
+            <div class="emg-inline-item"><strong>Quesito diagnostico:</strong> ${this.escape(
+              this.withFallback(emg.quesitoDiagnostico),
+            )}</div>
+            <div class="emg-inline-item"><strong>Sintomatologia riferita:</strong> ${this.escape(
+              this.withFallback(emg.sintomatologiaRiferita),
+            )}</div>
+          </div>
+        </div>
+      </section>
+
+      ${this.renderHtmlSection('Esame eseguito', emg.esameEseguito)}
+      ${this.renderHtmlSection(
+        'Reperti elettrofisiologici',
+        emg.repertiElettrofisiologici,
+        'Da compilare a cura del medico refertatore.',
+      )}
+      ${this.renderHtmlSection(
+        'Conclusioni',
+        emg.conclusioni,
+        'Da compilare a cura del medico refertatore.',
+      )}
+      ${this.renderHtmlSection(
+        'Consenso informato',
+        emg.consensoInformatoTesto,
+      )}
+
+      <section class="emg-section">
+        <h3>Firme</h3>
+        <div class="signature-grid">
+          ${this.renderSignatureCard('Tecnico esecutore', emg.firmaTecnico)}
+          ${this.renderSignatureCard('Il Neurologo refertatore')}
+        </div>
+      </section>
+
+      <div class="attachment-page">
+        <section class="emg-section">
+          <h3>Allegato - Scheda di esecuzione tecnica e anamnesi mirata</h3>
+          <p class="attachment-intro">
+            Questa pagina documenta la parte compilata prima/durante
+            l'esecuzione tecnica dell'esame. Non contiene diagnosi autonoma del
+            tecnico.
+          </p>
+
+          <div class="attachment-summary">
+            <div class="emg-inline-item"><strong>Paziente:</strong> ${this.escape(
+              this.withFallback(
+                `${report.paziente.nome} ${report.paziente.cognome}`.trim(),
+              ),
+            )}</div>
+            <div class="emg-inline-item"><strong>Data di nascita:</strong> ${this.escape(
+              this.withFallback(report.paziente.dataNascitaDisplay),
+            )}</div>
+            <div class="emg-inline-item"><strong>Data e ora esame:</strong> ${this.escape(
+              this.withFallback(
+                this.formatDateTimeLocal(emg.dataOraAcquisizioneTecnica) ||
+                  report.dataVisitaDisplay,
+              ),
+            )}</div>
+            <div class="emg-inline-item"><strong>Tecnico esecutore:</strong> ${this.escape(
+              this.withFallback(emg.tecnicoEsecutore),
+            )}</div>
+            <div class="emg-inline-item"><strong>Ruolo tecnico:</strong> ${this.escape(
+              this.withFallback(emg.tecnicoRuolo),
+            )}</div>
+            <div class="emg-inline-item"><strong>Tipo di indagine:</strong> ${this.escape(
+              prestazione,
+            )}</div>
+            <div class="emg-inline-item"><strong>Distretto:</strong> ${this.escape(
+              this.withFallback(emg.distrettoEsaminato),
+            )}</div>
+          </div>
+        </section>
+
+        <section class="emg-section">
+          <h3>Documentazione tecnica</h3>
+          <div class="content">
+            <p><strong>Consenso informato:</strong> ${this.escape(
+              this.withFallback(this.stripHtmlToText(emg.consensoInformatoTesto)),
+            )}</p>
+            <p><strong>Materiale prodotto:</strong> ${this.escape(
+              this.withFallback(emg.materialeProdotto),
+            )}</p>
+          </div>
+        </section>
+
+        <section class="emg-section">
+          <h3>Checklist anamnestica neuropatie</h3>
+          ${this.buildEmgChecklistTable(emg.checklistNeuropatie)}
+        </section>
+
+        ${this.renderHtmlSection(
+          "Note tecniche dell'esecutore",
+          emg.noteTecnicheEsecutore,
+        )}
+        ${this.renderHtmlSection(
+          'Attestazione del tecnico esecutore',
+          emg.attestazioneTecnico,
+        )}
+        ${this.renderTracciatiSection(tracciati)}
+
+        <section class="emg-section">
+          <h3>Tecnico esecutore</h3>
+          <div class="signature-card">
+            <div class="signature-value">
+              ${this.renderSignatureImage(emg.firmaTecnico)}
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+  }
+
+  private buildPsgHtml(report: ReportBuildInput): string {
+    const psg = report.psg ?? {};
+    const fullDoctorName =
+      `${report.medico.nome} ${report.medico.cognome}`.trim() ||
+      'Non disponibile';
+    const fullPatientName =
+      `${report.paziente.nome} ${report.paziente.cognome}`.trim() ||
+      'Non disponibile';
+    const reportName = psg.reportStrumentalePdf?.name || 'Report strumentale PDF';
+
+    return `
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>${this.escape(
+    report.titoloVisita || 'Refertazione polisonnografica cardio-respiratoria (PSG)',
+  )}</title>
+  <style>
+${this.sharedStyles()}
+
+.psg-page-break {
+  page-break-before: always;
+  break-before: page;
+  padding-top: 34mm;
+}
+
+.psg-hero {
+  margin-bottom: 5mm;
+}
+
+.psg-title {
+  margin: 0 0 1.2mm 0;
+  font-size: 15pt;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #111111;
+}
+
+.psg-subtitle {
+  margin: 0;
+  font-size: 10.2pt;
+  line-height: 1.45;
+  color: #50606d;
+}
+
+.psg-section {
+  width: 100%;
+  border: 0.35mm solid #cfd6de;
+  border-radius: 1.5mm;
+  padding: 2.8mm 3.2mm;
+  margin-bottom: 3mm;
+  background: #ffffff;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.psg-section h3 {
+  font-size: 10.5pt;
+  font-weight: 700;
+  margin: 0 0 1.8mm 0;
+  color: #1c9ebd;
+  border-bottom: 0.25mm solid #d9dde3;
+  padding-bottom: 0.9mm;
+  line-height: 1.2;
+}
+
+.psg-section .content,
+.psg-section .content p,
+.psg-section .content li,
+.psg-section .content div {
+  font-size: 9.5pt;
+  line-height: 1.4;
+  color: #1f2933;
+}
+
+.psg-section .content p {
+  margin: 0 0 1.4mm 0;
+}
+
+.psg-section .content p:last-child {
+  margin-bottom: 0;
+}
+
+.psg-meta-card {
+  width: 100%;
+  border: 0.35mm solid #cfd6de;
+  border-radius: 1.5mm;
+  padding: 3.2mm 3.6mm;
+  background: #ffffff;
+  margin-bottom: 3.4mm;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.psg-kv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2.6mm 6mm;
+}
+
+.psg-kv-label {
+  display: block;
+  font-size: 8.4pt;
+  color: #5a6872;
+  margin-bottom: 0.7mm;
+}
+
+.psg-kv-value {
+  display: block;
+  font-size: 10pt;
+  font-weight: 700;
+  color: #101820;
+  word-break: break-word;
+}
+
+.psg-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.psg-data-table th,
+.psg-data-table td {
+  border: 0.3mm solid #cfd6de;
+  padding: 2.2mm 2.4mm;
+  vertical-align: top;
+  font-size: 8.9pt;
+  line-height: 1.35;
+}
+
+.psg-data-table th {
+  background: #f3f9fc;
+  text-align: left;
+  font-weight: 700;
+  color: #29404d;
+}
+
+.psg-data-table td.center,
+.psg-data-table th.center {
+  text-align: center;
+}
+
+.psg-box {
+  border: 0.3mm solid #d7dfe6;
+  border-radius: 1.4mm;
+  padding: 2.6mm 2.8mm;
+  background: #fbfdff;
+}
+
+.psg-list {
+  margin: 0;
+  padding-left: 5mm;
+}
+
+.psg-signature {
+  border: 0.3mm solid #d7dfe6;
+  border-radius: 1.4mm;
+  min-height: 24mm;
+  padding: 3mm;
+}
+
+.psg-signature-label {
+  font-size: 8.5pt;
+  color: #5a6872;
+  margin-bottom: 8mm;
+}
+
+.psg-signature-value {
+  border-top: 0.3mm solid #aeb9c3;
+  padding-top: 2mm;
+  font-size: 9.6pt;
+  font-weight: 700;
+  color: #111111;
+}
+
+.psg-inline-note {
+  margin: 0;
+  font-size: 9.4pt;
+  line-height: 1.5;
+  color: #425466;
+}
+  </style>
+</head>
+<body>
+  <div class="page-frame"></div>
+
+  <div class="sheet">
+    <div class="container">
+      ${this.renderPatientCard(report)}
+
+      <section class="psg-hero">
+        <h1 class="psg-title">REFERTAZIONE POLISONNOGRAFICA CARDIO-RESPIRATORIA (PSG)</h1>
+        <p class="psg-subtitle">Monitoraggio cardio-respiratorio notturno domiciliare</p>
+      </section>
+
+      <section class="psg-meta-card">
+        <div class="psg-kv-grid">
+          ${this.renderPsgMetaItem('Paziente', fullPatientName)}
+          ${this.renderPsgMetaItem(
+            'Data di nascita',
+            this.withFallback(report.paziente.dataNascitaDisplay),
+          )}
+          ${this.renderPsgMetaItem(
+            'Data registrazione',
+            this.formatDateRange(
+              psg.dataRegistrazioneInizio,
+              psg.dataRegistrazioneFine,
+            ),
+          )}
+          ${this.renderPsgMetaItem(
+            'Sistema',
+            this.withFallback(psg.sistemaRegistrazione),
+          )}
+          ${this.renderPsgMetaItem(
+            'Statura / Peso / BMI',
+            `${this.withFallback(psg.staturaCm)} cm / ${this.withFallback(
+              psg.pesoKg,
+            )} kg / ${this.withFallback(psg.bmi)}`,
+          )}
+          ${this.renderPsgMetaItem(
+            'Consenso informato',
+            this.withFallback(psg.consensoInformato),
+          )}
+          ${this.renderPsgMetaItem(
+            'Medico refertatore',
+            fullDoctorName,
+          )}
+          ${this.renderPsgMetaItem(
+            'Specialita',
+            this.withFallback(report.medico.specialita),
+          )}
+          ${this.renderPsgMetaItem(
+            'Data refertazione',
+            this.withFallback(this.formatDateOnly(psg.dataRefertazione)),
+          )}
+          ${this.renderPsgMetaItem(
+            'Anamnesi',
+            this.withFallback(psg.anamnesiRaccolta),
+          )}
+          ${this.renderPsgMetaItem(
+            'Report tecnico',
+            this.withFallback(psg.reportTecnico),
+          )}
+          ${this.renderPsgMetaItem(
+            'Report strumentale',
+            reportName,
+          )}
+        </div>
+      </section>
+
+      ${this.renderPsgTextSection('Quesito clinico', psg.quesitoClinico)}
+
+      <section class="psg-section">
+        <h3>Documentazione valutata</h3>
+        <table class="psg-data-table">
+          <tbody>
+            <tr>
+              <th style="width: 38mm">Scheda anamnestica</th>
+              <td>Dati clinici raccolti telefonicamente da Remedic sulla base delle dichiarazioni del paziente.</td>
+            </tr>
+            <tr>
+              <th>Scala di Epworth ESS</th>
+              <td>Valutazione della sonnolenza diurna riferita, raccolta telefonicamente.</td>
+            </tr>
+            <tr>
+              <th>Report strumentale</th>
+              <td>Report strumentale originale allegato, con parametri, tabelle, grafici e tracciati del dispositivo.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      ${this.renderPsgTextSection(
+        'Interpretazione del medico refertatore',
+        psg.interpretazioneMedico,
+      )}
+
+      <section class="psg-section">
+        <h3>Conclusioni diagnostiche</h3>
+        <div class="psg-box content">
+          ${this.renderEscapedParagraphs(psg.conclusioneDiagnostica)}
+        </div>
+      </section>
+
+      <section class="psg-section">
+        <h3>Indicazioni</h3>
+        <div class="psg-box content">
+          ${this.renderEscapedParagraphs(psg.indicazioniCliniche)}
+        </div>
+      </section>
+
+      <section class="psg-section">
+        <h3>Allegati consegnati al paziente</h3>
+        <ol class="psg-list">
+          <li>Scheda anamnestica del sonno e scala di Epworth ESS.</li>
+          <li>Report strumentale originale generato dal dispositivo.</li>
+        </ol>
+      </section>
+
+      ${this.renderPsgTextSection('Nota documentale', psg.notaDocumentale)}
+
+      <section class="psg-section">
+        <h3>Il Medico refertatore</h3>
+        <div class="psg-signature">
+          <div class="psg-signature-label">Firma</div>
+          <div class="psg-signature-value">${this.escape(fullDoctorName)}</div>
+        </div>
+      </section>
+
+      <div class="psg-page-break">
+        <section class="psg-hero">
+          <h1 class="psg-title">ANAMNESI DEL SONNO E SCALA DI EPWORTH (ESS)</h1>
+          <p class="psg-subtitle">Scheda raccolta telefonicamente su dichiarazione del paziente</p>
+        </section>
+
+        <section class="psg-meta-card">
+          <div class="psg-kv-grid">
+            ${this.renderPsgMetaItem('Paziente', fullPatientName)}
+            ${this.renderPsgMetaItem(
+              'Data di nascita',
+              this.withFallback(report.paziente.dataNascitaDisplay),
+            )}
+            ${this.renderPsgMetaItem(
+              'Data registrazione',
+              this.formatDateRange(
+                psg.dataRegistrazioneInizio,
+                psg.dataRegistrazioneFine,
+              ),
+            )}
+            ${this.renderPsgMetaItem(
+              'Data raccolta',
+              this.withFallback(this.formatDateOnly(psg.dataRefertazione)),
+            )}
+            ${this.renderPsgMetaItem(
+              'Modalita raccolta',
+              this.withFallback(psg.modalitaRaccolta),
+            )}
+            ${this.renderPsgMetaItem(
+              'Operatore',
+              this.withFallback(psg.operatore),
+            )}
+          </div>
+        </section>
+
+        <section class="psg-section">
+          <p class="psg-inline-note">
+            La presente scheda e compilata da Remedic sulla base delle dichiarazioni telefoniche del paziente. Non e prevista firma del paziente su questa pagina.
+          </p>
+        </section>
+
+        <section class="psg-section">
+          <h3>Anamnesi mirata del sonno</h3>
+          ${this.buildPsgSleepHistoryTable(psg)}
+        </section>
+
+        <section class="psg-section">
+          <h3>Farmaci rilevanti</h3>
+          <div class="content">
+            <p>${this.escape(this.formatSelectedOptions(psg.anamnesiSonno?.farmaciRilevanti))}</p>
+            <p><strong>Note:</strong> ${this.escape(
+              this.withFallback(
+                this.extractSelectionNote(psg.anamnesiSonno?.farmaciRilevanti),
+              ),
+            )}</p>
+          </div>
+        </section>
+
+        <section class="psg-section">
+          <h3>Comorbidita rilevanti</h3>
+          <div class="content">
+            <p>${this.escape(
+              this.formatSelectedOptions(psg.anamnesiSonno?.comorbiditaRilevanti),
+            )}</p>
+            <p><strong>Note:</strong> ${this.escape(
+              this.withFallback(
+                this.extractSelectionNote(psg.anamnesiSonno?.comorbiditaRilevanti),
+              ),
+            )}</p>
+          </div>
+        </section>
+
+        <section class="psg-section">
+          <h3>Scala di Epworth - ESS</h3>
+          <div class="content">
+            <p>Indicare per ciascuna situazione la probabilita di addormentarsi: 0 = nessuna, 1 = lieve, 2 = moderata, 3 = elevata.</p>
+          </div>
+          ${this.buildPsgEssTable(psg.ess)}
+          <div class="content" style="margin-top: 2.4mm">
+            <p><strong>Punteggio totale ESS:</strong> ${this.escape(
+              `${psg.essTotale ?? 0} / 24`,
+            )}</p>
+            <p><strong>Interpretazione:</strong> ${this.escape(
+              this.withFallback(psg.interpretazioneEss),
+            )}</p>
+          </div>
+        </section>
+
+        ${this.renderPsgTextSection(
+          'Note anamnestiche ulteriori',
+          typeof psg.anamnesiSonno?.noteAnamnesticheUlteriori === 'string'
+            ? psg.anamnesiSonno.noteAnamnesticheUlteriori
+            : '',
+        )}
+
+        <section class="psg-section">
+          <h3>Chiusura scheda</h3>
+          <div class="content">
+            <p>Scheda anamnestica ed ESS raccolte telefonicamente da Remedic e inserite nel fascicolo della prestazione.</p>
+            <p><strong>Report strumentale allegato:</strong> ${this.escape(reportName)}</p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+  }
+
+  private sharedStyles(): string {
+    return `
 @page {
   size: A4;
   margin: 0 0 12mm 0;
@@ -79,7 +1027,7 @@ body {
   left: 4mm;
   right: 4mm;
   bottom: 4mm;
-  border: 0.35mm solid #4A4A4A;
+  border: 0.35mm solid #4a4a4a;
   pointer-events: none;
 }
 
@@ -254,7 +1202,7 @@ body {
   font-size: 10.5pt;
   font-weight: 700;
   margin: 0 0 1.8mm 0;
-  color: #1C9EBD;
+  color: #1c9ebd;
   border-bottom: 0.25mm solid #d9dde3;
   padding-bottom: 0.9mm;
   line-height: 1.2;
@@ -308,7 +1256,6 @@ body {
   pointer-events: none;
 }
 
-/* LIBERO SENZA CORNICE */
 .free-text {
   width: 100%;
   color: #1f2933;
@@ -362,14 +1309,15 @@ body {
 .free-page-body {
   width: 100%;
 }
-  </style>
-</head>
-<body>
-  <div class="page-frame"></div>
+    `;
+  }
 
-  <div class="sheet">
-    <div class="container">
+  private renderPatientCard(report: ReportBuildInput): string {
+    const fullPatientName =
+      `${report.paziente.nome} ${report.paziente.cognome}`.trim() ||
+      'Non disponibile';
 
+    return `
       <div class="patient-card">
         <div class="patient-grid">
           <div class="patient-col left">
@@ -424,15 +1372,27 @@ body {
           </div>
         </div>
       </div>
+    `;
+  }
 
+  private renderVisitRow(input: {
+    title: string;
+    dateLabel: string;
+    dateValue: string;
+    doctorLabel: string;
+    doctorName: string;
+    specialty?: string;
+  }): string {
+    return `
       <div class="visit-row">
         <div class="visit-main">
           <div class="visit-title">${this.escape(
-            this.withFallback(report.titoloVisita),
+            this.withFallback(input.title),
           )}</div>
           <div class="visit-date">
-            Data: <span class="date-value">${this.escape(
-              this.withFallback(report.dataVisitaDisplay),
+            ${this.escape(input.dateLabel)}:
+            <span class="date-value">${this.escape(
+              this.withFallback(input.dateValue),
             )}</span>
           </div>
         </div>
@@ -440,29 +1400,20 @@ body {
         <div class="doctor-card-wrap">
           <div class="doctor-card">
             <div class="doctor-line">
-              <span class="doctor-label">Medico:</span>
-              <span class="doctor-value">${this.escape(fullDoctorName)}</span>
+              <span class="doctor-label">${this.escape(input.doctorLabel)}:</span>
+              <span class="doctor-value">${this.escape(
+                this.withFallback(input.doctorName),
+              )}</span>
             </div>
             <div class="doctor-line">
-              <span class="doctor-label">Specialità:</span>
+              <span class="doctor-label">Specialita:</span>
               <span class="doctor-value">${this.escape(
-                this.withFallback(report.medico.specialita),
+                this.withFallback(input.specialty),
               )}</span>
             </div>
           </div>
         </div>
       </div>
-
-      ${
-        isFreeMode
-          ? this.renderFreeText(report.contenuti.testoLibero)
-          : this.renderGuidedPages(report.contenuti)
-      }
-
-    </div>
-  </div>
-</body>
-</html>
     `;
   }
 
@@ -497,37 +1448,15 @@ body {
               html: contenuti.anamnesiPatologicaProssima,
             },
           ]),
-
       ...(this.hasContent(contenuti.portaInVisione)
-        ? [
-            {
-              title: 'Porta in visione',
-              html: contenuti.portaInVisione,
-            },
-          ]
+        ? [{ title: 'Porta in visione', html: contenuti.portaInVisione }]
         : []),
-
       ...(this.hasContent(contenuti.esamiEseguitiInLoco)
-        ? [
-            {
-              title: 'Esami eseguiti',
-              html: contenuti.esamiEseguitiInLoco,
-            },
-          ]
+        ? [{ title: 'Esami eseguiti', html: contenuti.esamiEseguitiInLoco }]
         : []),
-
-      {
-        title: 'Esame obiettivo',
-        html: contenuti.esameObiettivo,
-      },
-      {
-        title: 'Diagnosi',
-        html: contenuti.diagnosi,
-      },
-      {
-        title: 'Prescrizione',
-        html: contenuti.prescrizione,
-      },
+      { title: 'Esame obiettivo', html: contenuti.esameObiettivo },
+      { title: 'Diagnosi', html: contenuti.diagnosi },
+      { title: 'Prescrizione', html: contenuti.prescrizione },
     ];
 
     return `
@@ -639,10 +1568,6 @@ body {
             return true;
           });
 
-          /*
-            NORMAL: pagine non finali (senza riserva timbro).
-            LAST: ultima pagina (con riserva timbro/firma).
-          */
           const PAGE_CONTENT_HEIGHT_FIRST_NORMAL = 650;
           const PAGE_CONTENT_HEIGHT_NEXT_NORMAL = 790;
           const PAGE_CONTENT_HEIGHT_FIRST_LAST = 580;
@@ -790,12 +1715,339 @@ body {
     `;
   }
 
+  private renderMetaItem(label: string, value: string): string {
+    return `
+      <div class="emg-kv">
+        <span class="emg-kv-label">${this.escape(label)}</span>
+        <span class="emg-kv-value">${this.escape(value)}</span>
+      </div>
+    `;
+  }
+
+  private renderHtmlSection(
+    title: string,
+    html?: string,
+    emptyText = '-',
+  ): string {
+    return `
+      <section class="emg-section">
+        <h3>${this.escape(title)}</h3>
+        <div class="content">
+          ${html && html.trim() ? html : `<p>${this.escape(emptyText)}</p>`}
+        </div>
+      </section>
+    `;
+  }
+
+  private renderSignatureCard(
+    label: string,
+    signature?: EmgUploadedAsset | null,
+  ): string {
+    return `
+      <div class="signature-card">
+        <div class="signature-label">${this.escape(label)}</div>
+        <div class="signature-value">
+          ${this.renderSignatureImage(signature)}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderSignatureImage(signature?: EmgUploadedAsset | null): string {
+    if (!signature?.dataUrl) return '';
+
+    return `<img class="signature-image" src="${signature.dataUrl}" alt="${this.escape(
+      signature.name,
+    )}" />`;
+  }
+
+  private renderTracciatiSection(tracciati: EmgUploadedAsset[]): string {
+    const immagini = tracciati.filter((item) => item.kind === 'image' && item.dataUrl);
+    const pdfFiles = tracciati.filter((item) => item.kind === 'pdf');
+
+    if (!tracciati.length) {
+      return `
+        <section class="emg-section">
+          <h3>Tracciati elettrofisiologici</h3>
+          <div class="content">
+            <p>Tracciati non allegati in questa generazione.</p>
+          </div>
+        </section>
+      `;
+    }
+
+    return `
+      <section class="emg-section">
+        <h3>Tracciati elettrofisiologici</h3>
+        <div class="content">
+          ${
+            immagini.length
+              ? `
+                <div class="trace-gallery">
+                  ${immagini
+                    .map(
+                      (item) => `
+                        <figure class="trace-figure">
+                          <img src="${item.dataUrl}" alt="${this.escape(item.name)}" />
+                          <figcaption class="trace-caption">${this.escape(item.name)}</figcaption>
+                        </figure>
+                      `,
+                    )
+                    .join('')}
+                </div>
+              `
+              : ''
+          }
+          ${
+            pdfFiles.length
+              ? `
+                <ul class="trace-pdf-list">
+                  ${pdfFiles
+                    .map(
+                      (item) =>
+                        `<li>File PDF allegato e unito come pagine finali del referto: ${this.escape(item.name)}</li>`,
+                    )
+                    .join('')}
+                </ul>
+              `
+              : ''
+          }
+        </div>
+      </section>
+    `;
+  }
+
+  private renderPsgMetaItem(label: string, value: string): string {
+    return `
+      <div>
+        <span class="psg-kv-label">${this.escape(label)}</span>
+        <span class="psg-kv-value">${this.escape(value)}</span>
+      </div>
+    `;
+  }
+
+  private renderPsgTextSection(title: string, value?: string): string {
+    return `
+      <section class="psg-section">
+        <h3>${this.escape(title)}</h3>
+        <div class="content">
+          ${this.renderEscapedParagraphs(value)}
+        </div>
+      </section>
+    `;
+  }
+
+  private renderEscapedParagraphs(value?: string | null, fallback = '-'): string {
+    const normalized = this.withFallback(value, fallback);
+    const lines = normalized
+      .split(/\r?\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (!lines.length) {
+      return `<p>${this.escape(fallback)}</p>`;
+    }
+
+    return lines.map((line) => `<p>${this.escape(line)}</p>`).join('');
+  }
+
+  private buildPsgSleepHistoryTable(psg: NonNullable<ReportBuildInput['psg']>): string {
+    return `
+      <table class="psg-data-table">
+        <thead>
+          <tr>
+            <th>Voce</th>
+            <th style="width: 54mm">Risposta</th>
+            <th style="width: 44mm">Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${PSG_SLEEP_HISTORY_ITEMS.map((item) => {
+            const entry = psg.anamnesiSonno?.[item.key] as
+              | { esito?: 'no' | 'si' | 'non_noto' | null; note?: string }
+              | undefined;
+
+            return `
+              <tr>
+                <td>${this.escape(item.label)}</td>
+                <td>${this.renderPsgSleepResponse(entry?.esito ?? null)}</td>
+                <td>${this.escape(this.withFallback(entry?.note, ''))}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  private renderPsgSleepResponse(
+    value: 'no' | 'si' | 'non_noto' | null,
+  ): string {
+    return [
+      `No ${value === 'no' ? '[X]' : '[ ]'}`,
+      `Si ${value === 'si' ? '[X]' : '[ ]'}`,
+      `Non noto ${value === 'non_noto' ? '[X]' : '[ ]'}`,
+    ].join(' &nbsp;&nbsp; ');
+  }
+
+  private buildPsgEssTable(
+    ess?: Record<string, number | null | undefined>,
+  ): string {
+    return `
+      <table class="psg-data-table">
+        <thead>
+          <tr>
+            <th>Situazione</th>
+            <th class="center" style="width: 12mm">0</th>
+            <th class="center" style="width: 12mm">1</th>
+            <th class="center" style="width: 12mm">2</th>
+            <th class="center" style="width: 12mm">3</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${PSG_ESS_ITEMS.map((item) => {
+            const score = ess?.[item.key] ?? null;
+
+            return `
+              <tr>
+                <td>${this.escape(item.label)}</td>
+                ${[0, 1, 2, 3]
+                  .map(
+                    (value) =>
+                      `<td class="center">${score === value ? 'X' : ''}</td>`,
+                  )
+                  .join('')}
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  private formatSelectedOptions(
+    value?: Record<string, boolean | string> | null,
+  ): string {
+    if (!value) return '-';
+
+    const optionLabels: Record<string, string> = {
+      nessuno: 'Nessuno',
+      sedativi_ipnotici: 'Sedativi / ipnotici',
+      oppioidi: 'Oppioidi',
+      altro: 'Altro',
+      ipertensione: 'Ipertensione',
+      cardiopatia: 'Cardiopatia',
+      bpco: 'BPCO',
+      diabete: 'Diabete',
+      aritmie: 'Aritmie',
+    };
+
+    const selected = Object.entries(value)
+      .filter(([key, entry]) => key !== 'note' && entry === true)
+      .map(([key]) => optionLabels[key] || key);
+
+    return selected.length ? selected.join(', ') : '-';
+  }
+
+  private extractSelectionNote(
+    value?: Record<string, boolean | string> | null,
+  ): string {
+    if (!value) return '';
+    return typeof value['note'] === 'string' ? value['note'] : '';
+  }
+
+  private buildEmgChecklistTable(
+    checklist?: Record<
+      string,
+      {
+        esito?: 'si' | 'no' | null;
+        note?: string;
+      }
+    >,
+  ): string {
+    return `
+      <table class="attachment-table">
+        <thead>
+          <tr>
+            <th>Fattore</th>
+            <th class="center" style="width: 14mm">Si</th>
+            <th class="center" style="width: 14mm">No</th>
+            <th style="width: 42mm">Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${EMG_CHECKLIST_ITEMS.map((item) => {
+            const entry = checklist?.[item.key];
+            const esito = entry?.esito ?? null;
+
+            return `
+              <tr>
+                <td>${this.escape(item.label)}</td>
+                <td class="center">${esito === 'si' ? 'X' : ''}</td>
+                <td class="center">${esito === 'no' ? 'X' : ''}</td>
+                <td>${this.escape(this.withFallback(entry?.note, ''))}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  private formatDateTimeLocal(value?: string | null): string {
+    if (!value) return '';
+
+    const match = value.match(
+      /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::\d{2})?$/,
+    );
+
+    if (!match) return value;
+
+    return `${match[3]}/${match[2]}/${match[1]} ${match[4]}:${match[5]}`;
+  }
+
+  private formatDateOnly(value?: string | null): string {
+    if (!value) return '';
+
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      return `${match[3]}/${match[2]}/${match[1]}`;
+    }
+
+    if (value.includes('T')) {
+      return this.formatDateTimeLocal(value).split(' ')[0] || value;
+    }
+
+    return value;
+  }
+
+  private formatDateRange(start?: string | null, end?: string | null): string {
+    const startLabel = this.formatDateTimeLocal(start);
+    const endLabel = this.formatDateTimeLocal(end);
+
+    if (startLabel && endLabel) {
+      return `${startLabel} - ${endLabel}`;
+    }
+
+    return startLabel || endLabel || '-';
+  }
+
+  private stripHtmlToText(value?: string | null): string {
+    if (!value) return '';
+
+    return value
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   private hasContent(value?: string | null): boolean {
     return !!value && !!value.trim();
   }
 
-  private withFallback(value?: string | null): string {
-    return value && value.trim() ? value.trim() : '-';
+  private withFallback(value?: string | null, fallback = '-'): string {
+    return value && value.trim() ? value.trim() : fallback;
   }
 
   private escape(value: string): string {

@@ -1,9 +1,10 @@
-<div class="field">
-  <div class="toolbar">
+<div class="field" [class.stretch]="stretch">
+  <div class="toolbar" [class.readonly]="readonly" [class.stretch]="stretch">
     <button
       type="button"
       (click)="toggleBold()"
       [class.active]="isActive('bold')"
+      [disabled]="readonly"
       title="Grassetto"
       aria-label="Grassetto"
     >
@@ -14,6 +15,7 @@
       type="button"
       (click)="toggleItalic()"
       [class.active]="isActive('italic')"
+      [disabled]="readonly"
       title="Corsivo"
       aria-label="Corsivo"
     >
@@ -24,6 +26,7 @@
       type="button"
       (click)="toggleUnderline()"
       [class.active]="isActive('underline')"
+      [disabled]="readonly"
       title="Sottolineato"
       aria-label="Sottolineato"
     >
@@ -34,6 +37,7 @@
       type="button"
       (click)="toggleBulletList()"
       [class.active]="isActive('bulletList')"
+      [disabled]="readonly"
       title="Elenco puntato"
       aria-label="Elenco puntato"
     >
@@ -50,7 +54,12 @@
     </button>
   </div>
 
-  <div class="editor-container" (click)="focusEditor()">
-    <div #editorHost class="editor-host"></div>
+  <div
+    class="editor-container"
+    [class.readonly]="readonly"
+    [class.stretch]="stretch"
+    (click)="focusEditor()"
+  >
+    <div #editorHost class="editor-host" [class.stretch]="stretch"></div>
   </div>
 </div>

@@ -1,52 +1,251 @@
-<!-- DATI VISITA -->
 <div class="section">
-  <h3 class="sectionTitle">Dati visita</h3>
+  <h3 class="sectionTitle">Tipo referto</h3>
 
-  <div class="grid2">
-    <div class="field">
-      <label>Data visita *</label>
-      <input
-        type="text"
-        inputmode="numeric"
-        autocomplete="off"
-        placeholder="gg/mm/aaaa"
-        maxlength="10"
-        [formControl]="control('dataVisitaDisplay')"
-        (input)="onVisitDateInput($event)"
-        (keydown)="onVisitDateKeydown($event)"
-        (blur)="onVisitDateBlur()"
-        class="date-input"
-      />
-      @if (hasError("dataVisitaDisplay", "required")) {
-        <div class="err">Campo obbligatorio</div>
-      } @else if (hasError("dataVisitaDisplay", "invalidDate")) {
-        <div class="err">Inserisci una data valida nel formato gg/mm/aaaa</div>
-      } @else if (hasError("dataVisitaDisplay", "futureDate")) {
-        <div class="err">La data visita non può essere futura</div>
-      }
-    </div>
+  <div class="typeGrid typeGridWide">
+    <label class="typeCard">
+      <input type="radio" [formControl]="control('tipoReferto')" value="standard" />
+      <span>
+        <strong>Referto standard</strong>
+        <small>Flusso attuale con modalita guidata o testo libero.</small>
+      </span>
+    </label>
 
-    <div class="field">
-      <label>Titolo visita *</label>
-      <input
-        type="text"
-        placeholder="Es. Prima visita cardiologica"
-        [formControl]="control('titoloVisita')"
-      />
-      @if (hasError("titoloVisita", "required")) {
-        <div class="err">Campo obbligatorio</div>
-      }
-    </div>
+    <label class="typeCard">
+      <input type="radio" [formControl]="control('tipoReferto')" value="emg" />
+      <span>
+        <strong>EMG / ENG</strong>
+        <small>Referto elettrofisiologico con allegato tecnico dedicato.</small>
+      </span>
+    </label>
+
+    <label class="typeCard">
+      <input type="radio" [formControl]="control('tipoReferto')" value="psg" />
+      <span>
+        <strong>PSG</strong>
+        <small>Polisonnografia cardio-respiratoria con report strumentale allegato.</small>
+      </span>
+    </label>
   </div>
 </div>
 
-<!-- SEPARATORE -->
 <div class="divider"></div>
 
-<!-- MEDICO -->
+<div class="section">
+  <h3 class="sectionTitle">
+    {{ isEmg || isPsg ? 'Dati esame' : 'Dati visita' }}
+  </h3>
+
+  @if (!isPsg) {
+    <div class="grid2">
+      <div class="field">
+        <label>{{ isEmg ? 'Data esame *' : 'Data visita *' }}</label>
+        <input
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          placeholder="gg/mm/aaaa"
+          maxlength="10"
+          [formControl]="control('dataVisitaDisplay')"
+          (input)="onVisitDateInput($event)"
+          (keydown)="onVisitDateKeydown($event)"
+          (blur)="onVisitDateBlur()"
+          class="date-input"
+        />
+        @if (hasError('dataVisitaDisplay', 'required')) {
+          <div class="err">Campo obbligatorio</div>
+        } @else if (hasError('dataVisitaDisplay', 'invalidDate')) {
+          <div class="err">Inserisci una data valida nel formato gg/mm/aaaa</div>
+        } @else if (hasError('dataVisitaDisplay', 'futureDate')) {
+          <div class="err">La data visita non puo essere futura</div>
+        }
+      </div>
+
+      @if (!isEmg) {
+        <div class="field">
+          <label>Titolo visita *</label>
+          <input
+            type="text"
+            placeholder="Es. Prima visita cardiologica"
+            [formControl]="control('titoloVisita')"
+          />
+          @if (hasError('titoloVisita', 'required')) {
+            <div class="err">Campo obbligatorio</div>
+          }
+        </div>
+      } @else {
+        <div class="field">
+          <label>Prestazione / tipo indagine *</label>
+          <input
+            type="text"
+            placeholder="Es. Studio della conduzione nervosa sensitiva"
+            [formControl]="control('prestazione')"
+          />
+          @if (hasError('prestazione', 'required')) {
+            <div class="err">Campo obbligatorio</div>
+          }
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="grid2 grid3Wide">
+      <div class="field">
+        <label>Data registrazione inizio *</label>
+        <input
+          type="datetime-local"
+          [formControl]="control('psg.dataRegistrazioneInizio')"
+        />
+        @if (hasError('psg.dataRegistrazioneInizio', 'required')) {
+          <div class="err">Campo obbligatorio</div>
+        }
+      </div>
+
+      <div class="field">
+        <label>Data registrazione fine *</label>
+        <input
+          type="datetime-local"
+          [formControl]="control('psg.dataRegistrazioneFine')"
+        />
+        @if (hasError('psg.dataRegistrazioneFine', 'required')) {
+          <div class="err">Campo obbligatorio</div>
+        }
+      </div>
+
+      <div class="field">
+        <label>Data refertazione *</label>
+        <input type="date" [formControl]="control('psg.dataRefertazione')" />
+        @if (hasError('psg.dataRefertazione', 'required')) {
+          <div class="err">Campo obbligatorio</div>
+        }
+      </div>
+
+      <div class="field">
+        <label>Prestazione / tipo indagine *</label>
+        <input type="text" [formControl]="control('prestazione')" />
+        @if (hasError('prestazione', 'required')) {
+          <div class="err">Campo obbligatorio</div>
+        }
+      </div>
+
+      <div class="field">
+        <label>Sistema registrazione *</label>
+        <input type="text" [formControl]="control('psg.sistemaRegistrazione')" />
+        @if (hasError('psg.sistemaRegistrazione', 'required')) {
+          <div class="err">Campo obbligatorio</div>
+        }
+      </div>
+
+      <div class="field">
+        <label>Consenso informato *</label>
+        <input type="text" [formControl]="control('psg.consensoInformato')" />
+        @if (hasError('psg.consensoInformato', 'required')) {
+          <div class="err">Campo obbligatorio</div>
+        }
+      </div>
+
+      <div class="field">
+        <label>Statura (cm) *</label>
+        <input type="number" min="0" step="1" [formControl]="control('psg.staturaCm')" />
+        @if (hasError('psg.staturaCm', 'required')) {
+          <div class="err">Campo obbligatorio</div>
+        }
+      </div>
+
+      <div class="field">
+        <label>Peso (kg) *</label>
+        <input type="number" min="0" step="0.1" [formControl]="control('psg.pesoKg')" />
+        @if (hasError('psg.pesoKg', 'required')) {
+          <div class="err">Campo obbligatorio</div>
+        }
+      </div>
+
+      <div class="field">
+        <label>BMI *</label>
+        <input type="text" [formControl]="control('psg.bmi')" readonly />
+        @if (hasError('psg.bmi', 'required')) {
+          <div class="err">BMI calcolato automaticamente da statura e peso</div>
+        }
+      </div>
+    </div>
+
+    <div class="grid2 extraGrid">
+      <div class="field">
+        <label>Anamnesi raccolta</label>
+        <input type="text" [formControl]="control('psg.anamnesiRaccolta')" />
+      </div>
+
+      <div class="field">
+        <label>Report tecnico</label>
+        <input type="text" [formControl]="control('psg.reportTecnico')" />
+      </div>
+    </div>
+  }
+
+  @if (isEmg) {
+    <div class="divider soft"></div>
+
+    <div class="section">
+      <div class="sectionHead">
+        <h3 class="sectionTitle">Tecnico esecutore</h3>
+
+        <button
+          type="button"
+          class="btn tiny ghost"
+          (click)="clearTechnicianEvent.emit()"
+        >
+          Svuota
+        </button>
+      </div>
+
+      <doctor-autocomplete
+        style="margin-bottom: 16px"
+        [doctorSearch]="technicalSearch"
+        [doctorResults]="technicalResults"
+        [selectedDoctorInvalid]="selectedTechnicianInvalid"
+        label="Cerca tecnico TNFP *"
+        placeholder="Digita nome, cognome o ruolo"
+        invalidMessage="Seleziona un tecnico TNFP dalla lista"
+        (selectDoctor)="selectTechnicianEvent.emit($event)"
+      >
+      </doctor-autocomplete>
+
+      <div class="grid2" style="margin-top: 16px">
+        <div class="field">
+          <label>Nome e cognome</label>
+          <input
+            type="text"
+            [formControl]="control('emg.tecnicoEsecutore')"
+            readonly
+          />
+        </div>
+
+        <div class="field">
+          <label>Specialita / Ruolo</label>
+          <input
+            type="text"
+            [formControl]="control('emg.tecnicoRuolo')"
+            readonly
+          />
+        </div>
+      </div>
+
+      <div class="grid2 extraGrid">
+        <div class="field">
+          <label>Data e ora acquisizione tecnica</label>
+          <input
+            type="datetime-local"
+            [formControl]="control('emg.dataOraAcquisizioneTecnica')"
+          />
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+<div class="divider"></div>
+
 <div class="section">
   <div class="sectionHead">
-    <h3 class="sectionTitle">Medico</h3>
+    <h3 class="sectionTitle">{{ doctorLabel }}</h3>
 
     <button
       type="button"
@@ -62,6 +261,17 @@
     [doctorSearch]="doctorSearch"
     [doctorResults]="doctorResults"
     [selectedDoctorInvalid]="selectedDoctorInvalid"
+    [label]="isEmg || isPsg ? 'Cerca neurologo *' : 'Cerca medico *'"
+    [placeholder]="
+      isEmg || isPsg
+        ? 'Digita nome, cognome o Neurologia'
+        : 'Digita nome, cognome o specialita'
+    "
+    [invalidMessage]="
+      isEmg || isPsg
+        ? 'Seleziona un medico refertatore di Neurologia'
+        : 'Seleziona un medico dalla lista'
+    "
     (selectDoctor)="selectDoctorEvent.emit($event)"
   >
   </doctor-autocomplete>
@@ -78,12 +288,15 @@
     </div>
 
     <div class="field">
-      <label>Specialità</label>
+      <label>Specialita</label>
       <input
         type="text"
         [formControl]="control('medico.specialita')"
         readonly
       />
+      @if (hasError('medico.specialita', 'required')) {
+        <div class="err">Campo obbligatorio</div>
+      }
     </div>
   </div>
 

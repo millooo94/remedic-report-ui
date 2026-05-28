@@ -3,4 +3,7 @@ export interface DoctorInfo {
   nome: string;
   cognome: string;
   specialita?: string;
+  ruolo?: string;
+  tipo?: 'medico' | 'tecnico';
+  displayName?: string;
 }

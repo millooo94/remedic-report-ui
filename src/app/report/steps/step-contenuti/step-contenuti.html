@@ -1,180 +1,548 @@
 <div class="stack">
-  @if (mode === "libero") {
+  @if (reportType === 'emg') {
+    <div class="field">
+      <label>Esame eseguito *</label>
+      <rich-text-field [control]="control('emg.esameEseguito')"></rich-text-field>
+      <div class="metaRow">
+        <span
+          class="charCount"
+          [class.overLimit]="isOverLimit('emg.esameEseguito', limits.esameEseguito.max)"
+        >
+          {{ plainTextLength('emg.esameEseguito') }} /
+          {{ limits.esameEseguito.max }} caratteri
+        </span>
+      </div>
+      @if (hasError('emg.esameEseguito', 'required')) {
+        <div class="err">Campo obbligatorio</div>
+      }
+    </div>
+
+    <section class="readonlyFieldCard">
+      <div class="readonlyFieldHead">
+        <div>
+          <label>Reperti elettrofisiologici</label>
+          <p class="fieldHint">Campo visibile ma riservato al neurologo refertatore.</p>
+        </div>
+        <span class="readonlyBadge">Compilazione riservata al neurologo refertatore</span>
+      </div>
+      <rich-text-field
+        [control]="control('emg.repertiElettrofisiologici')"
+        [readonly]="true"
+      ></rich-text-field>
+      <div class="metaRow">
+        <span
+          class="charCount"
+          [class.overLimit]="isOverLimit('emg.repertiElettrofisiologici', limits.repertiElettrofisiologici.max)"
+        >
+          {{ plainTextLength('emg.repertiElettrofisiologici') }} /
+          {{ limits.repertiElettrofisiologici.max }} caratteri
+        </span>
+      </div>
+    </section>
+
+    <section class="readonlyFieldCard">
+      <div class="readonlyFieldHead">
+        <div>
+          <label>Conclusioni</label>
+          <p class="fieldHint">Campo visibile ma riservato al neurologo refertatore.</p>
+        </div>
+        <span class="readonlyBadge">Compilazione riservata al neurologo refertatore</span>
+      </div>
+      <rich-text-field [control]="control('emg.conclusioni')" [readonly]="true"></rich-text-field>
+      <div class="metaRow">
+        <span class="charCount" [class.overLimit]="isOverLimit('emg.conclusioni', limits.conclusioni.max)">
+          {{ plainTextLength('emg.conclusioni') }} / {{ limits.conclusioni.max }} caratteri
+        </span>
+      </div>
+    </section>
+
+    <div class="field">
+      <label>Consenso informato</label>
+      <rich-text-field [control]="control('emg.consensoInformatoTesto')"></rich-text-field>
+      <div class="metaRow">
+        <span
+          class="charCount"
+          [class.overLimit]="isOverLimit('emg.consensoInformatoTesto', limits.consensoInformatoTesto.max)"
+        >
+          {{ plainTextLength('emg.consensoInformatoTesto') }} /
+          {{ limits.consensoInformatoTesto.max }} caratteri
+        </span>
+      </div>
+    </div>
+
+    <div class="emgContentGrid">
+      <div class="field gridStretch emgContentField">
+        <label>Materiale prodotto</label>
+        <div class="emgContentFieldBody">
+          <textarea
+            class="equalHeightTextarea"
+            rows="4"
+            [formControl]="control('emg.materialeProdotto')"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="field gridStretch emgContentField">
+        <label>Note tecniche dell'esecutore</label>
+        <div class="emgContentFieldBody emgContentFieldBodyEditor">
+          <div class="equalHeightEditor">
+            <rich-text-field
+              [control]="control('emg.noteTecnicheEsecutore')"
+              [stretch]="true"
+            ></rich-text-field>
+          </div>
+          <div class="metaRow metaRowPinned">
+            <span
+              class="charCount"
+              [class.overLimit]="isOverLimit('emg.noteTecnicheEsecutore', limits.noteTecnicheEsecutore.max)"
+            >
+              {{ plainTextLength('emg.noteTecnicheEsecutore') }} /
+              {{ limits.noteTecnicheEsecutore.max }} caratteri
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Attestazione del tecnico</label>
+      <rich-text-field [control]="control('emg.attestazioneTecnico')"></rich-text-field>
+      <div class="metaRow">
+        <span
+          class="charCount"
+          [class.overLimit]="isOverLimit('emg.attestazioneTecnico', limits.attestazioneTecnico.max)"
+        >
+          {{ plainTextLength('emg.attestazioneTecnico') }} /
+          {{ limits.attestazioneTecnico.max }} caratteri
+        </span>
+      </div>
+    </div>
+
+    <section class="uploadCard">
+      <div class="uploadCardHead">
+        <div>
+          <h3>Tracciati elettrofisiologici</h3>
+          <p>Carica immagini o PDF prodotti durante l'esame. I file restano solo nella sessione corrente.</p>
+        </div>
+
+        <button type="button" class="uploadBtn" (click)="openFilePicker(traceInput)">
+          Carica tracciati
+        </button>
+      </div>
+
+      <input
+        #traceInput
+        id="emg-tracciati-input"
+        class="srOnly"
+        type="file"
+        accept=".png,.jpg,.jpeg,.webp,.pdf"
+        multiple
+        (change)="onTraceFilesSelected($event)"
+      />
+
+      @if (traceUploadError) {
+        <div class="err">{{ traceUploadError }}</div>
+      }
+
+      @if (!emgTraceFiles.length) {
+        <div class="emptyUploadState">Tracciati non caricati in questa sessione.</div>
+      } @else {
+        <div class="uploadList">
+          @for (asset of emgTraceFiles; track asset.id) {
+            <article class="uploadItem">
+              <div class="uploadPreview">
+                @if (isImage(asset) && asset.dataUrl) {
+                  <img [src]="asset.dataUrl" [alt]="asset.name" />
+                } @else {
+                  <div class="filePill">PDF</div>
+                }
+              </div>
+
+              <div class="uploadMeta">
+                <strong>{{ asset.name }}</strong>
+                <small>{{ fileSizeLabel(asset.size) }}</small>
+                @if (asset.kind === 'pdf') {
+                  <span class="uploadHint">Sara unito al PDF finale come pagine aggiuntive.</span>
+                }
+              </div>
+
+              <button type="button" class="removeBtn" (click)="removeTraceFile(asset.id)">
+                Rimuovi
+              </button>
+            </article>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="uploadCard signatureCard">
+      <div class="uploadCardHead">
+        <div>
+          <h3>Firma</h3>
+          <p>Firma tecnico esecutore. Carica un'immagine della firma su sfondo bianco o trasparente.</p>
+        </div>
+
+        <button type="button" class="uploadBtn" (click)="openFilePicker(signatureInput)">
+          {{ emgSignature ? 'Sostituisci firma' : 'Carica firma' }}
+        </button>
+      </div>
+
+      <input
+        #signatureInput
+        id="emg-firma-input"
+        class="srOnly"
+        type="file"
+        accept=".png,.jpg,.jpeg,.webp"
+        (change)="onSignatureSelected($event)"
+      />
+
+      @if (signatureUploadError) {
+        <div class="err">{{ signatureUploadError }}</div>
+      }
+
+      @if (!emgSignature) {
+        <div class="emptyUploadState">Carica la firma del tecnico esecutore per completare il referto EMG.</div>
+      } @else {
+        <div class="signaturePreviewCard">
+          <div class="signaturePreview">
+            <img [src]="emgSignature.dataUrl" [alt]="emgSignature.name" />
+          </div>
+
+          <div class="uploadMeta">
+            <strong>{{ emgSignature.name }}</strong>
+            <small>{{ fileSizeLabel(emgSignature.size) }}</small>
+          </div>
+
+          <button type="button" class="removeBtn" (click)="removeSignature()">
+            Rimuovi firma
+          </button>
+        </div>
+      }
+
+      @if (signatureRequiredError) {
+        <div class="err">Carica la firma del tecnico esecutore per completare il referto EMG.</div>
+      }
+    </section>
+  } @else if (isPsg) {
+    <section class="panelCard">
+      <div class="panelTitleRow">
+        <div>
+          <h3>Anamnesi mirata del sonno</h3>
+          <p>Registra per ogni voce una risposta obbligatoria e, se necessario, una nota.</p>
+        </div>
+      </div>
+
+      <div class="psgTableWrap">
+        <div class="psgTableHeader sleepTableHeader">
+          <div>Voce</div>
+          <div>Risposta</div>
+          <div>Note</div>
+        </div>
+
+        @for (item of psgSleepHistoryItems; track item.key) {
+          <div class="psgTableRow sleepTableRow">
+            <div class="factorLabel">{{ item.label }}</div>
+
+            <div class="choiceGroup psgChoiceGroup">
+              <button
+                type="button"
+                class="choiceBtn"
+                [class.active]="isPsgSleepOutcomeSelected(item.key, 'no')"
+                [class.error]="psgSleepOutcomeHasRequiredError(item.key)"
+                (click)="setPsgSleepOutcome(item.key, 'no')"
+              >
+                No
+              </button>
+              <button
+                type="button"
+                class="choiceBtn"
+                [class.active]="isPsgSleepOutcomeSelected(item.key, 'si')"
+                [class.error]="psgSleepOutcomeHasRequiredError(item.key)"
+                (click)="setPsgSleepOutcome(item.key, 'si')"
+              >
+                Si
+              </button>
+              <button
+                type="button"
+                class="choiceBtn"
+                [class.active]="isPsgSleepOutcomeSelected(item.key, 'non_noto')"
+                [class.error]="psgSleepOutcomeHasRequiredError(item.key)"
+                (click)="setPsgSleepOutcome(item.key, 'non_noto')"
+              >
+                Non noto
+              </button>
+            </div>
+
+            <input
+              type="text"
+              class="noteInput psgNoteInput"
+              placeholder="Note"
+              [formControl]="psgSleepNoteControl(item.key)"
+            />
+
+            @if (psgSleepOutcomeHasRequiredError(item.key)) {
+              <div class="rowError fullRowError">Seleziona No, Si oppure Non noto.</div>
+            }
+          </div>
+        }
+      </div>
+    </section>
+
+    <div class="dualPanelGrid">
+      <section class="panelCard selectionPanel">
+        <div class="panelTitleRow">
+          <div>
+            <h3>Farmaci rilevanti</h3>
+            <p>Seleziona almeno una voce.</p>
+          </div>
+        </div>
+
+        <div class="selectionPanelBody">
+          <div class="optionChecklist optionChecklistAligned">
+            @for (option of psgFarmaciOptions; track option.key) {
+              <label class="checkboxCard">
+                <input type="checkbox" [formControl]="psgFarmacoControl(option.key)" />
+                <span>{{ option.label }}</span>
+              </label>
+            }
+          </div>
+
+          <div class="field noteFieldAligned">
+            <label>Note farmaci</label>
+            <textarea
+              rows="3"
+              [formControl]="control('psg.anamnesiSonno.farmaciRilevanti.note')"
+            ></textarea>
+          </div>
+        </div>
+
+        @if (hasError('psg.anamnesiSonno.farmaciRilevanti', 'selectionRequired')) {
+          <div class="err">Seleziona almeno una voce per i farmaci rilevanti.</div>
+        }
+      </section>
+
+      <section class="panelCard selectionPanel">
+        <div class="panelTitleRow">
+          <div>
+            <h3>Comorbidita rilevanti</h3>
+            <p>Seleziona almeno una voce.</p>
+          </div>
+        </div>
+
+        <div class="selectionPanelBody">
+          <div class="optionChecklist optionChecklistAligned">
+            @for (option of psgComorbiditaOptions; track option.key) {
+              <label class="checkboxCard">
+                <input type="checkbox" [formControl]="psgComorbiditaControl(option.key)" />
+                <span>{{ option.label }}</span>
+              </label>
+            }
+          </div>
+
+          <div class="field noteFieldAligned">
+            <label>Note comorbidita</label>
+            <textarea
+              rows="3"
+              [formControl]="control('psg.anamnesiSonno.comorbiditaRilevanti.note')"
+            ></textarea>
+          </div>
+        </div>
+
+        @if (hasError('psg.anamnesiSonno.comorbiditaRilevanti', 'selectionRequired')) {
+          <div class="err">Seleziona almeno una voce per le comorbidita rilevanti.</div>
+        }
+      </section>
+    </div>
+
+    <section class="panelCard">
+      <div class="panelTitleRow essHeaderRow">
+        <div>
+          <h3>Scala di Epworth - ESS</h3>
+          <p>Indicare per ciascuna situazione la probabilita di addormentarsi: 0 = nessuna, 1 = lieve, 2 = moderata, 3 = elevata.</p>
+        </div>
+
+        <div class="essSummaryCard">
+          <strong>{{ control('psg.essTotale').value }} / 24</strong>
+          <small>{{ control('psg.interpretazioneEss').value || 'Interpretazione ESS non disponibile' }}</small>
+        </div>
+      </div>
+
+      <div class="psgTableWrap">
+        <div class="psgTableHeader essTableHeader">
+          <div>Situazione</div>
+          <div>0</div>
+          <div>1</div>
+          <div>2</div>
+          <div>3</div>
+        </div>
+
+        @for (item of psgEssItems; track item.key) {
+          <div class="psgTableRow essTableRow">
+            <div class="factorLabel">{{ item.label }}</div>
+
+            @for (score of [0, 1, 2, 3]; track score) {
+              <button
+                type="button"
+                class="scoreBtn"
+                [class.active]="isPsgEssSelected(item.key, score)"
+                [class.error]="psgEssHasRequiredError(item.key)"
+                (click)="setPsgEssScore(item.key, score)"
+              >
+                {{ score }}
+              </button>
+            }
+
+            @if (psgEssHasRequiredError(item.key)) {
+              <div class="rowError fullRowError">Seleziona un punteggio da 0 a 3.</div>
+            }
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="panelCard">
+      <div class="field">
+        <label>Note anamnestiche ulteriori</label>
+        <textarea rows="4" [formControl]="control('psg.anamnesiSonno.noteAnamnesticheUlteriori')"></textarea>
+      </div>
+    </section>
+
+    <section class="uploadCard">
+      <div class="uploadCardHead">
+        <div>
+          <h3>Report strumentale PSG</h3>
+          <p>Carica il report strumentale in PDF. Verra unito come pagine finali del referto.</p>
+        </div>
+
+        <button type="button" class="uploadBtn" (click)="openFilePicker(psgReportInput)">
+          {{ psgReportAsset ? 'Sostituisci report' : 'Carica report strumentale' }}
+        </button>
+      </div>
+
+      <input
+        #psgReportInput
+        class="srOnly"
+        type="file"
+        accept=".pdf"
+        (change)="onPsgReportSelected($event)"
+      />
+
+      @if (psgReportUploadError) {
+        <div class="err">{{ psgReportUploadError }}</div>
+      }
+
+      @if (!psgReportAsset) {
+        <div class="emptyUploadState">Carica il report strumentale PSG per completare il referto.</div>
+      } @else {
+        <div class="uploadList">
+          <article class="uploadItem compactUploadItem">
+            <div class="uploadPreview"><div class="filePill">PDF</div></div>
+            <div class="uploadMeta">
+              <strong>{{ psgReportAsset.name }}</strong>
+              <small>{{ fileSizeLabel(psgReportAsset.size) }}</small>
+              <span class="uploadHint">Verra unito come pagine finali del referto.</span>
+            </div>
+            <button type="button" class="removeBtn" (click)="removePsgReport()">Rimuovi</button>
+          </article>
+        </div>
+      }
+
+      @if (hasError('psg.reportStrumentalePdf', 'required')) {
+        <div class="err">Carica il report strumentale PSG in PDF.</div>
+      }
+    </section>
+  } @else if (mode === 'libero') {
     <div class="field freeReportField">
       <label>Referto completo</label>
-      <p class="fieldHint">Scrivi qui l’intero referto in forma libera.</p>
+      <p class="fieldHint">Scrivi qui l'intero referto in forma libera.</p>
 
       <div class="freeEditorWrap">
         <rich-text-field [control]="control('testoLibero')"></rich-text-field>
       </div>
 
       <div class="metaRow">
-        <span
-          class="charCount"
-          [class.overLimit]="isOverLimit('testoLibero', limits.testoLibero.max)"
-        >
-          {{ plainTextLength("testoLibero") }} / {{ limits.testoLibero.max }}
-          caratteri
+        <span class="charCount" [class.overLimit]="isOverLimit('testoLibero', limits.testoLibero.max)">
+          {{ plainTextLength('testoLibero') }} / {{ limits.testoLibero.max }} caratteri
         </span>
       </div>
 
-      @if (hasError("testoLibero", "required")) {
+      @if (hasError('testoLibero', 'required')) {
         <div class="err">Campo obbligatorio</div>
       }
-      <!-- @if (hasError("testoLibero", "plainTextMaxLength")) {
-        <div class="err">
-          Hai superato il limite massimo di {{ limits.testoLibero.max }}
-          caratteri.
-        </div>
-      } -->
     </div>
   } @else {
     @if (!sections.value.anamnesiRemota) {
       <div class="field">
         <label>Anamnesi</label>
-        <rich-text-field [control]="control('anamnesiPatologicaProssima')">
-        </rich-text-field>
+        <rich-text-field [control]="control('anamnesiPatologicaProssima')"></rich-text-field>
 
         <div class="metaRow">
-          <span
-            class="charCount"
-            [class.overLimit]="
-              isOverLimit(
-                'anamnesiPatologicaProssima',
-                limits.anamnesiPatologicaProssima.max
-              )
-            "
-          >
-            {{ plainTextLength("anamnesiPatologicaProssima") }} /
+          <span class="charCount" [class.overLimit]="isOverLimit('anamnesiPatologicaProssima', limits.anamnesiPatologicaProssima.max)">
+            {{ plainTextLength('anamnesiPatologicaProssima') }} /
             {{ limits.anamnesiPatologicaProssima.max }} caratteri
           </span>
         </div>
 
-        @if (hasError("anamnesiPatologicaProssima", "required")) {
+        @if (hasError('anamnesiPatologicaProssima', 'required')) {
           <div class="err">Campo obbligatorio</div>
         }
-        <!-- @if (hasError("anamnesiPatologicaProssima", "plainTextMaxLength")) {
-          <div class="err">
-            Hai superato il limite massimo di
-            {{ limits.anamnesiPatologicaProssima.max }} caratteri.
-          </div>
-        } -->
       </div>
     }
 
     @if (sections.value.anamnesiRemota) {
       <div class="field">
         <label>Anamnesi patologica remota</label>
-        <rich-text-field [control]="control('anamnesiPatologicaRemota')">
-        </rich-text-field>
+        <rich-text-field [control]="control('anamnesiPatologicaRemota')"></rich-text-field>
 
         <div class="metaRow">
-          <span
-            class="charCount"
-            [class.overLimit]="
-              isOverLimit(
-                'anamnesiPatologicaRemota',
-                limits.anamnesiPatologicaRemota.max
-              )
-            "
-          >
-            {{ plainTextLength("anamnesiPatologicaRemota") }} /
+          <span class="charCount" [class.overLimit]="isOverLimit('anamnesiPatologicaRemota', limits.anamnesiPatologicaRemota.max)">
+            {{ plainTextLength('anamnesiPatologicaRemota') }} /
             {{ limits.anamnesiPatologicaRemota.max }} caratteri
           </span>
         </div>
-
-        <!-- @if (hasError("anamnesiPatologicaRemota", "plainTextMaxLength")) {
-          <div class="err">
-            Hai superato il limite massimo di
-            {{ limits.anamnesiPatologicaRemota.max }} caratteri.
-          </div>
-        } -->
       </div>
 
       <div class="field">
         <label>Anamnesi patologica prossima</label>
-        <rich-text-field [control]="control('anamnesiPatologicaProssima')">
-        </rich-text-field>
+        <rich-text-field [control]="control('anamnesiPatologicaProssima')"></rich-text-field>
 
         <div class="metaRow">
-          <span
-            class="charCount"
-            [class.overLimit]="
-              isOverLimit(
-                'anamnesiPatologicaProssima',
-                limits.anamnesiPatologicaProssima.max
-              )
-            "
-          >
-            {{ plainTextLength("anamnesiPatologicaProssima") }} /
+          <span class="charCount" [class.overLimit]="isOverLimit('anamnesiPatologicaProssima', limits.anamnesiPatologicaProssima.max)">
+            {{ plainTextLength('anamnesiPatologicaProssima') }} /
             {{ limits.anamnesiPatologicaProssima.max }} caratteri
           </span>
         </div>
 
-        @if (hasError("anamnesiPatologicaProssima", "required")) {
+        @if (hasError('anamnesiPatologicaProssima', 'required')) {
           <div class="err">Campo obbligatorio</div>
         }
-        <!-- @if (hasError("anamnesiPatologicaProssima", "plainTextMaxLength")) {
-          <div class="err">
-            Hai superato il limite massimo di
-            {{ limits.anamnesiPatologicaProssima.max }} caratteri.
-          </div>
-        } -->
       </div>
     }
 
     @if (sections.value.portaInVisione) {
       <div class="field">
         <label>Porta in visione</label>
-        <rich-text-field
-          [control]="control('portaInVisione')"
-        ></rich-text-field>
+        <rich-text-field [control]="control('portaInVisione')"></rich-text-field>
 
         <div class="metaRow">
-          <span
-            class="charCount"
-            [class.overLimit]="
-              isOverLimit('portaInVisione', limits.portaInVisione.max)
-            "
-          >
-            {{ plainTextLength("portaInVisione") }} /
-            {{ limits.portaInVisione.max }} caratteri
+          <span class="charCount" [class.overLimit]="isOverLimit('portaInVisione', limits.portaInVisione.max)">
+            {{ plainTextLength('portaInVisione') }} / {{ limits.portaInVisione.max }} caratteri
           </span>
         </div>
-
-        <!-- @if (hasError("portaInVisione", "plainTextMaxLength")) {
-          <div class="err">
-            Hai superato il limite massimo di
-            {{ limits.portaInVisione.max }} caratteri.
-          </div>
-        } -->
       </div>
     }
 
     @if (sections.value.esamiInLoco) {
       <div class="field">
         <label>Esami eseguiti</label>
-        <rich-text-field [control]="control('esamiEseguitiInLoco')">
-        </rich-text-field>
+        <rich-text-field [control]="control('esamiEseguitiInLoco')"></rich-text-field>
 
         <div class="metaRow">
-          <span
-            class="charCount"
-            [class.overLimit]="
-              isOverLimit('esamiEseguitiInLoco', limits.esamiEseguitiInLoco.max)
-            "
-          >
-            {{ plainTextLength("esamiEseguitiInLoco") }} /
+          <span class="charCount" [class.overLimit]="isOverLimit('esamiEseguitiInLoco', limits.esamiEseguitiInLoco.max)">
+            {{ plainTextLength('esamiEseguitiInLoco') }} /
             {{ limits.esamiEseguitiInLoco.max }} caratteri
           </span>
         </div>
-
-        <!-- @if (hasError("esamiEseguitiInLoco", "plainTextMaxLength")) {
-          <div class="err">
-            Hai superato il limite massimo di
-            {{ limits.esamiEseguitiInLoco.max }} caratteri.
-          </div>
-        } -->
       </div>
     }
 
@@ -185,26 +553,14 @@
       <rich-text-field [control]="control('esameObiettivo')"></rich-text-field>
 
       <div class="metaRow">
-        <span
-          class="charCount"
-          [class.overLimit]="
-            isOverLimit('esameObiettivo', limits.esameObiettivo.max)
-          "
-        >
-          {{ plainTextLength("esameObiettivo") }} /
-          {{ limits.esameObiettivo.max }} caratteri
+        <span class="charCount" [class.overLimit]="isOverLimit('esameObiettivo', limits.esameObiettivo.max)">
+          {{ plainTextLength('esameObiettivo') }} / {{ limits.esameObiettivo.max }} caratteri
         </span>
       </div>
 
-      @if (hasError("esameObiettivo", "required")) {
+      @if (hasError('esameObiettivo', 'required')) {
         <div class="err">Campo obbligatorio</div>
       }
-      <!-- @if (hasError("esameObiettivo", "plainTextMaxLength")) {
-        <div class="err">
-          Hai superato il limite massimo di {{ limits.esameObiettivo.max }}
-          caratteri.
-        </div>
-      } -->
     </div>
 
     <div class="field">
@@ -212,23 +568,14 @@
       <rich-text-field [control]="control('diagnosi')"></rich-text-field>
 
       <div class="metaRow">
-        <span
-          class="charCount"
-          [class.overLimit]="isOverLimit('diagnosi', limits.diagnosi.max)"
-        >
-          {{ plainTextLength("diagnosi") }} /
-          {{ limits.diagnosi.max }} caratteri
+        <span class="charCount" [class.overLimit]="isOverLimit('diagnosi', limits.diagnosi.max)">
+          {{ plainTextLength('diagnosi') }} / {{ limits.diagnosi.max }} caratteri
         </span>
       </div>
 
-      @if (hasError("diagnosi", "required")) {
+      @if (hasError('diagnosi', 'required')) {
         <div class="err">Campo obbligatorio</div>
       }
-      <!-- @if (hasError("diagnosi", "plainTextMaxLength")) {
-        <div class="err">
-          Hai superato il limite massimo di {{ limits.diagnosi.max }} caratteri.
-        </div>
-      } -->
     </div>
 
     <div class="field">
@@ -236,26 +583,14 @@
       <rich-text-field [control]="control('prescrizione')"></rich-text-field>
 
       <div class="metaRow">
-        <span
-          class="charCount"
-          [class.overLimit]="
-            isOverLimit('prescrizione', limits.prescrizione.max)
-          "
-        >
-          {{ plainTextLength("prescrizione") }} /
-          {{ limits.prescrizione.max }} caratteri
+        <span class="charCount" [class.overLimit]="isOverLimit('prescrizione', limits.prescrizione.max)">
+          {{ plainTextLength('prescrizione') }} / {{ limits.prescrizione.max }} caratteri
         </span>
       </div>
 
-      @if (hasError("prescrizione", "required")) {
+      @if (hasError('prescrizione', 'required')) {
         <div class="err">Campo obbligatorio</div>
       }
-      <!-- @if (hasError("prescrizione", "plainTextMaxLength")) {
-        <div class="err">
-          Hai superato il limite massimo di {{ limits.prescrizione.max }}
-          caratteri.
-        </div>
-      } -->
     </div>
   }
 </div>

@@ -3,6 +3,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { DoctorInfo } from '../../models/doctor-info';
 import { DoctorAutocomplete } from '../../components/doctor-autocomplete/doctor-autocomplete';
+import { ReportType } from '../../types/report-type';
 
 @Component({
   selector: 'step-visita',
@@ -14,18 +15,40 @@ export class StepVisita {
   @Input({ required: true }) form!: FormGroup;
   @Input({ required: true }) doctorSearch!: FormControl;
   @Input({ required: true }) doctorResults!: DoctorInfo[];
+  @Input({ required: true }) technicalSearch!: FormControl;
+  @Input({ required: true }) technicalResults!: DoctorInfo[];
   @Input({ required: true }) control!: (path: string) => FormControl;
   @Input({ required: true }) hasError!: (
     path: string,
     error: string,
   ) => boolean;
+  @Input({ required: true }) reportType!: ReportType;
 
   @Output() selectDoctorEvent = new EventEmitter<DoctorInfo>();
   @Output() clearDoctorEvent = new EventEmitter<void>();
+  @Output() selectTechnicianEvent = new EventEmitter<DoctorInfo>();
+  @Output() clearTechnicianEvent = new EventEmitter<void>();
 
   get selectedDoctorInvalid(): boolean {
     const ctrl = this.control('medico.id');
     return !!(ctrl && ctrl.touched && ctrl.hasError('required'));
+  }
+
+  get isEmg(): boolean {
+    return this.reportType === 'emg';
+  }
+
+  get isPsg(): boolean {
+    return this.reportType === 'psg';
+  }
+
+  get selectedTechnicianInvalid(): boolean {
+    const ctrl = this.control('emg.tecnicoEsecutoreId');
+    return !!(ctrl && ctrl.touched && ctrl.hasError('required'));
+  }
+
+  get doctorLabel(): string {
+    return this.isEmg || this.isPsg ? 'Medico refertatore' : 'Medico';
   }
 
   onVisitDateInput(event: Event): void {
