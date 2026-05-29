@@ -97,9 +97,39 @@
           [disabled]="draftSaving"
           (click)="openPsgAnamnesis.emit()"
         >
-          {{ currentDraftStatus === 'anamnesi_raccolta' || currentDraftStatus === 'in_refertazione' || currentDraftStatus === 'completato'
-            ? 'Modifica anamnesi PSG'
-            : 'Compila anamnesi PSG' }}
+          {{ readonlyMode
+            ? 'Visualizza anamnesi PSG'
+            : currentDraftStatus === 'anamnesi_raccolta' || currentDraftStatus === 'in_refertazione' || currentDraftStatus === 'completato'
+              ? 'Modifica anamnesi PSG'
+              : 'Compila anamnesi PSG' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showEmgCard) {
+  <div class="psgAnamnesiCard emgAnamnesiCard">
+    <div class="psgAnamnesiCardContent">
+      <div>
+        <div class="psgAnamnesiCardEyebrow">EMG</div>
+        <h3>Anamnesi neuropatie e dati preliminari EMG</h3>
+        <p>Raccogli la checklist anamnestica e le informazioni preliminari prima dell'esecuzione/refertazione EMG.</p>
+      </div>
+
+      <div class="psgAnamnesiCardMeta">
+        <span class="statusBadge">{{ emgStatusLabel }}</span>
+        <button
+          type="button"
+          class="actionBtn"
+          [disabled]="draftSaving"
+          (click)="openEmgAnamnesis.emit()"
+        >
+          {{ readonlyMode
+            ? 'Visualizza anamnesi EMG'
+            : currentDraftStatus === 'anamnesi_raccolta' || currentDraftStatus === 'in_refertazione' || currentDraftStatus === 'completato'
+              ? 'Modifica anamnesi EMG'
+              : 'Compila anamnesi EMG' }}
         </button>
       </div>
     </div>

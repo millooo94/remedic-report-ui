@@ -1,139 +1,883 @@
 <div class="page">
-  <wizard-header
-    [steps]="steps"
-    [step]="step"
-    [pct]="pct()"
-    (goTo)="goTo($event)"
-    [showResumeButton]="true"
-    (resumeDraft)="openResumeDraftModal()"
-  >
-  </wizard-header>
-
-  <main class="main">
-    <section class="card">
-      <div class="cardHead">
-        <h2>{{ steps[step].title }}</h2>
-        <p class="hint">{{ stepHint() }}</p>
-
-        @if (currentDraftId) {
-          <div class="draftMetaRow">
-            <span class="draftMetaPill">Bozza attiva</span>
-            <span class="draftMetaText">ID: {{ currentDraftId }}</span>
-            @if (currentDraftStatus) {
-              <span class="draftMetaPill muted">{{ currentDraftStatus }}</span>
-            }
+  @if (uiState === 'initialTypeSelection') {
+    <main class="entryMain">
+      <section class="entryCard">
+        <header class="entryHeader">
+          <div class="entryHeaderTop">
+            <div class="entryEyebrow">Remedic Report</div>
+            <button type="button" class="ghostLinkBtn" (click)="openReservedArea()">
+              Area riservata
+            </button>
           </div>
-        }
-      </div>
+          <h1>Scegli la tipologia di referto</h1>
+          <p>Seleziona il percorso operativo con cui vuoi iniziare.</p>
+        </header>
 
-      <div class="cardBody">
-        @if (draftMessage) {
-          <div class="draftAlert" [class.error]="draftMessageType === 'error'" [class.success]="draftMessageType === 'success'" [class.warning]="draftMessageType === 'warning'">
-            {{ draftMessage }}
-          </div>
-        }
-
-        @if (attachmentsReloadNotice) {
-          <div class="draftAlert warning">
-            {{ attachmentsReloadNotice }}
-          </div>
-        }
-
-        @if (step === 0) {
-          <step-anagrafica
-            [form]="form"
-            [control]="control.bind(this)"
-            [hasError]="hasError.bind(this)"
-            [reportType]="reportType"
-            [currentDraftStatus]="currentDraftStatus"
-            [draftSaving]="draftSaving"
-            (openPsgAnamnesis)="openPsgAnamnesisModal()"
-          >
-          </step-anagrafica>
-        }
-
-        @if (step === 1) {
-          <step-visita
-            [form]="form"
-            [doctorSearch]="doctorSearch"
-            [doctorResults]="doctorResults"
-            [technicalSearch]="technicalSearch"
-            [technicalResults]="technicalResults"
-            [control]="control.bind(this)"
-            [hasError]="hasError.bind(this)"
-            [reportType]="reportType"
-            (selectDoctorEvent)="selectDoctor($event)"
-            (clearDoctorEvent)="clearDoctor()"
-            (selectTechnicianEvent)="selectTechnician($event)"
-            (clearTechnicianEvent)="clearTechnician()"
-          >
-          </step-visita>
-        }
-
-        @if (step === 2) {
-          <step-sezioni
-            [sectionKeys]="sectionKeys"
-            [mandatorySections]="mandatorySections"
-            [section]="section.bind(this)"
-            [sectionLabel]="sectionLabel.bind(this)"
-            [sectionDescription]="sectionDescription.bind(this)"
-            [modeControl]="control('modalitaReferto')"
-            [control]="control.bind(this)"
-            [hasError]="hasError.bind(this)"
-            [reportType]="reportType"
-          >
-          </step-sezioni>
-        }
-
-        @if (step === 3) {
-          <step-contenuti
-            [sections]="sections"
-            [control]="control.bind(this)"
-            [hasError]="hasError.bind(this)"
-            [mode]="control('modalitaReferto').value"
-            [reportType]="reportType"
-          >
-          </step-contenuti>
-        }
-      </div>
-
-      <div class="cardFooter">
-        <div class="left-buttons">
-          <button
-            type="button"
-            class="btn ghost"
-            (click)="saveDraft()"
-            [disabled]="draftSaving"
-          >
-            {{ draftSaving ? 'Salvataggio...' : 'Salva bozza' }}
+        <div class="entryTypeGrid">
+          <button type="button" class="entryTypeCard" (click)="selectReportType('standard')">
+            <div class="entryTypeIcon">
+              <img src="doctor.svg" alt="Icona referto standard" class="entryTypeIconImg" />
+            </div>
+            <h3>Referto standard</h3>
+            <p>Crea un referto medico generico con sezioni personalizzabili.</p>
           </button>
 
-          <button
-            type="button"
-            class="btn danger ghost"
-            (click)="openResetModal()"
-          >
-            Cancella tutto
+          <button type="button" class="entryTypeCard" (click)="selectReportType('emg')">
+            <div class="entryTypeIcon">
+              <img src="nerve.svg" alt="Icona EMG" class="entryTypeIconImg" />
+            </div>
+            <h3>EMG / ENG</h3>
+            <p>Refertazione elettrofisiologica con dati tecnici, anamnesi mirata e tracciati.</p>
           </button>
 
-          <button
-            type="button"
-            class="btn ghost"
-            (click)="prev()"
-            [disabled]="step === 0"
-          >
-            Indietro
+          <button type="button" class="entryTypeCard" (click)="selectReportType('psg')">
+            <div class="entryTypeIcon">
+              <img src="sleepy.svg" alt="Icona PSG" class="entryTypeIconImg" />
+            </div>
+            <h3>PSG</h3>
+            <p>Refertazione polisonnografica cardio-respiratoria con anamnesi del sonno, ESS e report strumentale.</p>
+          </button>
+        </div>
+      </section>
+    </main>
+  } @else if (uiState === 'typeActionSelection') {
+    <main class="entryMain">
+      <section class="entryCard">
+        <header class="entryHeader">
+          <div class="entryHeaderTop">
+            <div class="entryEyebrow">Tipo selezionato</div>
+            <button type="button" class="ghostLinkBtn" (click)="goToInitialTypeSelection()">
+              Indietro
+            </button>
+          </div>
+          <h1>{{ selectedTypeLabel }}</h1>
+          <p>{{ selectedTypeDescription }}</p>
+        </header>
+
+        <div class="actionGrid">
+          <button type="button" class="actionCard" (click)="startNewReport()">
+            <h3>Nuovo referto</h3>
+            <p>Avvia una nuova compilazione guidata con il tipo gia impostato.</p>
+          </button>
+
+          <button type="button" class="actionCard" (click)="startResumeForSelectedType()">
+            <h3>Riprendi referto</h3>
+            <p>Apri la lista bozze salvate e riprendi la compilazione.</p>
+          </button>
+        </div>
+      </section>
+    </main>
+  } @else if (uiState === 'reservedLogin' || uiState === 'neurologistLogin') {
+    <main class="entryMain">
+      <section class="entryCard entryCardNarrow">
+        <header class="entryHeader">
+          <div class="entryHeaderTop">
+            <div class="entryEyebrow">Area riservata</div>
+            <button type="button" class="ghostLinkBtn" (click)="goToInitialTypeSelection()">
+              Indietro
+            </button>
+          </div>
+          <h1>Accedi all'area riservata</h1>
+          <p>Admin e refertatori accedono da qui. Il backend decide automaticamente ruolo e permessi disponibili.</p>
+        </header>
+
+        <div class="loginForm">
+          <div class="field">
+            <label>Email</label>
+            <input type="email" [(ngModel)]="neurologistEmail" placeholder="nome@remedic.it" />
+          </div>
+
+          <div class="field">
+            <label>Password</label>
+            <input type="password" [(ngModel)]="neurologistPassword" placeholder="Inserisci la password" />
+          </div>
+
+          @if (neurologistLoginError) {
+            <div class="draftAlert error">{{ neurologistLoginError }}</div>
+          }
+
+          <div class="loginActions loginActionsSplit">
+            <button type="button" class="btn ghost" (click)="goToForgotPassword()">
+              Password dimenticata?
+            </button>
+            <button
+              type="button"
+              class="btn primary"
+              [disabled]="neurologistLoginLoading"
+              (click)="submitNeurologistLogin()"
+            >
+              {{ neurologistLoginLoading ? 'Accesso...' : 'Accedi' }}
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  } @else if (uiState === 'forgotPassword') {
+    <main class="entryMain">
+      <section class="entryCard entryCardNarrow">
+        <header class="entryHeader">
+          <div class="entryHeaderTop">
+            <div class="entryEyebrow">Area riservata</div>
+            <button type="button" class="ghostLinkBtn" (click)="goToReservedLogin()">
+              Torna al login
+            </button>
+          </div>
+          <h1>Password dimenticata</h1>
+          <p>Se l'email e associata a un account attivo, riceverai le istruzioni per reimpostare la password.</p>
+        </header>
+
+        <div class="loginForm">
+          <div class="field">
+            <label>Email</label>
+            <input type="email" [(ngModel)]="forgotPasswordEmail" placeholder="nome@remedic.it" />
+          </div>
+
+          @if (forgotPasswordMessage) {
+            <div class="draftAlert success">{{ forgotPasswordMessage }}</div>
+          }
+
+          <div class="loginActions">
+            <button type="button" class="btn primary" [disabled]="forgotPasswordLoading" (click)="submitForgotPassword()">
+              {{ forgotPasswordLoading ? 'Invio...' : 'Invia istruzioni' }}
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  } @else if (uiState === 'resetPassword') {
+    <main class="entryMain">
+      <section class="entryCard entryCardNarrow">
+        <header class="entryHeader">
+          <div class="entryHeaderTop">
+            <div class="entryEyebrow">Area riservata</div>
+            <button type="button" class="ghostLinkBtn" (click)="goToReservedLogin()">
+              Torna al login
+            </button>
+          </div>
+          <h1>Reimposta password</h1>
+          <p>Imposta una nuova password sicura per il tuo account di area riservata.</p>
+        </header>
+
+        <div class="loginForm">
+          <div class="field">
+            <label>Nuova password</label>
+            <input type="password" [(ngModel)]="resetPasswordValue" placeholder="Nuova password" />
+          </div>
+
+          <div class="field">
+            <label>Conferma password</label>
+            <input type="password" [(ngModel)]="resetPasswordConfirm" placeholder="Conferma password" />
+          </div>
+
+          @if (resetPasswordMessage) {
+            <div
+              class="draftAlert"
+              [class.error]="!resetPasswordMessage.includes('correttamente')"
+              [class.success]="resetPasswordMessage.includes('correttamente')"
+            >
+              {{ resetPasswordMessage }}
+            </div>
+          }
+
+          <div class="loginActions">
+            <button type="button" class="btn primary" [disabled]="resetPasswordLoading" (click)="submitResetPassword()">
+              {{ resetPasswordLoading ? 'Aggiorno...' : 'Aggiorna password' }}
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  } @else if (uiState === 'adminDashboard') {
+    <main class="entryMain">
+      <section class="entryCard dashboardCard">
+        <header class="entryHeader">
+          <div class="entryHeaderTop">
+            <div class="entryEyebrow">Area riservata</div>
+            <div class="dashboardTopActions">
+              <span class="dashboardUserBadge">{{ reservedUser?.displayName || 'Admin' }}</span>
+              <button type="button" class="ghostLinkBtn" (click)="logoutNeurologist()">
+                Logout
+              </button>
+            </div>
+          </div>
+          <h1>Dashboard admin</h1>
+          <p>Gestisci professionisti, refertatori, referti in lavorazione, archivio e audit di base.</p>
+        </header>
+
+        @if (adminDashboardError) {
+          <div class="draftAlert error">{{ adminDashboardError }}</div>
+        }
+
+        <div class="dashboardTabs">
+          <button type="button" class="ghostLinkBtn" [class.isActive]="adminTab === 'professionals'" (click)="adminTab = 'professionals'">
+            Professionisti
+          </button>
+          <button type="button" class="ghostLinkBtn" [class.isActive]="adminTab === 'users'" (click)="adminTab = 'users'">
+            Refertatori
+          </button>
+          <button type="button" class="ghostLinkBtn" [class.isActive]="adminTab === 'drafts'" (click)="adminTab = 'drafts'">
+            In lavorazione
+          </button>
+          <button type="button" class="ghostLinkBtn" [class.isActive]="adminTab === 'archive'" (click)="adminTab = 'archive'">
+            Archivio
+          </button>
+          <button type="button" class="ghostLinkBtn" [class.isActive]="adminTab === 'audit'" (click)="adminTab = 'audit'">
+            Audit log
           </button>
         </div>
 
-        <div class="spacer"></div>
+        @if (adminDashboardLoading) {
+          <div class="emptyStateCard">Sto caricando la dashboard admin...</div>
+        } @else if (adminTab === 'professionals') {
+          <div class="dashboardSplit">
+            <section class="dashboardPanel">
+              <h3>Gestione medici e professionisti</h3>
+              <div class="dashboardFormGrid">
+                <div class="field">
+                  <label>Nome</label>
+                  <input type="text" [(ngModel)]="adminProfessionalForm.first_name" />
+                </div>
+                <div class="field">
+                  <label>Cognome</label>
+                  <input type="text" [(ngModel)]="adminProfessionalForm.last_name" />
+                </div>
+                <div class="field full">
+                  <label>Nome visualizzato *</label>
+                  <input type="text" [(ngModel)]="adminProfessionalForm.display_name" />
+                </div>
+                <div class="field">
+                  <label>Titolo</label>
+                  <input type="text" [(ngModel)]="adminProfessionalForm.title" />
+                </div>
+                <div class="field">
+                  <label>Email</label>
+                  <input type="email" [(ngModel)]="adminProfessionalForm.email" />
+                </div>
+                <div class="field">
+                  <label>Telefono</label>
+                  <input type="text" [(ngModel)]="adminProfessionalForm.phone" />
+                </div>
+                <div class="field">
+                  <label>Specializzazione</label>
+                  <input type="text" [(ngModel)]="adminProfessionalForm.specializzazione" />
+                </div>
+                <div class="field">
+                  <label>Ruolo / label</label>
+                  <input type="text" [(ngModel)]="adminProfessionalForm.role_label" />
+                </div>
+                <div class="field">
+                  <label>Tipo</label>
+                  <select [(ngModel)]="adminProfessionalForm.professional_type">
+                    <option value="medico">Medico</option>
+                    <option value="tecnico">Tecnico</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Ordinamento</label>
+                  <input type="number" [(ngModel)]="adminProfessionalForm.sort_order" />
+                </div>
+                <label class="checkline full">
+                  <input type="checkbox" [(ngModel)]="adminProfessionalForm.visible_in_standard" />
+                  <span>Visibile nei referti standard</span>
+                </label>
+                <label class="checkline full">
+                  <input type="checkbox" [(ngModel)]="adminProfessionalForm.is_refertatore" />
+                  <span>Disponibile anche come professionista refertatore</span>
+                </label>
+              </div>
 
-        <button type="button" class="btn primary" (click)="primaryAction()">
-          {{ canProceedLabel() }}
-        </button>
-      </div>
-    </section>
-  </main>
+              <div class="loginActions">
+                <button type="button" class="btn ghost" (click)="resetAdminProfessionalForm()">
+                  Nuovo
+                </button>
+                <button type="button" class="btn primary" (click)="saveAdminProfessional()">
+                  Salva professionista
+                </button>
+              </div>
+            </section>
+
+            <section class="dashboardPanel">
+              <h3>Elenco professionisti</h3>
+              @if (!adminProfessionals.length) {
+                <div class="emptyStateCard">Nessun professionista disponibile.</div>
+              } @else {
+                <div class="draftTableWrap">
+                  <div class="draftTable draftTableHead draftTableAdminProfessionals">
+                    <div>Professionista</div>
+                    <div>Specializzazione</div>
+                    <div>Tipo</div>
+                    <div>Stato</div>
+                    <div>Azioni</div>
+                  </div>
+                  @for (professional of adminProfessionals; track professional.id) {
+                    <div class="draftTable draftTableRow draftTableAdminProfessionals">
+                      <div>
+                        <strong>{{ professional.display_name }}</strong>
+                        <small>{{ professional.role_label || '—' }}</small>
+                      </div>
+                      <div>{{ professional.specializzazione || '—' }}</div>
+                      <div>{{ professional.professional_type }}</div>
+                      <div><span class="draftRowStatus">{{ professional.active ? 'Attivo' : 'Disattivato' }}</span></div>
+                      <div class="draftRowActions">
+                        <button type="button" class="btn tiny ghost" (click)="editAdminProfessional(professional)">
+                          Modifica
+                        </button>
+                        <button type="button" class="btn tiny ghost" (click)="toggleAdminProfessionalStatus(professional)">
+                          {{ professional.active ? 'Disattiva' : 'Riattiva' }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+          </div>
+        } @else if (adminTab === 'users') {
+          <div class="dashboardSplit">
+            <section class="dashboardPanel">
+              <h3>Gestione admin e refertatori</h3>
+              <div class="dashboardFormGrid">
+                <div class="field">
+                  <label>Ruolo</label>
+                  <select [(ngModel)]="adminUserForm.role">
+                    <option value="refertatore">Refertatore</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Email *</label>
+                  <input type="email" [(ngModel)]="adminUserForm.email" />
+                </div>
+                <div class="field full">
+                  <label>Nome visualizzato *</label>
+                  <input type="text" [(ngModel)]="adminUserForm.display_name" />
+                </div>
+                <div class="field">
+                  <label>Specializzazione</label>
+                  <input type="text" [(ngModel)]="adminUserForm.specializzazione" />
+                </div>
+                <div class="field">
+                  <label>Password {{ adminUserForm.id ? '(lascia vuoto per non cambiarla)' : '*' }}</label>
+                  <input type="password" [(ngModel)]="adminUserForm.password" />
+                </div>
+
+                @if (adminUserForm.role === 'refertatore') {
+                  <div class="field full">
+                    <label>Assegnazioni</label>
+                    <div class="inlineChecks">
+                      <label class="checkline">
+                        <input
+                          type="checkbox"
+                          [checked]="adminUserForm.assignedTypes.includes('emg')"
+                          (change)="toggleAdminAssignedType('emg', $any($event.target).checked)"
+                        />
+                        <span>EMG</span>
+                      </label>
+                      <label class="checkline">
+                        <input
+                          type="checkbox"
+                          [checked]="adminUserForm.assignedTypes.includes('psg')"
+                          (change)="toggleAdminAssignedType('psg', $any($event.target).checked)"
+                        />
+                        <span>PSG</span>
+                      </label>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <div class="loginActions">
+                <button type="button" class="btn ghost" (click)="resetAdminUserForm()">
+                  Nuovo
+                </button>
+                <button type="button" class="btn primary" (click)="saveAdminUser()">
+                  Salva utente
+                </button>
+              </div>
+            </section>
+
+            <section class="dashboardPanel">
+              <h3>Utenti area riservata</h3>
+              @if (!adminUsers.length) {
+                <div class="emptyStateCard">Nessun utente configurato.</div>
+              } @else {
+                <div class="draftTableWrap">
+                  <div class="draftTable draftTableHead draftTableAdminUsers">
+                    <div>Utente</div>
+                    <div>Ruolo</div>
+                    <div>Assegnazioni</div>
+                    <div>Stato</div>
+                    <div>Azioni</div>
+                  </div>
+                  @for (user of adminUsers; track user.id) {
+                    <div class="draftTable draftTableRow draftTableAdminUsers">
+                      <div>
+                        <strong>{{ user.display_name }}</strong>
+                        <small>{{ user.email }}</small>
+                      </div>
+                      <div>{{ user.role }}</div>
+                      <div>{{ user.assignedTypes.length ? user.assignedTypes.join(', ').toUpperCase() : '—' }}</div>
+                      <div><span class="draftRowStatus">{{ user.active ? 'Attivo' : 'Disattivato' }}</span></div>
+                      <div class="draftRowActions">
+                        <button type="button" class="btn tiny ghost" (click)="editAdminUser(user)">
+                          Modifica
+                        </button>
+                        <button type="button" class="btn tiny ghost" (click)="toggleAdminUserStatus(user)">
+                          {{ user.active ? 'Disattiva' : 'Riattiva' }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+          </div>
+        } @else if (adminTab === 'drafts' || adminTab === 'archive') {
+          <section class="dashboardPanel">
+            <h3>{{ adminTab === 'drafts' ? 'Referti in lavorazione' : 'Archivio referti completati' }}</h3>
+            @if (!(adminTab === 'drafts' ? adminDrafts.length : adminArchiveDrafts.length)) {
+              <div class="emptyStateCard">Nessun referto da mostrare.</div>
+            } @else {
+              <div class="draftTableWrap">
+                <div class="draftTable draftTableHead draftTableAdminDrafts">
+                  <div>Paziente</div>
+                  <div>Tipo</div>
+                  <div>Refertatore</div>
+                  <div>Stato</div>
+                  <div>Ultima modifica</div>
+                  <div>Azioni</div>
+                </div>
+                @for (draft of (adminTab === 'drafts' ? adminDrafts : adminArchiveDrafts); track draft.id) {
+                  <div class="draftTable draftTableRow draftTableAdminDrafts">
+                    <div>
+                      <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
+                      <small>{{ draft.data_nascita || '—' }}</small>
+                    </div>
+                    <div>{{ reportTypeLabelFor(draft.tipo_referto) }}</div>
+                    <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '—' }}</div>
+                    <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
+                    <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
+                    <div class="draftRowActions">
+                      <button type="button" class="btn tiny ghost" (click)="openAdminDraftRecord(draft, true)">
+                        Apri
+                      </button>
+                      @if ((draft.stato === 'completato' || draft.stato === 'firmato_caricato') && canOpenSignedPdf(draft)) {
+                        <button type="button" class="btn tiny ghost" (click)="openSignedPdfForDraft(draft)">
+                          Apri PDF firmato
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </section>
+        } @else {
+          <section class="dashboardPanel">
+            <h3>Audit log base</h3>
+            @if (!auditLogs.length) {
+              <div class="emptyStateCard">Nessun evento disponibile.</div>
+            } @else {
+              <div class="draftTableWrap">
+                <div class="draftTable draftTableHead draftTableAudit">
+                  <div>Quando</div>
+                  <div>Azione</div>
+                  <div>Ruolo</div>
+                  <div>Entita</div>
+                </div>
+                @for (log of auditLogs; track log.id) {
+                  <div class="draftTable draftTableRow draftTableAudit">
+                    <div>{{ log.created_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+                    <div>{{ log.action }}</div>
+                    <div>{{ log.role || '—' }}</div>
+                    <div>{{ log.entity_type || '—' }}</div>
+                  </div>
+                }
+              </div>
+            }
+          </section>
+        }
+      </section>
+    </main>
+  } @else if (uiState === 'refertatoreDashboard' || uiState === 'neurologistDashboard') {
+    <main class="entryMain">
+      <section class="entryCard dashboardCard">
+        <header class="entryHeader">
+          <div class="entryHeaderTop">
+            <div class="entryEyebrow">Area refertatore</div>
+            <div class="dashboardTopActions">
+              <span class="dashboardUserBadge">{{ neurologistDisplayName }}</span>
+              <button type="button" class="ghostLinkBtn" (click)="logoutNeurologist()">
+                Logout
+              </button>
+            </div>
+          </div>
+          <h1>Dashboard refertatore</h1>
+          <p>Visualizza solo i referti assegnati a te, completa le aree abilitate e archivia il PDF firmato definitivo.</p>
+        </header>
+
+        @if (neurologistDraftsError) {
+          <div class="draftAlert error">{{ neurologistDraftsError }}</div>
+        }
+
+        @if (neurologistDraftsLoading) {
+          <div class="emptyStateCard">Sto caricando i referti assegnati...</div>
+        } @else {
+          @if (hasEmgAssignment) {
+            <section class="dashboardPanel">
+              <h3>EMG assegnate da completare</h3>
+              @if (!activeRefertatoreDrafts('emg').length) {
+                <div class="emptyStateCard">Nessun referto EMG assegnato in lavorazione.</div>
+              } @else {
+                <div class="draftTableWrap">
+                  <div class="draftTable draftTableHead neurologistTable">
+                    <div>Paziente</div>
+                    <div>Data esame</div>
+                    <div>Refertatore</div>
+                    <div>Stato</div>
+                    <div>Ultima modifica</div>
+                    <div>Azioni</div>
+                  </div>
+                  @for (draft of activeRefertatoreDrafts('emg'); track draft.id) {
+                    <div class="draftTable draftTableRow neurologistTable">
+                      <div>
+                        <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
+                        <small>{{ draft.data_nascita || '—' }}</small>
+                      </div>
+                      <div>{{ draft.data_esame || '—' }}</div>
+                      <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '—' }}</div>
+                      <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
+                      <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+                      <div class="draftRowActions">
+                        <button type="button" class="btn tiny ghost" [disabled]="neurologistOpeningDraftId === draft.id" (click)="openNeurologistDraft(draft.id)">
+                          {{ neurologistOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+
+            <section class="dashboardPanel">
+              <h3>Archivio personale EMG</h3>
+              @if (!archiveRefertatoreDrafts('emg').length) {
+                <div class="emptyStateCard">Nessun referto EMG completato nel tuo archivio.</div>
+              } @else {
+                <div class="draftTableWrap">
+                  <div class="draftTable draftTableHead neurologistTable">
+                    <div>Paziente</div>
+                    <div>Data esame</div>
+                    <div>Stato</div>
+                    <div>Completato</div>
+                    <div>Azioni</div>
+                  </div>
+                  @for (draft of archiveRefertatoreDrafts('emg'); track draft.id) {
+                    <div class="draftTable draftTableRow neurologistTable">
+                      <div>
+                        <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
+                        <small>{{ draft.data_nascita || '—' }}</small>
+                      </div>
+                      <div>{{ draft.data_esame || '—' }}</div>
+                      <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
+                      <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
+                      <div class="draftRowActions">
+                        <button type="button" class="btn tiny ghost" [disabled]="neurologistOpeningDraftId === draft.id" (click)="openNeurologistDraft(draft.id)">
+                          {{ neurologistOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
+                        </button>
+                        @if (canOpenSignedPdf(draft)) {
+                          <button type="button" class="btn tiny ghost" (click)="openSignedPdfForDraft(draft)">
+                            Apri PDF firmato
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+          }
+
+          @if (hasPsgAssignment) {
+            <section class="dashboardPanel">
+              <h3>PSG assegnate da completare</h3>
+              @if (!activeRefertatoreDrafts('psg').length) {
+                <div class="emptyStateCard">Nessun referto PSG assegnato in lavorazione.</div>
+              } @else {
+                <div class="draftTableWrap">
+                  <div class="draftTable draftTableHead neurologistTable">
+                    <div>Paziente</div>
+                    <div>Data esame</div>
+                    <div>Refertatore</div>
+                    <div>Stato</div>
+                    <div>Ultima modifica</div>
+                    <div>Azioni</div>
+                  </div>
+                  @for (draft of activeRefertatoreDrafts('psg'); track draft.id) {
+                    <div class="draftTable draftTableRow neurologistTable">
+                      <div>
+                        <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
+                        <small>{{ draft.data_nascita || '—' }}</small>
+                      </div>
+                      <div>{{ draft.data_esame || '—' }}</div>
+                      <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '—' }}</div>
+                      <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
+                      <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+                      <div class="draftRowActions">
+                        <button type="button" class="btn tiny ghost" [disabled]="neurologistOpeningDraftId === draft.id" (click)="openNeurologistDraft(draft.id)">
+                          {{ neurologistOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+
+            <section class="dashboardPanel">
+              <h3>Archivio personale PSG</h3>
+              @if (!archiveRefertatoreDrafts('psg').length) {
+                <div class="emptyStateCard">Nessun referto PSG completato nel tuo archivio.</div>
+              } @else {
+                <div class="draftTableWrap">
+                  <div class="draftTable draftTableHead neurologistTable">
+                    <div>Paziente</div>
+                    <div>Data esame</div>
+                    <div>Stato</div>
+                    <div>Completato</div>
+                    <div>Azioni</div>
+                  </div>
+                  @for (draft of archiveRefertatoreDrafts('psg'); track draft.id) {
+                    <div class="draftTable draftTableRow neurologistTable">
+                      <div>
+                        <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
+                        <small>{{ draft.data_nascita || '—' }}</small>
+                      </div>
+                      <div>{{ draft.data_esame || '—' }}</div>
+                      <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
+                      <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
+                      <div class="draftRowActions">
+                        <button type="button" class="btn tiny ghost" [disabled]="neurologistOpeningDraftId === draft.id" (click)="openNeurologistDraft(draft.id)">
+                          {{ neurologistOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
+                        </button>
+                        @if (canOpenSignedPdf(draft)) {
+                          <button type="button" class="btn tiny ghost" (click)="openSignedPdfForDraft(draft)">
+                            Apri PDF firmato
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+          }
+        }
+      </section>
+    </main>
+  } @else {
+    <wizard-header
+      [steps]="steps"
+      [step]="step"
+      [pct]="pct()"
+      [showResumeButton]="false"
+      [showFlowButton]="true"
+      flowButtonLabel="Cambia flusso"
+      (goTo)="goTo($event)"
+      (changeFlow)="goToTypeActionSelection()"
+    >
+    </wizard-header>
+
+    <main class="main">
+      <section class="card">
+        <div class="cardHead">
+          <div class="cardHeadTop">
+            <span class="typeBadge">{{ selectedTypeLabel }}</span>
+          </div>
+
+          <h2>{{ steps[step].title }}</h2>
+          <p class="hint">{{ stepHint() }}</p>
+
+          @if (currentDraftId) {
+            <div class="draftMetaRow">
+              <span class="draftMetaPill">{{ completedReadonlyMode ? 'Referto archiviato' : 'Bozza attiva' }}</span>
+              <span class="draftMetaText">ID: {{ currentDraftId }}</span>
+              @if (currentDraftStatus) {
+                <span class="draftMetaPill muted">{{ currentDraftStatus }}</span>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="cardBody">
+          @if (showSignedArchiveCard) {
+            <section class="archiveSignedCard">
+              <div class="archiveSignedHead">
+                <div>
+                  <div class="archiveSignedEyebrow">Archivio</div>
+                  <h3>Referto firmato archiviato</h3>
+                  <p>Il PDF firmato e stato caricato e salvato come documento definitivo.</p>
+                </div>
+                <span class="draftMetaPill">Completato</span>
+              </div>
+
+              @if (currentSignedStoredAttachment) {
+                <div class="archiveSignedMeta">
+                  <div><strong>Nome file</strong><span>{{ currentSignedStoredAttachment.original_name || currentSignedStoredAttachment.file_name }}</span></div>
+                  <div><strong>Caricato il</strong><span>{{ currentSignedStoredAttachment.created_at | date: 'dd/MM/yyyy HH:mm' }}</span></div>
+                  <div><strong>Refertatore</strong><span>{{ control('medico.nome').value }} {{ control('medico.cognome').value }}</span></div>
+                  <div><strong>Stato Drive</strong><span>{{ currentSignedStoredAttachment.drive_file_id ? 'Salvato su Drive' : 'Metadato Drive non disponibile' }}</span></div>
+                </div>
+
+                <div class="archiveSignedActions">
+                  <button type="button" class="btn ghost" (click)="openSignedPdfForCurrentDraft()">
+                    Apri PDF firmato
+                  </button>
+                  <button type="button" class="btn ghost" (click)="downloadSignedPdfForCurrentDraft()">
+                    Scarica PDF firmato
+                  </button>
+                  @if (currentSignedStoredAttachment.drive_web_view_link) {
+                    <button type="button" class="btn primary" (click)="openSignedPdfOnDrive()">
+                      Apri su Drive
+                    </button>
+                  }
+                </div>
+              } @else {
+                <div class="draftAlert warning">
+                  Referto completato, ma il PDF firmato non e disponibile nella UI. Verificare archivio Drive.
+                </div>
+              }
+            </section>
+          }
+
+          @if (draftMessage) {
+            <div class="draftAlert" [class.error]="draftMessageType === 'error'" [class.success]="draftMessageType === 'success'" [class.warning]="draftMessageType === 'warning'">
+              {{ draftMessage }}
+            </div>
+          }
+
+          @if (attachmentsReloadNotice) {
+            <div class="draftAlert warning">
+              {{ attachmentsReloadNotice }}
+            </div>
+          }
+
+          @if (step === 0) {
+            <step-anagrafica
+              [form]="form"
+              [control]="control.bind(this)"
+              [hasError]="hasError.bind(this)"
+              [reportType]="reportType"
+              [currentDraftStatus]="currentDraftStatus"
+              [draftSaving]="draftSaving"
+              [readonlyMode]="isReadonlyWizardMode"
+              (openPsgAnamnesis)="openPsgAnamnesisModal()"
+              (openEmgAnamnesis)="openEmgAnamnesisModal()"
+            >
+            </step-anagrafica>
+          }
+
+          @if (step === 1) {
+            <step-visita
+              [form]="form"
+              [doctorSearch]="doctorSearch"
+              [doctorResults]="doctorResults"
+              [technicalSearch]="technicalSearch"
+              [technicalResults]="technicalResults"
+              [control]="control.bind(this)"
+              [hasError]="hasError.bind(this)"
+              [reportType]="reportType"
+              [readonlyMode]="isReadonlyWizardMode"
+              (selectDoctorEvent)="selectDoctor($event)"
+              (clearDoctorEvent)="clearDoctor()"
+              (selectTechnicianEvent)="selectTechnician($event)"
+              (clearTechnicianEvent)="clearTechnician()"
+            >
+            </step-visita>
+          }
+
+          @if (step === 2) {
+            <step-sezioni
+              [sectionKeys]="sectionKeys"
+              [mandatorySections]="mandatorySections"
+              [section]="section.bind(this)"
+              [sectionLabel]="sectionLabel.bind(this)"
+              [sectionDescription]="sectionDescription.bind(this)"
+              [modeControl]="control('modalitaReferto')"
+              [control]="control.bind(this)"
+              [hasError]="hasError.bind(this)"
+              [reportType]="reportType"
+              [readonlyMode]="isReadonlyWizardMode"
+            >
+            </step-sezioni>
+          }
+
+          @if (step === 3) {
+            <step-contenuti
+              [sections]="sections"
+              [control]="control.bind(this)"
+              [hasError]="hasError.bind(this)"
+              [mode]="control('modalitaReferto').value"
+              [reportType]="reportType"
+              [emgNeurologistMode]="emgNeurologistMode"
+              [readonlyMode]="isReadonlyWizardMode"
+              [signedPdfAsset]="currentSignedPdfAsset"
+              [signedPdfSaving]="signedPdfSaving"
+              (signedPdfSelected)="onSignedPdfSelected($event)"
+              (saveSignedPdf)="saveSignedPdfToDrive()"
+            >
+            </step-contenuti>
+          }
+        </div>
+
+        <div class="cardFooter">
+          <div class="left-buttons">
+            @if (showDraftWriteActions) {
+              <button type="button" class="btn ghost" (click)="saveDraft()" [disabled]="draftSaving">
+                {{ draftSaving ? 'Salvataggio...' : 'Salva bozza' }}
+              </button>
+
+              <button type="button" class="btn danger ghost" (click)="openResetModal()">
+                Cancella tutto
+              </button>
+            }
+
+            @if (step > 0) {
+              <button type="button" class="btn ghost" (click)="prev()">
+                Indietro
+              </button>
+            }
+          </div>
+
+          <div class="spacer"></div>
+
+          <div class="footerPrimaryActions">
+            @if (showPrimaryAction && showControlPreviewButton) {
+              <button
+                type="button"
+                class="iconActionBtn"
+                title="Esporta copia di controllo"
+                aria-label="Esporta copia di controllo"
+                (click)="exportControlCopy()"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.29a1 1 0 1 1 1.4 1.42l-4 3.98a1 1 0 0 1-1.4 0l-4-3.98a1 1 0 1 1 1.4-1.42L11 12.59V4a1 1 0 0 1 1-1Zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z"
+                  />
+                </svg>
+              </button>
+            }
+
+            @if (showPrimaryAction) {
+              <button type="button" class="btn primary" (click)="primaryAction()">
+                {{ canProceedLabel() }}
+              </button>
+            }
+          </div>
+        </div>
+      </section>
+    </main>
+  }
 
   @if (showResetModal) {
     <reset-modal (cancel)="closeResetModal()" (confirm)="confirmReset()">
@@ -161,14 +905,52 @@
 
         <div class="modalFooter">
           <button type="button" class="btn ghost" (click)="closePsgAnamnesisModal()">
-            Annulla
+            {{ isReadonlyWizardMode ? 'Chiudi' : 'Annulla' }}
           </button>
-          <button type="button" class="btn ghost" [disabled]="draftSaving" (click)="savePsgAnamnesis(false)">
-            {{ draftSaving ? 'Salvataggio...' : 'Salva anamnesi' }}
+          @if (!isReadonlyWizardMode) {
+            <button type="button" class="btn ghost" [disabled]="draftSaving" (click)="savePsgAnamnesis(false)">
+              {{ draftSaving ? 'Salvataggio...' : 'Salva anamnesi' }}
+            </button>
+            <button type="button" class="btn primary" [disabled]="draftSaving" (click)="savePsgAnamnesis(true)">
+              {{ draftSaving ? 'Salvataggio...' : 'Salva e chiudi' }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showEmgAnamnesisModal) {
+    <div class="modalBackdrop">
+      <div class="modalSheet modalSheetWide">
+        <div class="modalHead">
+          <div>
+            <div class="modalEyebrow">EMG</div>
+            <h3>Anamnesi neuropatie e dati preliminari EMG</h3>
+            <p>Compila la checklist anamnestica obbligatoria prima della refertazione tecnica.</p>
+          </div>
+          <button type="button" class="iconCloseBtn" (click)="closeEmgAnamnesisModal()">Chiudi</button>
+        </div>
+
+        <div class="modalBody">
+          <emg-anamnesi-form
+            [control]="control.bind(this)"
+            [readonlyMode]="isReadonlyWizardMode"
+          ></emg-anamnesi-form>
+        </div>
+
+        <div class="modalFooter">
+          <button type="button" class="btn ghost" (click)="closeEmgAnamnesisModal()">
+            {{ isReadonlyWizardMode ? 'Chiudi' : 'Annulla' }}
           </button>
-          <button type="button" class="btn primary" [disabled]="draftSaving" (click)="savePsgAnamnesis(true)">
-            {{ draftSaving ? 'Salvataggio...' : 'Salva e chiudi' }}
-          </button>
+          @if (!isReadonlyWizardMode) {
+            <button type="button" class="btn ghost" [disabled]="draftSaving" (click)="saveEmgAnamnesis(false)">
+              {{ draftSaving ? 'Salvataggio...' : 'Salva anamnesi EMG' }}
+            </button>
+            <button type="button" class="btn primary" [disabled]="draftSaving" (click)="saveEmgAnamnesis(true)">
+              {{ draftSaving ? 'Salvataggio...' : 'Salva e chiudi' }}
+            </button>
+          }
         </div>
       </div>
     </div>
@@ -180,14 +962,14 @@
         <div class="modalHead">
           <div>
             <div class="modalEyebrow">Bozze</div>
-            <h3>Riprendi referto</h3>
-            <p>Filtra e riprendi una bozza salvata da qualunque postazione.</p>
+            <h3>{{ draftBrowserTitle }}</h3>
+            <p>{{ draftBrowserDescription }}</p>
           </div>
           <button type="button" class="iconCloseBtn" (click)="closeResumeDraftModal()">Chiudi</button>
         </div>
 
         <div class="modalBody">
-          <div class="draftFiltersGrid">
+          <div class="draftFiltersGrid draftFiltersGridCompact">
             <div class="field">
               <label>Ricerca paziente</label>
               <input
@@ -198,20 +980,10 @@
             </div>
 
             <div class="field">
-              <label>Tipo referto</label>
-              <select [(ngModel)]="draftFilters.tipo_referto">
-                <option value="">Tutti</option>
-                @for (item of draftTypeOptions; track item.value) {
-                  <option [value]="item.value">{{ item.label }}</option>
-                }
-              </select>
-            </div>
-
-            <div class="field">
               <label>Stato</label>
               <select [(ngModel)]="draftFilters.stato">
                 <option value="">Tutti</option>
-                @for (item of draftStatusOptions; track item.value) {
+                @for (item of filteredDraftStatusOptions; track item.value) {
                   <option [value]="item.value">{{ item.label }}</option>
                 }
               </select>
@@ -229,14 +1001,17 @@
           }
 
           @if (draftsLoading) {
-            <div class="emptyStateCard">Sto caricando l'elenco delle bozze salvate...</div>
+            <div class="emptyStateCard">
+              Sto caricando l'elenco delle bozze salvate...
+            </div>
           } @else if (!drafts.length) {
-            <div class="emptyStateCard">Nessuna bozza trovata con i filtri attuali.</div>
+            <div class="emptyStateCard">
+              Nessuna bozza trovata con i filtri attuali.
+            </div>
           } @else {
             <div class="draftTableWrap">
               <div class="draftTable draftTableHead">
                 <div>Paziente</div>
-                <div>Tipo</div>
                 <div>Stato</div>
                 <div>Data nascita</div>
                 <div>Ultima modifica</div>
@@ -244,14 +1019,13 @@
               </div>
 
               @for (draft of drafts; track draft.id) {
-                <div class="draftTable draftTableRow">
+                <div class="draftTable draftTableRow draftTableRowCompact">
                   <div>
                     <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
                     @if (draft.codice_fiscale) {
                       <small>{{ draft.codice_fiscale }}</small>
                     }
                   </div>
-                  <div>{{ draft.tipo_referto }}</div>
                   <div><span class="draftRowStatus">{{ draft.stato }}</span></div>
                   <div>{{ draft.data_nascita || '—' }}</div>
                   <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
@@ -270,7 +1044,7 @@
                       [disabled]="deletingDraftId === draft.id"
                       (click)="deleteDraftRecord(draft.id)"
                     >
-                      {{ deletingDraftId === draft.id ? 'Elimino...' : 'Elimina' }}
+                      {{ deletingDraftId === draft.id ? 'Elimino...' : 'Elimina bozza' }}
                     </button>
                   </div>
                 </div>

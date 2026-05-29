@@ -8,4 +8,7 @@ export interface EmgUploadedAsset {
   kind: EmgUploadedAssetKind;
   dataUrl?: string;
   base64?: string;
+  attachmentId?: string;
+  persisted?: boolean;
+  source?: 'session' | 'draft';
 }

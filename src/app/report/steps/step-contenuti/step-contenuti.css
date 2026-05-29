@@ -122,54 +122,56 @@
 }
 
 .freeEditorWrap rich-text-field,
-.equalHeightEditor rich-text-field {
+.emgRichFieldStretch rich-text-field {
   display: block;
   width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+  height: 100%;
 }
 
 ::ng-deep .freeEditorWrap .ProseMirror {
   min-height: 700px !important;
 }
 
-.emgContentGrid {
+.emgContentPair {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px 24px;
+  gap: 24px;
   align-items: stretch;
 }
 
 .emgContentField {
   display: flex;
   flex-direction: column;
-  min-height: 430px;
+  min-width: 0;
 }
 
-.emgContentFieldBody {
+.emgContentFieldSurface {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  min-height: 392px;
 }
 
-.emgContentFieldBodyEditor {
-  gap: 8px;
-}
-
-.equalHeightTextarea {
-  min-height: 386px !important;
+.emgContentTextarea {
   flex: 1 1 auto;
-  height: 100%;
+  width: 100%;
+  min-height: 392px !important;
+  resize: none;
 }
 
-.equalHeightEditor {
+.emgRichFieldStretch {
   display: flex;
   flex: 1 1 auto;
-  min-height: 0;
-  height: 100%;
+  flex-direction: column;
+  min-width: 0;
 }
 
-.metaRowPinned {
-  margin-top: auto;
+.emgContentMetaRow {
+  margin-top: 8px;
 }
 
 .metaRow {
@@ -321,6 +323,13 @@
 .uploadHint {
   font-size: 12px;
   color: #6b7280;
+}
+
+.signedPdfCard .draftRowActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .signatureCard {
@@ -567,18 +576,15 @@
 }
 
 @media (max-width: 760px) {
-  .emgContentGrid,
+  .emgContentPair,
   .dualPanelGrid,
   .uploadItem,
   .signaturePreviewCard {
     grid-template-columns: 1fr;
   }
 
-  .emgContentField {
-    min-height: auto;
-  }
-
-  .equalHeightTextarea {
+  .emgContentFieldSurface,
+  .emgContentTextarea {
     min-height: 240px !important;
   }
 

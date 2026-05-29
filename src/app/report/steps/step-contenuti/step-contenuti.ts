@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { EmgUploadedAsset } from '../../models/emg-uploaded-asset';
 import { RichTextField } from '../../components/rich-text-field/rich-text-field';
@@ -20,6 +20,12 @@ export class StepContenuti {
   ) => boolean;
   @Input({ required: true }) mode!: 'sezioni' | 'libero';
   @Input({ required: true }) reportType!: ReportType;
+  @Input() emgNeurologistMode = false;
+  @Input() readonlyMode = false;
+  @Input() signedPdfAsset: EmgUploadedAsset | null = null;
+  @Input() signedPdfSaving = false;
+  @Output() signedPdfSelected = new EventEmitter<EmgUploadedAsset | null>();
+  @Output() saveSignedPdf = new EventEmitter<void>();
 
   readonly limits = {
     testoLibero: { max: 10000 },
@@ -46,9 +52,18 @@ export class StepContenuti {
   traceUploadError = '';
   signatureUploadError = '';
   psgReportUploadError = '';
+  signedPdfUploadError = '';
 
   get isPsg(): boolean {
     return this.reportType === 'psg';
+  }
+
+  get contentReadonlyMode(): boolean {
+    return this.readonlyMode || this.emgNeurologistMode;
+  }
+
+  get showSignedPdfSection(): boolean {
+    return !this.readonlyMode && this.emgNeurologistMode;
   }
 
   get emgTraceFiles(): EmgUploadedAsset[] {
@@ -78,10 +93,18 @@ export class StepContenuti {
   }
 
   openFilePicker(input: HTMLInputElement): void {
+    if (this.contentReadonlyMode) {
+      return;
+    }
+
     input.click();
   }
 
   async onTraceFilesSelected(event: Event): Promise<void> {
+    if (this.contentReadonlyMode) {
+      return;
+    }
+
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
     this.traceUploadError = '';
@@ -111,6 +134,10 @@ export class StepContenuti {
   }
 
   async onSignatureSelected(event: Event): Promise<void> {
+    if (this.contentReadonlyMode) {
+      return;
+    }
+
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     this.signatureUploadError = '';
@@ -137,6 +164,10 @@ export class StepContenuti {
   }
 
   async onPsgReportSelected(event: Event): Promise<void> {
+    if (this.readonlyMode) {
+      return;
+    }
+
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     this.psgReportUploadError = '';
@@ -167,6 +198,10 @@ export class StepContenuti {
   }
 
   removeTraceFile(id: string): void {
+    if (this.contentReadonlyMode) {
+      return;
+    }
+
     const control = this.control('emg.tracciati');
     control.setValue(this.emgTraceFiles.filter((item) => item.id !== id));
     control.markAsDirty();
@@ -174,6 +209,10 @@ export class StepContenuti {
   }
 
   removeSignature(): void {
+    if (this.contentReadonlyMode) {
+      return;
+    }
+
     const control = this.control('emg.firmaTecnico');
     control.setValue(null);
     control.markAsDirty();
@@ -182,6 +221,10 @@ export class StepContenuti {
   }
 
   removePsgReport(): void {
+    if (this.readonlyMode) {
+      return;
+    }
+
     const control = this.control('psg.reportStrumentalePdf');
     control.setValue(null);
     control.markAsDirty();
@@ -189,8 +232,64 @@ export class StepContenuti {
     this.psgReportUploadError = '';
   }
 
+  async onSignedPdfSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    this.signedPdfUploadError = '';
+
+    if (!file) {
+      input.value = '';
+      return;
+    }
+
+    try {
+      const asset = await this.buildAsset(file);
+      if (asset.kind !== 'pdf') {
+        throw new Error('Il PDF firmato deve essere un file PDF.');
+      }
+
+      this.signedPdfSelected.emit(asset);
+    } catch (error) {
+      this.signedPdfUploadError = this.buildUploadErrorMessage(
+        error,
+        'Impossibile caricare il PDF firmato selezionato.',
+      );
+    } finally {
+      input.value = '';
+    }
+  }
+
+  clearSignedPdfSelection(): void {
+    this.signedPdfSelected.emit(null);
+    this.signedPdfUploadError = '';
+  }
+
   isImage(asset: EmgUploadedAsset | null | undefined): boolean {
     return !!asset && asset.kind === 'image';
+  }
+
+  isPdf(asset: EmgUploadedAsset | null | undefined): boolean {
+    return !!asset && asset.kind === 'pdf';
+  }
+
+  openAsset(asset: EmgUploadedAsset): void {
+    const newWindow = window.open('', '_blank');
+
+    if (!newWindow) {
+      return;
+    }
+
+    if (asset.kind === 'image' && asset.dataUrl) {
+      newWindow.location.href = asset.dataUrl;
+      return;
+    }
+
+    if (asset.kind === 'pdf' && asset.base64) {
+      newWindow.location.href = `data:${asset.mimeType};base64,${asset.base64}`;
+      return;
+    }
+
+    newWindow.close();
   }
 
   fileSizeLabel(size: number): string {

@@ -7,7 +7,8 @@
   padding: 0 24px;
   display: flex;
   align-items: center;
-  gap: 50px;
+  gap: 20px;
+  width: 100%;
 }
 
 .brand {
@@ -28,8 +29,10 @@
 /* ================== PROGRESS ================== */
 
 .progressWrap {
-  flex: 1;
-  max-width: 420px;
+  flex: 1 1 auto;
+  max-width: 560px;
+  margin: 0 auto;
+  min-width: 240px;
 }
 
 .resumeBtn {
@@ -45,6 +48,8 @@
     border 0.15s ease,
     background 0.15s ease,
     color 0.15s ease;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .resumeBtn:hover {

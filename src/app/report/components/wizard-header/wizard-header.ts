@@ -12,7 +12,10 @@ export class WizardHeader {
   @Input({ required: true }) step!: number;
   @Input({ required: true }) pct!: number;
   @Input() showResumeButton = false;
+  @Input() showFlowButton = false;
+  @Input() flowButtonLabel = 'Cambia flusso';
 
   @Output() goTo = new EventEmitter<number>();
   @Output() resumeDraft = new EventEmitter<void>();
+  @Output() changeFlow = new EventEmitter<void>();
 }

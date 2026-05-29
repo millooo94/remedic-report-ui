@@ -2,7 +2,10 @@
   @if (reportType === 'emg') {
     <div class="field">
       <label>Esame eseguito *</label>
-      <rich-text-field [control]="control('emg.esameEseguito')"></rich-text-field>
+      <rich-text-field
+        [control]="control('emg.esameEseguito')"
+        [readonly]="contentReadonlyMode"
+      ></rich-text-field>
       <div class="metaRow">
         <span
           class="charCount"
@@ -17,17 +20,29 @@
       }
     </div>
 
-    <section class="readonlyFieldCard">
+    <section class="readonlyFieldCard" [class.neurologistEditableCard]="emgNeurologistMode">
       <div class="readonlyFieldHead">
         <div>
           <label>Reperti elettrofisiologici</label>
-          <p class="fieldHint">Campo visibile ma riservato al neurologo refertatore.</p>
+          <p class="fieldHint">
+            {{
+              emgNeurologistMode
+                ? 'Compilazione riservata al refertatore assegnato.'
+                : 'Campo visibile ma riservato al refertatore assegnato.'
+            }}
+          </p>
         </div>
-        <span class="readonlyBadge">Compilazione riservata al neurologo refertatore</span>
+        <span class="readonlyBadge">
+            {{
+              emgNeurologistMode
+              ? 'Compilazione refertatore'
+              : 'Compilazione riservata al refertatore'
+          }}
+        </span>
       </div>
       <rich-text-field
         [control]="control('emg.repertiElettrofisiologici')"
-        [readonly]="true"
+        [readonly]="!emgNeurologistMode"
       ></rich-text-field>
       <div class="metaRow">
         <span
@@ -40,15 +55,30 @@
       </div>
     </section>
 
-    <section class="readonlyFieldCard">
+    <section class="readonlyFieldCard" [class.neurologistEditableCard]="emgNeurologistMode">
       <div class="readonlyFieldHead">
         <div>
           <label>Conclusioni</label>
-          <p class="fieldHint">Campo visibile ma riservato al neurologo refertatore.</p>
+          <p class="fieldHint">
+            {{
+              emgNeurologistMode
+                ? 'Compilazione riservata al refertatore assegnato.'
+                : 'Campo visibile ma riservato al refertatore assegnato.'
+            }}
+          </p>
         </div>
-        <span class="readonlyBadge">Compilazione riservata al neurologo refertatore</span>
+        <span class="readonlyBadge">
+            {{
+              emgNeurologistMode
+              ? 'Compilazione refertatore'
+              : 'Compilazione riservata al refertatore'
+          }}
+        </span>
       </div>
-      <rich-text-field [control]="control('emg.conclusioni')" [readonly]="true"></rich-text-field>
+      <rich-text-field
+        [control]="control('emg.conclusioni')"
+        [readonly]="!emgNeurologistMode"
+      ></rich-text-field>
       <div class="metaRow">
         <span class="charCount" [class.overLimit]="isOverLimit('emg.conclusioni', limits.conclusioni.max)">
           {{ plainTextLength('emg.conclusioni') }} / {{ limits.conclusioni.max }} caratteri
@@ -58,7 +88,10 @@
 
     <div class="field">
       <label>Consenso informato</label>
-      <rich-text-field [control]="control('emg.consensoInformatoTesto')"></rich-text-field>
+      <rich-text-field
+        [control]="control('emg.consensoInformatoTesto')"
+        [readonly]="contentReadonlyMode"
+      ></rich-text-field>
       <div class="metaRow">
         <span
           class="charCount"
@@ -70,43 +103,48 @@
       </div>
     </div>
 
-    <div class="emgContentGrid">
-      <div class="field gridStretch emgContentField">
+    <div class="emgContentPair">
+      <div class="field emgContentField">
         <label>Materiale prodotto</label>
-        <div class="emgContentFieldBody">
+        <div class="emgContentFieldSurface">
           <textarea
-            class="equalHeightTextarea"
+            class="emgContentTextarea"
             rows="4"
             [formControl]="control('emg.materialeProdotto')"
+            [readOnly]="contentReadonlyMode"
           ></textarea>
         </div>
       </div>
 
-      <div class="field gridStretch emgContentField">
+      <div class="field emgContentField">
         <label>Note tecniche dell'esecutore</label>
-        <div class="emgContentFieldBody emgContentFieldBodyEditor">
-          <div class="equalHeightEditor">
+        <div class="emgContentFieldSurface">
+          <div class="emgRichFieldStretch">
             <rich-text-field
               [control]="control('emg.noteTecnicheEsecutore')"
               [stretch]="true"
+              [readonly]="contentReadonlyMode"
             ></rich-text-field>
           </div>
-          <div class="metaRow metaRowPinned">
-            <span
-              class="charCount"
-              [class.overLimit]="isOverLimit('emg.noteTecnicheEsecutore', limits.noteTecnicheEsecutore.max)"
-            >
-              {{ plainTextLength('emg.noteTecnicheEsecutore') }} /
-              {{ limits.noteTecnicheEsecutore.max }} caratteri
-            </span>
-          </div>
+        </div>
+        <div class="metaRow emgContentMetaRow">
+          <span
+            class="charCount"
+            [class.overLimit]="isOverLimit('emg.noteTecnicheEsecutore', limits.noteTecnicheEsecutore.max)"
+          >
+            {{ plainTextLength('emg.noteTecnicheEsecutore') }} /
+            {{ limits.noteTecnicheEsecutore.max }} caratteri
+          </span>
         </div>
       </div>
     </div>
 
     <div class="field">
       <label>Attestazione del tecnico</label>
-      <rich-text-field [control]="control('emg.attestazioneTecnico')"></rich-text-field>
+      <rich-text-field
+        [control]="control('emg.attestazioneTecnico')"
+        [readonly]="contentReadonlyMode"
+      ></rich-text-field>
       <div class="metaRow">
         <span
           class="charCount"
@@ -121,13 +159,21 @@
     <section class="uploadCard">
       <div class="uploadCardHead">
         <div>
-          <h3>Tracciati elettrofisiologici</h3>
-          <p>Carica immagini o PDF prodotti durante l'esame. I file restano solo nella sessione corrente.</p>
+          <h3>{{ emgNeurologistMode ? 'Tracciati caricati dal TNFP' : 'Tracciati elettrofisiologici' }}</h3>
+          <p>
+            {{
+              emgNeurologistMode
+                ? 'Visualizza i tracciati persistiti dal TNFP e usati nel PDF finale.'
+                : "Carica immagini o PDF prodotti durante l'esame. I file restano solo nella sessione corrente finche non invii il referto al refertatore."
+            }}
+          </p>
         </div>
 
-        <button type="button" class="uploadBtn" (click)="openFilePicker(traceInput)">
-          Carica tracciati
-        </button>
+        @if (!contentReadonlyMode) {
+          <button type="button" class="uploadBtn" (click)="openFilePicker(traceInput)">
+            Carica tracciati
+          </button>
+        }
       </div>
 
       <input
@@ -166,9 +212,15 @@
                 }
               </div>
 
-              <button type="button" class="removeBtn" (click)="removeTraceFile(asset.id)">
-                Rimuovi
-              </button>
+              @if (contentReadonlyMode) {
+                <button type="button" class="removeBtn" (click)="openAsset(asset)">
+                  {{ isPdf(asset) ? 'Apri PDF' : 'Visualizza' }}
+                </button>
+              } @else {
+                <button type="button" class="removeBtn" (click)="removeTraceFile(asset.id)">
+                  Rimuovi
+                </button>
+              }
             </article>
           }
         </div>
@@ -178,13 +230,21 @@
     <section class="uploadCard signatureCard">
       <div class="uploadCardHead">
         <div>
-          <h3>Firma</h3>
-          <p>Firma tecnico esecutore. Carica un'immagine della firma su sfondo bianco o trasparente.</p>
+          <h3>{{ emgNeurologistMode ? 'Firma tecnico esecutore' : 'Firma' }}</h3>
+          <p>
+            {{
+              emgNeurologistMode
+                ? 'Firma TNFP acquisita e inclusa nel PDF finale.'
+                : "Firma tecnico esecutore. Carica un'immagine della firma su sfondo bianco o trasparente."
+            }}
+          </p>
         </div>
 
-        <button type="button" class="uploadBtn" (click)="openFilePicker(signatureInput)">
-          {{ emgSignature ? 'Sostituisci firma' : 'Carica firma' }}
-        </button>
+        @if (!contentReadonlyMode) {
+          <button type="button" class="uploadBtn" (click)="openFilePicker(signatureInput)">
+            {{ emgSignature ? 'Sostituisci firma' : 'Carica firma' }}
+          </button>
+        }
       </div>
 
       <input
@@ -213,9 +273,11 @@
             <small>{{ fileSizeLabel(emgSignature.size) }}</small>
           </div>
 
-          <button type="button" class="removeBtn" (click)="removeSignature()">
-            Rimuovi firma
-          </button>
+          @if (!contentReadonlyMode) {
+            <button type="button" class="removeBtn" (click)="removeSignature()">
+              Rimuovi firma
+            </button>
+          }
         </div>
       }
 
@@ -223,6 +285,56 @@
         <div class="err">Carica la firma del tecnico esecutore per completare il referto EMG.</div>
       }
     </section>
+
+    @if (showSignedPdfSection) {
+      <section class="uploadCard signedPdfCard">
+        <div class="uploadCardHead">
+          <div>
+            <h3>Carica PDF firmato</h3>
+            <p>Carica il PDF gia firmato digitalmente fuori dal programma. Solo questo file verra salvato su Drive come referto definitivo.</p>
+          </div>
+
+          <button type="button" class="uploadBtn" (click)="openFilePicker(signedPdfInput)">
+            {{ signedPdfAsset ? 'Sostituisci PDF firmato' : 'Carica PDF firmato' }}
+          </button>
+        </div>
+
+        <input
+          #signedPdfInput
+          class="srOnly"
+          type="file"
+          accept=".pdf"
+          (change)="onSignedPdfSelected($event)"
+        />
+
+        @if (signedPdfUploadError) {
+          <div class="err">{{ signedPdfUploadError }}</div>
+        }
+
+        @if (!signedPdfAsset) {
+          <div class="emptyUploadState">Carica il PDF firmato per salvarlo definitivamente su Drive.</div>
+        } @else {
+          <div class="uploadList">
+            <article class="uploadItem compactUploadItem">
+              <div class="uploadPreview"><div class="filePill">PDF</div></div>
+              <div class="uploadMeta">
+                <strong>{{ signedPdfAsset.name }}</strong>
+                <small>{{ fileSizeLabel(signedPdfAsset.size) }}</small>
+                <span class="uploadHint">Il file verra archiviato come documento definitivo nella cartella Drive del refertatore.</span>
+              </div>
+              <div class="draftRowActions">
+                <button type="button" class="removeBtn" (click)="clearSignedPdfSelection()">
+                  Rimuovi
+                </button>
+                <button type="button" class="uploadBtn" [disabled]="signedPdfSaving" (click)="saveSignedPdf.emit()">
+                  {{ signedPdfSaving ? 'Salvataggio...' : 'Salva su Drive' }}
+                </button>
+              </div>
+            </article>
+          </div>
+        }
+      </section>
+    }
   } @else if (isPsg) {
     <section class="panelCard">
       <div class="panelTitleRow">
@@ -240,9 +352,11 @@
           <p>Carica il report strumentale in PDF. Verra unito come pagine finali del referto.</p>
         </div>
 
-        <button type="button" class="uploadBtn" (click)="openFilePicker(psgReportInput)">
+        @if (!readonlyMode) {
+          <button type="button" class="uploadBtn" (click)="openFilePicker(psgReportInput)">
           {{ psgReportAsset ? 'Sostituisci report' : 'Carica report strumentale' }}
-        </button>
+          </button>
+        }
       </div>
 
       <input
@@ -268,7 +382,9 @@
               <small>{{ fileSizeLabel(psgReportAsset.size) }}</small>
               <span class="uploadHint">Verra unito come pagine finali del referto.</span>
             </div>
-            <button type="button" class="removeBtn" (click)="removePsgReport()">Rimuovi</button>
+            @if (!readonlyMode) {
+              <button type="button" class="removeBtn" (click)="removePsgReport()">Rimuovi</button>
+            }
           </article>
         </div>
       }
@@ -277,6 +393,56 @@
         <div class="err">Carica il report strumentale PSG in PDF.</div>
       }
     </section>
+
+    @if (showSignedPdfSection) {
+      <section class="uploadCard signedPdfCard">
+        <div class="uploadCardHead">
+          <div>
+            <h3>Carica PDF firmato</h3>
+            <p>Carica il PDF PSG gia firmato digitalmente. Solo questo documento verra salvato in via definitiva su Drive.</p>
+          </div>
+
+          <button type="button" class="uploadBtn" (click)="openFilePicker(signedPdfInput)">
+            {{ signedPdfAsset ? 'Sostituisci PDF firmato' : 'Carica PDF firmato' }}
+          </button>
+        </div>
+
+        <input
+          #signedPdfInput
+          class="srOnly"
+          type="file"
+          accept=".pdf"
+          (change)="onSignedPdfSelected($event)"
+        />
+
+        @if (signedPdfUploadError) {
+          <div class="err">{{ signedPdfUploadError }}</div>
+        }
+
+        @if (!signedPdfAsset) {
+          <div class="emptyUploadState">Carica il PDF firmato per salvarlo definitivamente su Drive.</div>
+        } @else {
+          <div class="uploadList">
+            <article class="uploadItem compactUploadItem">
+              <div class="uploadPreview"><div class="filePill">PDF</div></div>
+              <div class="uploadMeta">
+                <strong>{{ signedPdfAsset.name }}</strong>
+                <small>{{ fileSizeLabel(signedPdfAsset.size) }}</small>
+                <span class="uploadHint">Il file verra archiviato come documento definitivo nella cartella Drive del refertatore.</span>
+              </div>
+              <div class="draftRowActions">
+                <button type="button" class="removeBtn" (click)="clearSignedPdfSelection()">
+                  Rimuovi
+                </button>
+                <button type="button" class="uploadBtn" [disabled]="signedPdfSaving" (click)="saveSignedPdf.emit()">
+                  {{ signedPdfSaving ? 'Salvataggio...' : 'Salva su Drive' }}
+                </button>
+              </div>
+            </article>
+          </div>
+        }
+      </section>
+    }
   } @else if (mode === 'libero') {
     <div class="field freeReportField">
       <label>Referto completo</label>

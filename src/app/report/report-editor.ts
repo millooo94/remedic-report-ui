@@ -12,6 +12,7 @@ import {
   ValidatorFn,
 } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
+import { EmgAnamnesiForm } from './components/emg-anamnesi-form/emg-anamnesi-form';
 import { PsgAnamnesiForm } from './components/psg-anamnesi-form/psg-anamnesi-form';
 import { WizardHeader } from './components/wizard-header/wizard-header';
 import { StepAnagrafica } from './steps/step-anagrafica/step-anagrafica';
@@ -20,6 +21,12 @@ import { StepVisita } from './steps/step-visita/step-visita';
 import { ResetModal } from './components/reset-modal/reset-modal';
 import { DoctorInfo } from './models/doctor-info';
 import {
+  AdminUserItem,
+  AuditLogItem,
+  AuthUser,
+  DraftAttachmentMetadata,
+  DraftAttachmentUploadPayload,
+  ProfessionalItem,
   ReportDraftDetail,
   ReportDraftFilters,
   ReportDraftPayload,
@@ -57,8 +64,21 @@ import { ReportPayloadBuilderService } from './services/report-payload-builder.s
 import { ReportApiService } from './services/report-api.service';
 import { StepContenuti } from './steps/step-contenuti/step-contenuti';
 import { ReportType } from './types/report-type';
+import { EmgUploadedAsset } from './models/emg-uploaded-asset';
+import { ReportPdfRequest } from './models/report-pdf-request';
 
 type SectionKey = (typeof REPORT_SECTION_KEYS)[number];
+type EditorUiState =
+  | 'initialTypeSelection'
+  | 'typeActionSelection'
+  | 'wizard'
+  | 'neurologistLogin'
+  | 'neurologistDashboard'
+  | 'reservedLogin'
+  | 'forgotPassword'
+  | 'resetPassword'
+  | 'adminDashboard'
+  | 'refertatoreDashboard';
 
 @Component({
   selector: 'report-editor',
@@ -72,6 +92,7 @@ type SectionKey = (typeof REPORT_SECTION_KEYS)[number];
     StepSezioni,
     ResetModal,
     StepContenuti,
+    EmgAnamnesiForm,
     PsgAnamnesiForm,
   ],
   templateUrl: './report-editor.html',
@@ -79,13 +100,70 @@ type SectionKey = (typeof REPORT_SECTION_KEYS)[number];
 })
 export class ReportEditor {
   step = 0;
+  uiState: EditorUiState = 'initialTypeSelection';
+  selectedReportType: ReportType | null = null;
 
   readonly standardSteps = REPORT_STEPS;
   readonly emgSteps = EMG_REPORT_STEPS;
   readonly psgSteps = PSG_REPORT_STEPS;
   readonly sectionKeys = REPORT_SECTION_KEYS;
   readonly mandatorySections = REPORT_MANDATORY_SECTIONS;
-  readonly doctors: DoctorInfo[] = REPORT_DOCTORS;
+  readonly fallbackDoctors: DoctorInfo[] = REPORT_DOCTORS;
+  doctors: DoctorInfo[] = REPORT_DOCTORS;
+  professionals: ProfessionalItem[] = [];
+  refertatoriEmg: DoctorInfo[] = [];
+  refertatoriPsg: DoctorInfo[] = [];
+  reservedUser: AuthUser | null = null;
+  reservedLoginEmail = '';
+  reservedLoginPassword = '';
+  reservedLoginLoading = false;
+  reservedLoginError = '';
+  forgotPasswordEmail = '';
+  forgotPasswordLoading = false;
+  forgotPasswordMessage = '';
+  resetPasswordToken = '';
+  resetPasswordValue = '';
+  resetPasswordConfirm = '';
+  resetPasswordLoading = false;
+  resetPasswordMessage = '';
+  refertatoreDrafts: ReportDraftSummary[] = [];
+  refertatoreArchiveDrafts: ReportDraftSummary[] = [];
+  refertatoreDashboardLoading = false;
+  refertatoreDashboardError = '';
+  adminUsers: AdminUserItem[] = [];
+  adminProfessionals: ProfessionalItem[] = [];
+  adminDrafts: ReportDraftSummary[] = [];
+  adminArchiveDrafts: ReportDraftSummary[] = [];
+  auditLogs: AuditLogItem[] = [];
+  adminDashboardLoading = false;
+  adminDashboardError = '';
+  adminTab: 'professionals' | 'users' | 'drafts' | 'archive' | 'audit' = 'professionals';
+  draftActionLoadingId: string | null = null;
+  adminUserForm = {
+    id: '',
+    role: 'refertatore' as 'admin' | 'refertatore',
+    email: '',
+    password: '',
+    display_name: '',
+    specializzazione: '',
+    assignedTypes: [] as Array<'emg' | 'psg'>,
+  };
+  adminProfessionalForm = {
+    id: '',
+    first_name: '',
+    last_name: '',
+    display_name: '',
+    title: '',
+    email: '',
+    phone: '',
+    specializzazione: '',
+    role_label: '',
+    professional_type: 'medico' as 'medico' | 'tecnico',
+    visible_in_standard: true,
+    is_refertatore: false,
+    active: true,
+    sort_order: 0,
+  };
 
   doctorResults: DoctorInfo[] = [];
   technicalResults: DoctorInfo[] = [];
@@ -97,7 +175,9 @@ export class ReportEditor {
 
   showResetModal = false;
   showDraftsModal = false;
+  draftBrowserMode: 'active' | 'archive' = 'active';
   showPsgAnamnesisModal = false;
+  showEmgAnamnesisModal = false;
   draftSaving = false;
   draftLoaded = false;
   draftError = '';
@@ -110,9 +190,13 @@ export class ReportEditor {
   draftsLoading = false;
   draftsError = '';
   attachmentsReloadNotice = '';
+  currentDraftAttachments: DraftAttachmentMetadata[] = [];
+  completedReadonlyMode = false;
+  draftSentToRefertatore = false;
   draftFilters: ReportDraftFilters = {
-    tipo_referto: '',
+    tipo_referto: 'standard',
     stato: '',
+    scope: 'active',
     q: '',
     limit: 20,
     offset: 0,
@@ -122,14 +206,27 @@ export class ReportEditor {
     { value: 'bozza', label: 'Bozza' },
     { value: 'anamnesi_raccolta', label: 'Anamnesi raccolta' },
     { value: 'in_refertazione', label: 'In refertazione' },
+    { value: 'in_attesa_neurologo', label: 'In attesa refertatore' },
+    { value: 'in_refertazione_neurologo', label: 'Refertazione in corso' },
+    { value: 'pronto_per_firma', label: 'Pronto per firma' },
+    { value: 'firmato_caricato', label: 'Firmato caricato' },
     { value: 'completato', label: 'Completato' },
   ];
-  readonly draftTypeOptions: Array<{ value: ReportType; label: string }> = [
-    { value: 'standard', label: 'Standard' },
-    { value: 'emg', label: 'EMG / ENG' },
-    { value: 'psg', label: 'PSG' },
-  ];
-
+  neurologistEmail = '';
+  neurologistPassword = '';
+  neurologistLoginLoading = false;
+  neurologistLoginError = '';
+  neurologistUser: AuthUser | null = null;
+  neurologistToken = '';
+  neurologistDrafts: ReportDraftSummary[] = [];
+  neurologistDraftsLoading = false;
+  neurologistDraftsError = '';
+  neurologistOpeningDraftId: string | null = null;
+  emgNeurologistMode = false;
+  reviewerMode = false;
+  signedPdfSaving = false;
+  emgSignedPdfAsset: EmgUploadedAsset | null = null;
+  psgSignedPdfAsset: EmgUploadedAsset | null = null;
   constructor(
     private fb: FormBuilder,
     private payloadBuilder: ReportPayloadBuilderService,
@@ -189,6 +286,10 @@ export class ReportEditor {
     this.updatePsgBmi();
     this.updatePsgEssSummary();
     this.updateModeValidators();
+    this.restoreReservedSession();
+    this.loadOperationalOptions();
+    this.captureResetPasswordToken();
+    this.goToInitialTypeSelection();
   }
 
   @HostListener('document:keydown.enter', ['$event'])
@@ -270,15 +371,147 @@ export class ReportEditor {
     );
   }
 
+  get selectedTypeLabel(): string {
+    if (this.selectedReportType === 'emg') return 'Elettromiografia / EMG';
+    if (this.selectedReportType === 'psg') return 'Polisonnografia / PSG';
+    return 'Referto standard';
+  }
+
+  get selectedTypeDescription(): string {
+    if (this.selectedReportType === 'emg') {
+      return 'Refertazione elettrofisiologica con dati tecnici, checklist anamnestica e tracciati.';
+    }
+
+    if (this.selectedReportType === 'psg') {
+      return 'Refertazione polisonnografica cardio-respiratoria con anamnesi del sonno, ESS e report strumentale.';
+    }
+
+    return 'Referto medico generico con sezioni personalizzabili.';
+  }
+
+  get showNeurologistAreaCard(): boolean {
+    return false;
+  }
+
+  get isReadonlyWizardMode(): boolean {
+    return this.reviewerMode || this.completedReadonlyMode;
+  }
+
+  get isArchiveBrowserMode(): boolean {
+    return this.draftBrowserMode === 'archive';
+  }
+
+  get showPrimaryAction(): boolean {
+    return !this.completedReadonlyMode;
+  }
+
+  get showDraftWriteActions(): boolean {
+    return !this.completedReadonlyMode;
+  }
+
+  get draftBrowserTitle(): string {
+    return this.isArchiveBrowserMode
+      ? `Archivio referti ${this.selectedTypeLabel}`
+      : `Riprendi referto ${this.selectedTypeLabel}`;
+  }
+
+  get draftBrowserDescription(): string {
+    return this.isArchiveBrowserMode
+      ? 'Consulta i referti completati e apri il PDF firmato archiviato, se disponibile.'
+      : 'Visualizza e riprendi solo le bozze operative del tipo referto selezionato.';
+  }
+
+  get currentSignedStoredAttachment(): DraftAttachmentMetadata | null {
+    if (this.reportType === 'emg') {
+      return (
+        this.currentDraftAttachments.find(
+          (item) => item.kind === 'emg_pdf_firmato',
+        ) || null
+      );
+    }
+
+    if (this.reportType === 'psg') {
+      return (
+        this.currentDraftAttachments.find(
+          (item) => item.kind === 'psg_pdf_firmato',
+        ) || null
+      );
+    }
+
+    return null;
+  }
+
+  get showSignedArchiveCard(): boolean {
+    return (
+      this.completedReadonlyMode &&
+      (this.reportType === 'emg' || this.reportType === 'psg')
+    );
+  }
+
+  get filteredDraftStatusOptions(): Array<{
+    value: ReportDraftStatus;
+    label: string;
+  }> {
+    return this.isArchiveBrowserMode
+      ? this.draftStatusOptions.filter((item) =>
+          item.value === 'completato' || item.value === 'firmato_caricato',
+        )
+      : this.draftStatusOptions.filter(
+          (item) =>
+            item.value !== 'completato' && item.value !== 'firmato_caricato',
+        );
+  }
+
+  get neurologistDisplayName(): string {
+    return this.reservedUser?.displayName || this.neurologistUser?.displayName || 'Refertatore';
+  }
+
+  get showControlPreviewButton(): boolean {
+    return (
+      !this.completedReadonlyMode &&
+      this.step === this.steps.length - 1 &&
+      (this.reportType === 'psg' ||
+        (this.reportType === 'emg' && !this.emgNeurologistMode))
+    );
+  }
+
+  get currentSignedPdfAsset(): EmgUploadedAsset | null {
+    if (this.reportType === 'emg') {
+      return this.emgSignedPdfAsset;
+    }
+
+    if (this.reportType === 'psg') {
+      return this.psgSignedPdfAsset;
+    }
+
+    return null;
+  }
+
+  get refertatoreAssignedTypes(): Array<'emg' | 'psg'> {
+    return this.reservedUser?.assignedTypes ?? [];
+  }
+
+  get hasEmgAssignment(): boolean {
+    return this.refertatoreAssignedTypes.includes('emg');
+  }
+
+  get hasPsgAssignment(): boolean {
+    return this.refertatoreAssignedTypes.includes('psg');
+  }
+
   stepHint(): string {
     if (this.reportType === 'psg') {
       switch (this.step) {
         case 1:
-          return "Configura i dati della registrazione, il sistema utilizzato e il medico refertatore.";
+          return "Configura i dati della registrazione e seleziona il refertatore assegnato.";
         case 2:
-          return 'Compila il quesito clinico e la refertazione medica che accompagneranno il report strumentale.';
+          return this.reviewerMode
+            ? 'Completa la parte clinica del referto PSG usando i dati raccolti dall’operatore.'
+            : 'Compila il quesito clinico e prepara i dati che verranno inviati al refertatore.';
         case 3:
-          return "Carica il report strumentale da unire al PDF finale. L'anamnesi del sonno e la Scala ESS vengono richiamate automaticamente dalla scheda PSG.";
+          return this.reviewerMode
+            ? "Esporta il PDF PSG da firmare senza salvarlo su Drive, poi ricarica il PDF firmato per l'archiviazione definitiva."
+            : "Verifica report strumentale e dati raccolti, poi invia la PSG al refertatore assegnato.";
         default:
           return "Compila l'anagrafica una sola volta: verra riutilizzata sia nel referto PSG sia nella scheda anamnestica.";
       }
@@ -292,9 +525,11 @@ export class ReportEditor {
       case 1:
         return "Configura i dati dell'esame, il medico refertatore e il tecnico esecutore.";
       case 2:
-        return 'Raccogli il quesito clinico e la checklist anamnestica mirata.';
+        return "Raccogli il quesito clinico. La checklist anamnestica EMG e disponibile nella card dedicata in Anagrafica.";
       case 3:
-        return 'Completa il contenuto clinico e l\'allegato tecnico del referto EMG.';
+        return this.emgNeurologistMode
+          ? "Completa Reperti e Conclusioni, esporta il PDF temporaneo da firmare e poi carica il PDF firmato per il salvataggio definitivo su Drive."
+          : "Completa il contenuto tecnico EMG e invia l'acquisizione al refertatore. La copia di controllo resta temporanea e non viene salvata su Drive.";
       default:
         return 'Compila l\'anagrafica del paziente una sola volta per tutto il documento.';
     }
@@ -490,10 +725,17 @@ export class ReportEditor {
   canGoNext(): boolean {
     switch (this.step) {
       case 0:
+        if (this.reportType === 'emg' && this.emgNeurologistMode) {
+          return true;
+        }
         return this.form.get('anagrafica')?.valid ?? false;
 
       case 1:
         if (this.reportType === 'emg') {
+          if (this.emgNeurologistMode) {
+            return true;
+          }
+
           return (
             this.control('dataVisitaDisplay').valid &&
             this.control('dataVisita').valid &&
@@ -529,10 +771,13 @@ export class ReportEditor {
 
       case 2:
         if (this.reportType === 'emg') {
+          if (this.emgNeurologistMode) {
+            return true;
+          }
+
           return (
             this.control('emg.quesitoDiagnostico').valid &&
-            this.control('emg.distrettoEsaminato').valid &&
-            this.isEmgChecklistComplete()
+            this.control('emg.distrettoEsaminato').valid
           );
         }
 
@@ -549,10 +794,15 @@ export class ReportEditor {
 
       case 3:
         if (this.reportType === 'emg') {
-          return (
-            this.control('emg.esameEseguito').valid &&
-            this.control('emg.firmaTecnico').valid
-          );
+          return this.emgNeurologistMode
+            ? (
+                this.control('emg.repertiElettrofisiologici').valid &&
+                this.control('emg.conclusioni').valid
+              )
+            : (
+                this.control('emg.esameEseguito').valid &&
+                this.control('emg.firmaTecnico').valid
+              );
         }
 
         if (this.reportType === 'psg') {
@@ -623,7 +873,6 @@ export class ReportEditor {
         if (this.reportType === 'emg') {
           mark(this.control('emg.quesitoDiagnostico'));
           mark(this.control('emg.distrettoEsaminato'));
-          this.markEmgChecklistTouched();
           break;
         }
 
@@ -640,8 +889,13 @@ export class ReportEditor {
 
       case 3:
         if (this.reportType === 'emg') {
-          mark(this.control('emg.esameEseguito'));
-          mark(this.control('emg.firmaTecnico'));
+          if (this.emgNeurologistMode) {
+            mark(this.control('emg.repertiElettrofisiologici'));
+            mark(this.control('emg.conclusioni'));
+          } else {
+            mark(this.control('emg.esameEseguito'));
+            mark(this.control('emg.firmaTecnico'));
+          }
           break;
         }
 
@@ -791,19 +1045,37 @@ export class ReportEditor {
         Validators.required,
         this.plainTextMaxLength(3000),
       ]);
-      repertiElettrofisiologici.clearValidators();
-      conclusioni.clearValidators();
+      if (this.emgNeurologistMode) {
+        repertiElettrofisiologici.setValidators([
+          Validators.required,
+          this.plainTextMaxLength(4000),
+        ]);
+        conclusioni.setValidators([
+          Validators.required,
+          this.plainTextMaxLength(2000),
+        ]);
+      } else {
+        repertiElettrofisiologici.clearValidators();
+        conclusioni.clearValidators();
+      }
       consensoInformatoTesto.setValidators([this.plainTextMaxLength(2500)]);
       materialeProdotto.setValidators([Validators.maxLength(1500)]);
       noteTecnicheEsecutore.setValidators([this.plainTextMaxLength(2000)]);
       attestazioneTecnico.setValidators([this.plainTextMaxLength(2500)]);
-      firmaTecnico.setValidators([Validators.required]);
+      firmaTecnico.setValidators(
+        this.emgNeurologistMode ? [] : [Validators.required],
+      );
       checklistControls.forEach((control: FormControl) =>
         control.setValidators([Validators.required]),
       );
 
-      repertiElettrofisiologici.disable({ emitEvent: false });
-      conclusioni.disable({ emitEvent: false });
+      if (this.emgNeurologistMode) {
+        repertiElettrofisiologici.enable({ emitEvent: false });
+        conclusioni.enable({ emitEvent: false });
+      } else {
+        repertiElettrofisiologici.disable({ emitEvent: false });
+        conclusioni.disable({ emitEvent: false });
+      }
 
       testoLibero.clearValidators();
       anamnesiPatologicaRemota.clearValidators();
@@ -873,18 +1145,21 @@ export class ReportEditor {
         Validators.required,
         this.plainTextMaxLength(3500),
       ]);
-      psgInterpretazioneMedico.setValidators([
-        Validators.required,
-        this.plainTextMaxLength(4500),
-      ]);
-      psgConclusioneDiagnostica.setValidators([
-        Validators.required,
-        this.plainTextMaxLength(2500),
-      ]);
-      psgIndicazioniCliniche.setValidators([
-        Validators.required,
-        this.plainTextMaxLength(2500),
-      ]);
+      psgInterpretazioneMedico.setValidators(
+        this.reviewerMode
+          ? [Validators.required, this.plainTextMaxLength(4500)]
+          : [this.plainTextMaxLength(4500)],
+      );
+      psgConclusioneDiagnostica.setValidators(
+        this.reviewerMode
+          ? [Validators.required, this.plainTextMaxLength(2500)]
+          : [this.plainTextMaxLength(2500)],
+      );
+      psgIndicazioniCliniche.setValidators(
+        this.reviewerMode
+          ? [Validators.required, this.plainTextMaxLength(2500)]
+          : [this.plainTextMaxLength(2500)],
+      );
       psgNotaDocumentale.setValidators([this.plainTextMaxLength(2500)]);
       psgReportStrumentalePdf.setValidators([Validators.required]);
       psgSleepHistoryControls.forEach((control) =>
@@ -1115,9 +1390,16 @@ export class ReportEditor {
     this.resetTransientUiState();
     this.form.reset(this.getFreshFormState() as any);
     this.sections.reset(this.getFreshSectionsState() as any);
+    if (this.selectedReportType) {
+      this.control('tipoReferto').setValue(this.selectedReportType);
+    }
 
     for (const k of this.sectionKeys) {
       this.section(k).enable({ emitEvent: false });
+    }
+
+    if (this.selectedReportType) {
+      this.applyReportTypeDefaults(this.selectedReportType);
     }
 
     this.updateModeValidators();
@@ -1221,11 +1503,131 @@ export class ReportEditor {
   }
 
   canProceedLabel(): string {
-    return this.step === this.steps.length - 1 ? 'Genera Referto' : 'Avanti';
+    if (this.step !== this.steps.length - 1) {
+      return 'Avanti';
+    }
+
+    if (
+      (this.reportType === 'emg' || this.reportType === 'psg') &&
+      !this.reviewerMode
+    ) {
+      return 'Invia al refertatore';
+    }
+
+    if (this.reviewerMode) {
+      return 'Esporta PDF da firmare';
+    }
+
+    return 'Genera Referto';
+  }
+
+  selectReportType(type: ReportType): void {
+    this.selectedReportType = type;
+    this.draftFilters.tipo_referto = type;
+    this.draftFilters.stato = '';
+    this.draftFilters.q = '';
+    this.draftFilters.offset = 0;
+    this.uiState = 'typeActionSelection';
+    this.draftMessage = '';
+    this.draftError = '';
+    this.attachmentsReloadNotice = '';
+  }
+
+  goToInitialTypeSelection(): void {
+    this.uiState = 'initialTypeSelection';
+    this.selectedReportType = null;
+    this.setEmgNeurologistMode(false);
+    this.closeResumeDraftModal();
+    this.closePsgAnamnesisModal();
+    this.closeEmgAnamnesisModal();
+  }
+
+  goToTypeActionSelection(): void {
+    if (!this.selectedReportType) {
+      this.uiState = 'initialTypeSelection';
+      return;
+    }
+
+    this.uiState = 'typeActionSelection';
+    this.setEmgNeurologistMode(false);
+    this.closeResumeDraftModal();
+    this.closePsgAnamnesisModal();
+    this.closeEmgAnamnesisModal();
+  }
+
+  startNewReport(): void {
+    if (!this.selectedReportType) {
+      this.setDraftMessage('Seleziona prima il tipo di referto.', 'warning');
+      this.uiState = 'initialTypeSelection';
+      return;
+    }
+
+    this.currentDraftId = null;
+    this.currentDraftStatus = null;
+    this.draftLoaded = false;
+    this.setEmgNeurologistMode(false);
+    this.step = 0;
+    this.doctorSearch.reset('');
+    this.technicalSearch.reset('');
+    this.doctorResults = [];
+    this.technicalResults = [];
+    this.resetTransientUiState();
+    this.form.reset(this.getFreshFormState() as any);
+    this.sections.reset(this.getFreshSectionsState() as any);
+    this.control('tipoReferto').setValue(this.selectedReportType);
+    this.applyReportTypeDefaults(this.selectedReportType);
+    this.updateModeValidators();
+    this.uiState = 'wizard';
+    this.setDraftMessage('Nuovo referto inizializzato.', 'info');
+  }
+
+  startResumeForSelectedType(): void {
+    if (!this.selectedReportType) {
+      this.setDraftMessage('Seleziona prima il tipo di referto.', 'warning');
+      this.uiState = 'initialTypeSelection';
+      return;
+    }
+
+    this.draftFilters.tipo_referto = this.selectedReportType;
+    this.draftFilters.offset = 0;
+    this.openResumeDraftModal();
+  }
+
+  startArchiveForSelectedType(): void {
+    if (!this.selectedReportType) {
+      this.setDraftMessage('Seleziona prima il tipo di referto.', 'warning');
+      this.uiState = 'initialTypeSelection';
+      return;
+    }
+
+    this.draftFilters.tipo_referto = this.selectedReportType;
+    this.draftFilters.offset = 0;
+    this.openArchiveModal();
+  }
+
+  startNeurologistArea(): void {
+    this.openReservedArea();
   }
 
   primaryAction(): void {
+    if (this.completedReadonlyMode) {
+      return;
+    }
+
     if (this.step === this.steps.length - 1) {
+      if (
+        (this.reportType === 'emg' || this.reportType === 'psg') &&
+        !this.reviewerMode
+      ) {
+        void this.sendDraftToRefertatore();
+        return;
+      }
+
+      if (this.reviewerMode) {
+        void this.exportPdfForSignature();
+        return;
+      }
+
       void this.generatePdf();
       return;
     }
@@ -1233,7 +1635,308 @@ export class ReportEditor {
     this.next();
   }
 
+  async exportControlCopy(): Promise<void> {
+    if (this.reportType !== 'emg' && this.reportType !== 'psg') {
+      return;
+    }
+
+    if (!this.isPreviewExportValid()) {
+      return;
+    }
+
+    const payload = this.payloadBuilder.build(
+      this.form.getRawValue(),
+      this.sections.getRawValue(),
+    );
+
+    const ok = await this.openPreviewPdfBlob(payload);
+
+    if (ok) {
+      this.setDraftMessage(
+        'Copia di controllo esportata senza salvataggio su Drive.',
+        'success',
+      );
+    }
+  }
+
+  private async exportPdfForSignature(): Promise<void> {
+    if (!this.reviewerMode) {
+      return;
+    }
+
+    if (!this.isPreviewExportValid(true)) {
+      return;
+    }
+
+    const savedDraft = await this.saveNeurologistDraftProgress(false);
+    if (!savedDraft) {
+      return;
+    }
+
+    const payload = this.payloadBuilder.build(
+      this.form.getRawValue(),
+      this.sections.getRawValue(),
+    );
+
+    const ok = await this.openPreviewPdfBlob(payload);
+
+    if (!ok) {
+      return;
+    }
+
+    if (this.currentDraftId) {
+      try {
+        const updatedDraft = await firstValueFrom(
+          this.api.updateDraftStatus(this.currentDraftId, 'pronto_per_firma'),
+        );
+        this.currentDraftStatus = updatedDraft.stato;
+      } catch (error) {
+        console.error('Errore aggiornamento stato pronto per firma:', error);
+        this.setDraftMessage(
+          'PDF esportato correttamente, ma non sono riuscito ad aggiornare lo stato della bozza a pronto per firma.',
+          'warning',
+        );
+        return;
+      }
+    }
+
+    this.setDraftMessage(
+      this.reportType === 'psg'
+        ? "PDF PSG esportato senza salvataggio su Drive. Firma il file esternamente e poi caricalo nella sezione 'Carica PDF firmato'."
+        : "PDF EMG esportato senza salvataggio su Drive. Firma il file esternamente e poi caricalo nella sezione 'Carica PDF firmato'.",
+      'success',
+    );
+  }
+
+  private isPreviewExportValid(requireSignatureReady = false): boolean {
+    if (this.reportType === 'psg') {
+      if (!requireSignatureReady) {
+        return true;
+      }
+
+      this.form.markAllAsTouched();
+
+      if (!this.isPsgAnamnesisReadyForSave()) {
+        this.setDraftMessage(
+          "Completa l'anamnesi PSG e la Scala ESS prima di esportare il PDF da firmare.",
+          'warning',
+        );
+        this.showPsgAnamnesisModal = true;
+        return false;
+      }
+
+      if (!this.reviewerMode && this.form.invalid) {
+        this.setDraftMessage(
+          'Completa tutti i campi obbligatori PSG e carica il report strumentale prima di esportare il PDF da firmare.',
+          'warning',
+        );
+        return false;
+      }
+
+      if (this.reviewerMode) {
+        const requiredReviewerControls = [
+          this.control('psg.quesitoClinico'),
+          this.control('psg.interpretazioneMedico'),
+          this.control('psg.conclusioneDiagnostica'),
+          this.control('psg.indicazioniCliniche'),
+          this.control('psg.reportStrumentalePdf'),
+        ];
+
+        if (requiredReviewerControls.some((control) => control.invalid)) {
+          this.setDraftMessage(
+            'Completa i campi clinici PSG e verifica il report strumentale prima di esportare il PDF da firmare.',
+            'warning',
+          );
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    if (this.reportType === 'emg' && this.emgNeurologistMode) {
+      const repertiControl = this.control('emg.repertiElettrofisiologici');
+      const conclusioniControl = this.control('emg.conclusioni');
+
+      repertiControl.markAsTouched();
+      conclusioniControl.markAsTouched();
+
+      if (!requireSignatureReady) {
+        return true;
+      }
+
+      const repertiFilled = !!this.stripHtml(repertiControl.value);
+      const conclusioniFilled = !!this.stripHtml(conclusioniControl.value);
+
+      if (!repertiFilled || !conclusioniFilled) {
+        this.setDraftMessage(
+          'Compila Reperti elettrofisiologici e Conclusioni prima di esportare il PDF da firmare.',
+          'warning',
+        );
+        return false;
+      }
+
+      if (repertiControl.invalid || conclusioniControl.invalid) {
+        this.setDraftMessage(
+          'Verifica i campi del refertatore prima di esportare il PDF da firmare.',
+          'warning',
+        );
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private async openPreviewPdfBlob(payload: ReportPdfRequest): Promise<boolean> {
+    try {
+      const blob = await firstValueFrom(this.api.previewPdf(payload));
+      if (this.reviewerMode && this.currentDraftId) {
+        void firstValueFrom(this.api.exportRefertatoreDraftPreview(this.currentDraftId));
+      }
+      const opened = this.openBlobInNewTab(
+        blob,
+        `${payload.titolo_visita || 'referto-temporaneo'}.pdf`,
+      );
+
+      if (!opened) {
+        this.setDraftMessage(
+          'PDF generato, ma il browser ha bloccato l’apertura automatica. Controlla i download o i popup bloccati.',
+          'warning',
+        );
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Errore export PDF temporaneo:', error);
+      this.setDraftMessage(
+        'Impossibile esportare il PDF temporaneo senza Drive. Riprova tra qualche istante.',
+        'error',
+      );
+      return false;
+    }
+  }
+
+  private openBlobInNewTab(blob: Blob, fallbackFileName: string): boolean {
+    const objectUrl = URL.createObjectURL(blob);
+    const win = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+
+    if (win) {
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      return true;
+    }
+
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = fallbackFileName;
+    anchor.rel = 'noopener';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 5_000);
+    return true;
+  }
+
+  onSignedPdfSelected(asset: EmgUploadedAsset | null): void {
+    if (this.reportType === 'emg') {
+      this.emgSignedPdfAsset = asset;
+      return;
+    }
+
+    if (this.reportType === 'psg') {
+      this.psgSignedPdfAsset = asset;
+    }
+  }
+
+  async saveSignedPdfToDrive(): Promise<void> {
+    if (!this.reviewerMode) {
+      return;
+    }
+
+    const asset = this.currentSignedPdfAsset;
+
+    if (!asset || asset.kind !== 'pdf' || !asset.base64) {
+      this.setDraftMessage(
+        'Carica prima il PDF firmato da salvare definitivamente su Drive.',
+        'warning',
+      );
+      return;
+    }
+
+    if (!this.currentDraftId) {
+      this.setDraftMessage(
+        'Salva o riprendi prima una bozza valida prima di caricare il PDF firmato.',
+        'warning',
+      );
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Confermi di voler salvare questo PDF firmato come referto definitivo su Drive?',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.signedPdfSaving = true;
+
+    try {
+      const response = await firstValueFrom(
+        this.api.uploadSignedDraftPdf(
+          this.currentDraftId,
+          {
+            tipo_referto: this.reportType as 'emg' | 'psg',
+            fileName: asset.name,
+            mimeType: 'application/pdf',
+            base64: asset.base64,
+          },
+          this.emgNeurologistMode ? this.neurologistToken : undefined,
+        ),
+      );
+
+      this.currentDraftStatus = response.draft.stato;
+
+      if (this.reportType === 'emg') {
+        this.emgSignedPdfAsset = null;
+      } else if (this.reportType === 'psg') {
+        this.psgSignedPdfAsset = null;
+      }
+
+      if (this.currentDraftId) {
+        await this.hydratePersistedAttachments(
+          this.currentDraftId,
+          this.emgNeurologistMode ? this.neurologistToken : undefined,
+        );
+      }
+
+      this.completedReadonlyMode = true;
+      await this.refreshDraftList(false);
+      if (this.emgNeurologistMode) {
+        await this.openNeurologistDashboard();
+      }
+
+      this.setDraftMessage(
+        'PDF firmato caricato e salvato su Drive come referto definitivo.',
+        'success',
+      );
+    } catch (error) {
+      console.error('Errore salvataggio PDF firmato su Drive:', error);
+      this.setDraftMessage(
+        'Impossibile salvare il PDF firmato su Drive. Riprova tra qualche istante.',
+        'error',
+      );
+    } finally {
+      this.signedPdfSaving = false;
+    }
+  }
+
   async saveDraft(status?: ReportDraftStatus): Promise<void> {
+    if (this.emgNeurologistMode && this.currentDraftId) {
+      await this.saveNeurologistDraftProgress();
+      return;
+    }
+
     const nextStatus = status ?? this.resolveDraftStatusForSave();
     await this.persistDraft(nextStatus, 'Bozza salvata.');
   }
@@ -1260,10 +1963,153 @@ export class ReportEditor {
 
     if (savedDraft && closeAfterSave) {
       this.showPsgAnamnesisModal = false;
+      this.uiState = 'wizard';
+    }
+  }
+
+  async saveEmgAnamnesis(closeAfterSave = false): Promise<void> {
+    if (this.reportType !== 'emg') {
+      return;
+    }
+
+    this.markEmgChecklistTouched();
+
+    if (!this.isEmgChecklistComplete()) {
+      this.setDraftMessage(
+        'Completa la checklist anamnestica EMG: ogni voce richiede Si o No.',
+        'error',
+      );
+      return;
+    }
+
+    const savedDraft = await this.persistDraft(
+      'anamnesi_raccolta',
+      'Anamnesi EMG salvata. Il referto puo essere ripreso successivamente.',
+    );
+
+    if (savedDraft && closeAfterSave) {
+      this.showEmgAnamnesisModal = false;
+      this.uiState = 'wizard';
+    }
+  }
+
+  async submitNeurologistLogin(): Promise<void> {
+    this.neurologistLoginError = '';
+
+    if (!this.neurologistEmail.trim() || !this.neurologistPassword.trim()) {
+      this.neurologistLoginError = 'Inserisci email e password dell’Area Riservata.';
+      return;
+    }
+
+    this.neurologistLoginLoading = true;
+
+    try {
+      const response = await firstValueFrom(
+        this.api.login(
+          this.neurologistEmail.trim(),
+          this.neurologistPassword,
+        ),
+      );
+
+      this.neurologistUser = response.user;
+      this.reservedUser = response.user;
+      this.neurologistToken = 'session';
+      this.neurologistPassword = '';
+      this.persistNeurologistSession();
+      await this.routeReservedUserDashboard();
+    } catch (error) {
+      console.error('Errore login area riservata:', error);
+      this.neurologistLoginError = 'Credenziali non valide.';
+    } finally {
+      this.neurologistLoginLoading = false;
+    }
+  }
+
+  async logoutNeurologist(): Promise<void> {
+    try {
+      await firstValueFrom(this.api.logout());
+    } catch (error) {
+      console.error('Errore logout area riservata:', error);
+    }
+
+    this.neurologistPassword = '';
+    this.neurologistLoginError = '';
+    this.neurologistDrafts = [];
+    this.refertatoreDrafts = [];
+    this.refertatoreArchiveDrafts = [];
+    this.clearNeurologistSession();
+    this.uiState = 'initialTypeSelection';
+  }
+
+  async openNeurologistDashboard(): Promise<void> {
+    if (!this.reservedUser || this.reservedUser.role !== 'refertatore') {
+      this.uiState = 'reservedLogin';
+      return;
+    }
+
+    this.neurologistDraftsLoading = true;
+    this.neurologistDraftsError = '';
+
+    try {
+      const assignedTypes = this.reservedUser.assignedTypes || [];
+      const pairs = await Promise.all(
+        assignedTypes.map(async (tipo) => {
+          const [activeResponse, archiveResponse] = await Promise.all([
+            firstValueFrom(this.api.listRefertatoreDrafts(tipo)),
+            firstValueFrom(this.api.listRefertatoreArchive(tipo)),
+          ]);
+
+          return {
+            active: activeResponse.items,
+            archive: archiveResponse.items,
+          };
+        }),
+      );
+
+      this.refertatoreDrafts = pairs.flatMap((item) => item.active);
+      this.refertatoreArchiveDrafts = pairs.flatMap((item) => item.archive);
+      this.neurologistDrafts = this.refertatoreDrafts.filter(
+        (draft) => draft.tipo_referto === 'emg',
+      );
+      this.uiState = 'refertatoreDashboard';
+    } catch (error) {
+      console.error('Errore caricamento area refertatore:', error);
+      this.neurologistDraftsError =
+        'Impossibile caricare i referti assegnati al refertatore.';
+      this.uiState = 'reservedLogin';
+      this.clearNeurologistSession();
+    } finally {
+      this.neurologistDraftsLoading = false;
     }
   }
 
   openResumeDraftModal(): void {
+    this.draftBrowserMode = 'active';
+    this.draftFilters.scope = 'active';
+    this.draftFilters.stato =
+      this.draftFilters.stato === 'completato' ||
+      this.draftFilters.stato === 'firmato_caricato'
+        ? ''
+        : this.draftFilters.stato;
+    if (this.selectedReportType) {
+      this.draftFilters.tipo_referto = this.selectedReportType;
+    }
+    this.showDraftsModal = true;
+    void this.refreshDraftList();
+  }
+
+  openArchiveModal(): void {
+    this.draftBrowserMode = 'archive';
+    this.draftFilters.scope = 'archive';
+    this.draftFilters.stato =
+      this.draftFilters.stato &&
+      this.draftFilters.stato !== 'completato' &&
+      this.draftFilters.stato !== 'firmato_caricato'
+        ? ''
+        : this.draftFilters.stato;
+    if (this.selectedReportType) {
+      this.draftFilters.tipo_referto = this.selectedReportType;
+    }
     this.showDraftsModal = true;
     void this.refreshDraftList();
   }
@@ -1281,6 +2127,14 @@ export class ReportEditor {
     this.showPsgAnamnesisModal = false;
   }
 
+  openEmgAnamnesisModal(): void {
+    this.showEmgAnamnesisModal = true;
+  }
+
+  closeEmgAnamnesisModal(): void {
+    this.showEmgAnamnesisModal = false;
+  }
+
   async applyDraftFilters(resetOffset = false): Promise<void> {
     if (resetOffset) {
       this.draftFilters.offset = 0;
@@ -1296,9 +2150,27 @@ export class ReportEditor {
 
     try {
       const draft = await firstValueFrom(this.api.getDraft(id));
-      this.hydrateDraft(draft);
+
+      if (this.selectedReportType && draft.tipo_referto !== this.selectedReportType) {
+        this.draftsError =
+          'La bozza selezionata appartiene a un tipo referto diverso da quello scelto.';
+        return;
+      }
+
+      await this.hydrateDraft(draft, {
+        readonlyMode:
+          this.isArchiveBrowserMode ||
+          draft.stato === 'completato' ||
+          draft.stato === 'firmato_caricato',
+      });
       this.showDraftsModal = false;
-      this.setDraftMessage('Referto ripreso.', 'success');
+      this.uiState = 'wizard';
+      this.setDraftMessage(
+        this.isArchiveBrowserMode
+          ? 'Referto archiviato aperto in sola lettura.'
+          : 'Referto ripreso.',
+        'success',
+      );
     } catch (error) {
       console.error('Errore caricamento bozza:', error);
       this.draftsError =
@@ -1308,7 +2180,49 @@ export class ReportEditor {
     }
   }
 
+  async openNeurologistDraft(id: string): Promise<void> {
+    if (!this.reservedUser) {
+      this.uiState = 'reservedLogin';
+      return;
+    }
+
+    this.neurologistOpeningDraftId = id;
+    this.neurologistDraftsError = '';
+
+    try {
+      const draft = await firstValueFrom(
+        this.api.getRefertatoreDraft(id),
+      );
+      await this.hydrateDraft(draft, {
+        neurologistMode: true,
+        neurologistToken: 'session',
+      });
+      this.uiState = 'wizard';
+      this.setDraftMessage('Referto assegnato aperto in area refertatore.', 'success');
+    } catch (error) {
+      console.error('Errore apertura referto refertatore:', error);
+      this.neurologistDraftsError =
+        'Impossibile aprire il referto assegnato selezionato.';
+    } finally {
+      this.neurologistOpeningDraftId = null;
+    }
+  }
+
   async deleteDraftRecord(id: string): Promise<void> {
+    const draft = this.drafts.find((item) => item.id === id) || null;
+
+    if (!draft || !this.isDraftDeletable(draft)) {
+      this.draftsError =
+        'I referti completati non possono essere eliminati dalla UI operativa.';
+      return;
+    }
+
+    const confirmed = window.confirm(this.buildDeleteDraftConfirmationMessage(draft));
+
+    if (!confirmed) {
+      return;
+    }
+
     this.deletingDraftId = id;
     this.draftsError = '';
 
@@ -1330,15 +2244,28 @@ export class ReportEditor {
     }
   }
 
-  hydrateDraft(draft: ReportDraftDetail): void {
+  async hydrateDraft(
+    draft: ReportDraftDetail,
+    options: {
+      neurologistMode?: boolean;
+      neurologistToken?: string;
+      readonlyMode?: boolean;
+    } = {},
+  ): Promise<void> {
     const formData = draft.form_data?.form ?? {};
     const sectionsData = draft.form_data?.sections ?? {};
     const meta = draft.form_data?.meta;
     const rawForm = this.getFreshFormState();
     const rawSections = this.getFreshSectionsState();
     const tipoReferto = draft.tipo_referto || formData.tipoReferto || 'standard';
+    this.selectedReportType = tipoReferto;
 
+    this.emgNeurologistMode =
+      !!options.neurologistMode &&
+      draft.stato !== 'completato' &&
+      draft.stato !== 'firmato_caricato';
     this.resetTransientUiState();
+    this.setEmgNeurologistMode(false);
     this.form.reset(rawForm as any);
     this.sections.reset(rawSections as any);
     this.step = 0;
@@ -1349,8 +2276,14 @@ export class ReportEditor {
 
     this.currentDraftId = draft.id;
     this.currentDraftStatus = draft.stato;
+    this.draftSentToRefertatore = !!meta?.sentToRefertatore;
     this.draftLoaded = true;
+    this.completedReadonlyMode =
+      !!options.readonlyMode ||
+      draft.stato === 'completato' ||
+      draft.stato === 'firmato_caricato';
     this.step = this.clampStep(meta?.currentStep ?? 0);
+    this.uiState = 'wizard';
 
     this.doctorSearch.setValue(
       this.buildDoctorSearchLabel(
@@ -1366,6 +2299,18 @@ export class ReportEditor {
     this.technicalResults = [];
 
     this.refreshDerivedStateAfterDraftLoad();
+    await this.hydratePersistedAttachments(
+      draft.id,
+      options.neurologistToken,
+    );
+    if (this.completedReadonlyMode) {
+      this.form.disable({ emitEvent: false });
+      this.sections.disable({ emitEvent: false });
+      this.reviewerMode = false;
+      this.emgNeurologistMode = false;
+    } else {
+      this.setEmgNeurologistMode(this.emgNeurologistMode);
+    }
     this.attachmentsReloadNotice = this.buildAttachmentsReloadNotice();
   }
 
@@ -1380,7 +2325,22 @@ export class ReportEditor {
         );
         this.showPsgAnamnesisModal = true;
       }
+
+      if (this.reportType === 'emg' && !this.isEmgChecklistComplete()) {
+        this.setDraftMessage(
+          'Completa prima l’anamnesi EMG dalla sezione Anagrafica prima di generare il referto.',
+          'warning',
+        );
+        this.showEmgAnamnesisModal = true;
+      }
       return;
+    }
+
+    if (this.reportType === 'emg' && this.emgNeurologistMode && this.currentDraftId) {
+      const saved = await this.saveNeurologistDraftProgress(false);
+      if (!saved) {
+        return;
+      }
     }
 
     const formValue = this.form.getRawValue();
@@ -1712,6 +2672,174 @@ export class ReportEditor {
     }
   }
 
+  private restoreNeurologistSession(): void {
+    void this.restoreReservedSession();
+  }
+
+  private persistNeurologistSession(): void {
+    // Gestione sessione delegata ai cookie HttpOnly del backend.
+  }
+
+  private clearNeurologistSession(): void {
+    this.api.clearAuthState();
+    this.neurologistToken = '';
+    this.neurologistUser = null;
+    this.reservedUser = null;
+  }
+
+  private async sendDraftToRefertatore(): Promise<void> {
+    if (this.reportType !== 'emg' && this.reportType !== 'psg') {
+      return;
+    }
+
+    this.form.markAllAsTouched();
+    if (this.reportType === 'emg') {
+      this.markEmgChecklistTouched();
+      this.control('emg.firmaTecnico').markAsTouched();
+
+      if (this.form.invalid || !this.isEmgChecklistComplete()) {
+        this.setDraftMessage(
+          'Completa tutti i dati tecnici EMG, la checklist neuropatie e la firma TNFP prima di inviare al refertatore.',
+          'error',
+        );
+        return;
+      }
+    }
+
+    if (this.reportType === 'psg') {
+      if (!this.isPsgAnamnesisReadyForSave()) {
+        this.setDraftMessage(
+          "Completa l'anamnesi PSG e la Scala ESS prima di inviare il referto al refertatore.",
+          'error',
+        );
+        this.showPsgAnamnesisModal = true;
+        return;
+      }
+
+      const requiredPsgControls = [
+        this.control('psg.dataRegistrazioneInizio'),
+        this.control('psg.dataRegistrazioneFine'),
+        this.control('psg.sistemaRegistrazione'),
+        this.control('psg.staturaCm'),
+        this.control('psg.pesoKg'),
+        this.control('psg.bmi'),
+        this.control('psg.consensoInformato'),
+        this.control('psg.dataRefertazione'),
+        this.control('prestazione'),
+        this.control('medico.id'),
+        this.control('psg.quesitoClinico'),
+        this.control('psg.reportStrumentalePdf'),
+      ];
+
+      if (requiredPsgControls.some((control) => control.invalid)) {
+        this.setDraftMessage(
+          'Completa i dati obbligatori PSG, il quesito clinico e il report strumentale prima di inviare al refertatore.',
+          'error',
+        );
+        return;
+      }
+    }
+
+    this.draftSaving = true;
+    this.draftError = '';
+
+    try {
+      const draftPayload = this.buildDraftPayload('in_refertazione');
+      const savedDraft = this.currentDraftId
+        ? await firstValueFrom(
+            this.api.updateDraft(this.currentDraftId, draftPayload),
+          )
+        : await firstValueFrom(this.api.createDraft(draftPayload));
+
+      this.currentDraftId = savedDraft.id;
+      if (this.reportType === 'emg') {
+        await this.syncEmgDraftAttachments(savedDraft.id);
+      } else {
+        await this.syncPsgDraftAttachments(savedDraft.id);
+      }
+
+      const sendResult = await firstValueFrom(
+        this.api.sendDraftToRefertatore(savedDraft.id),
+      );
+
+      this.currentDraftStatus = sendResult.draft.stato;
+      this.draftSentToRefertatore = true;
+      this.draftLoaded = true;
+      await this.hydratePersistedAttachments(savedDraft.id);
+      this.attachmentsReloadNotice = this.buildAttachmentsReloadNotice();
+      await this.refreshDraftList(false);
+      this.setDraftMessage(
+        sendResult.emailSent
+          ? this.reportType === 'emg'
+            ? 'Acquisizione tecnica salvata e inviata al refertatore.'
+            : 'Bozza PSG salvata e inviata al refertatore.'
+          : this.reportType === 'emg'
+            ? 'Acquisizione tecnica salvata e assegnata al refertatore. Invio email non disponibile.'
+            : 'Bozza PSG salvata e assegnata al refertatore. Invio email non disponibile.',
+        'success',
+      );
+    } catch (error) {
+      console.error('Errore invio referto al refertatore:', error);
+      this.draftError =
+        this.reportType === 'emg'
+          ? "Impossibile completare l'invio al refertatore. Controlla gli allegati EMG e riprova."
+          : "Impossibile completare l'invio PSG al refertatore. Controlla il report strumentale e riprova.";
+      this.setDraftMessage(this.draftError, 'error');
+    } finally {
+      this.draftSaving = false;
+    }
+  }
+
+  private async saveNeurologistDraftProgress(
+    showSuccessMessage = true,
+  ): Promise<ReportDraftDetail | null> {
+    if (!this.currentDraftId || !this.neurologistToken) {
+      this.setDraftMessage(
+        'Sessione refertatore non disponibile per il salvataggio.',
+        'warning',
+      );
+      return null;
+    }
+
+    this.draftSaving = true;
+    this.draftError = '';
+
+    try {
+      const payload = this.buildDraftPayload(
+        this.reportType === 'emg'
+          ? 'in_refertazione_neurologo'
+          : 'in_refertazione',
+      );
+      const savedDraft = await firstValueFrom(
+        this.api.updateNeurologistEmgDraft(
+          this.neurologistToken,
+          this.currentDraftId,
+          payload,
+        ),
+      );
+
+      this.currentDraftStatus = savedDraft.stato;
+      this.draftLoaded = true;
+
+      if (showSuccessMessage) {
+        this.setDraftMessage(
+          'Progressi del refertatore salvati correttamente.',
+          'success',
+        );
+      }
+
+      return savedDraft;
+    } catch (error) {
+      console.error('Errore salvataggio refertatore:', error);
+      this.draftError =
+        'Impossibile salvare i campi del refertatore in questo momento.';
+      this.setDraftMessage(this.draftError, 'error');
+      return null;
+    } finally {
+      this.draftSaving = false;
+    }
+  }
+
   private buildDraftPayload(status: ReportDraftStatus): ReportDraftPayload {
     const rawForm = this.form.getRawValue();
     const rawSections = this.sections.getRawValue();
@@ -1739,6 +2867,13 @@ export class ReportEditor {
           schemaVersion: 1,
           currentStep: this.step,
           draftStatus: status,
+          sentToRefertatore:
+            this.draftSentToRefertatore ||
+            status === 'in_attesa_neurologo' ||
+            status === 'in_refertazione_neurologo' ||
+            status === 'pronto_per_firma' ||
+            status === 'completato' ||
+            status === 'firmato_caricato',
         },
       },
     };
@@ -1764,6 +2899,22 @@ export class ReportEditor {
       email: formValue.anagrafica?.email?.trim() || null,
       medico_refertatore: medicoRefertatore,
       medico_refertatore_id: formValue.medico?.id || null,
+      assigned_refertatore_id:
+        this.reportType === 'emg' || this.reportType === 'psg'
+          ? formValue.medico?.id || null
+          : null,
+      assigned_refertatore_email:
+        this.reportType === 'emg' || this.reportType === 'psg'
+          ? this.findDoctorEmailById(formValue.medico?.id || '')
+          : null,
+      assigned_refertatore_name:
+        this.reportType === 'emg' || this.reportType === 'psg'
+          ? medicoRefertatore
+          : null,
+      assigned_refertatore_specializzazione:
+        this.reportType === 'emg' || this.reportType === 'psg'
+          ? formValue.medico?.specialita?.trim() || null
+          : null,
       specializzazione: formValue.medico?.specialita?.trim() || null,
       prestazione: formValue.prestazione?.trim() || null,
       data_esame:
@@ -1774,7 +2925,19 @@ export class ReportEditor {
   }
 
   private resolveDraftStatusForSave(): ReportDraftStatus {
+    if (this.emgNeurologistMode) {
+      if (this.currentDraftStatus === 'pronto_per_firma') {
+        return 'pronto_per_firma';
+      }
+
+      return 'in_refertazione_neurologo';
+    }
+
     if (this.reportType === 'psg') {
+      if (this.currentDraftStatus === 'pronto_per_firma') {
+        return 'pronto_per_firma';
+      }
+
       if (this.currentDraftStatus === 'completato') {
         return 'in_refertazione';
       }
@@ -1785,6 +2948,20 @@ export class ReportEditor {
 
       if (this.currentDraftStatus === 'anamnesi_raccolta') {
         return 'anamnesi_raccolta';
+      }
+    }
+
+    if (this.reportType === 'emg') {
+      if (this.currentDraftStatus === 'in_attesa_neurologo') {
+        return 'in_attesa_neurologo';
+      }
+
+      if (this.currentDraftStatus === 'pronto_per_firma') {
+        return 'pronto_per_firma';
+      }
+
+      if (this.currentDraftStatus === 'in_refertazione_neurologo') {
+        return 'in_refertazione_neurologo';
       }
     }
 
@@ -1801,7 +2978,18 @@ export class ReportEditor {
 
     try {
       const response = await firstValueFrom(this.api.listDrafts(this.draftFilters));
-      this.drafts = response.items;
+      const filteredItems = response.items.filter((item) => {
+        if (this.selectedReportType && item.tipo_referto !== this.selectedReportType) {
+          return false;
+        }
+
+        if (this.isArchiveBrowserMode) {
+          return item.stato === 'completato' || item.stato === 'firmato_caricato';
+        }
+
+        return item.stato !== 'completato' && item.stato !== 'firmato_caricato';
+      });
+      this.drafts = filteredItems;
       this.draftListTotal = response.total;
       if (showModalIfEmpty) {
         this.showDraftsModal = true;
@@ -1848,19 +3036,40 @@ export class ReportEditor {
     this.draftError = '';
     this.draftMessage = '';
     this.draftMessageType = 'info';
+    this.currentDraftAttachments = [];
+    this.completedReadonlyMode = false;
+    this.draftSentToRefertatore = false;
     this.showPsgAnamnesisModal = false;
+    this.showEmgAnamnesisModal = false;
+    this.emgSignedPdfAsset = null;
+    this.psgSignedPdfAsset = null;
     this.form.get('emg.tracciati')?.setValue([], { emitEvent: false });
     this.form.get('emg.firmaTecnico')?.setValue(null, { emitEvent: false });
     this.form.get('psg.reportStrumentalePdf')?.setValue(null, { emitEvent: false });
   }
 
   private buildAttachmentsReloadNotice(): string {
+    if (this.completedReadonlyMode || this.currentDraftStatus === 'completato') {
+      return '';
+    }
+
     if (this.reportType === 'emg') {
+      const hasPersistedEmgAttachments =
+        this.emgTraceAssets().some((asset) => asset.persisted) ||
+        !!this.emgSignatureAsset()?.persisted;
+
+      if (hasPersistedEmgAttachments) {
+        return '';
+      }
+
       return 'Tracciati EMG e firma TNFP non vengono salvati nella bozza: vanno ricaricati nella sessione corrente.';
     }
 
     if (this.reportType === 'psg') {
-      return 'Il report strumentale PSG non viene salvato nella bozza: andra ricaricato prima della generazione PDF.';
+      const persistedReport = this.psgReportAsset()?.persisted;
+      return persistedReport
+        ? ''
+        : 'Il report strumentale PSG non e ancora persistito in questa bozza: verra richiesto nuovamente finche il referto non viene inviato al refertatore.';
     }
 
     return '';
@@ -1873,6 +3082,107 @@ export class ReportEditor {
 
   private buildDoctorSearchLabel(nome?: string | null, cognome?: string | null): string {
     return `${cognome ?? ''} ${nome ?? ''}`.trim();
+  }
+
+  canOpenSignedPdf(draft?: ReportDraftSummary | null): boolean {
+    const type = draft?.tipo_referto ?? this.reportType;
+    if (type !== 'emg' && type !== 'psg') {
+      return false;
+    }
+
+    if (!draft) {
+      return !!this.currentSignedStoredAttachment;
+    }
+
+    return draft.stato === 'completato' || draft.stato === 'firmato_caricato';
+  }
+
+  async openSignedPdfForCurrentDraft(): Promise<void> {
+    try {
+      if (!this.currentDraftId) {
+        return;
+      }
+
+      const attachment = await this.resolveSignedAttachmentForDraft(this.currentDraftId);
+      if (!attachment) {
+        this.setDraftMessage(
+          'Referto completato, ma il PDF firmato non e disponibile nella UI. Verifica archivio Drive.',
+          'warning',
+        );
+        return;
+      }
+
+      await this.openDraftAttachmentBlob(attachment);
+    } catch (error) {
+      console.error('Errore apertura PDF firmato corrente:', error);
+      this.setDraftMessage(
+        'Impossibile aprire il PDF firmato selezionato.',
+        'error',
+      );
+    }
+  }
+
+  async downloadSignedPdfForCurrentDraft(): Promise<void> {
+    try {
+      if (!this.currentDraftId) {
+        return;
+      }
+
+      const attachment = await this.resolveSignedAttachmentForDraft(this.currentDraftId);
+      if (!attachment) {
+        this.setDraftMessage(
+          'Referto completato, ma il PDF firmato non e disponibile nella UI. Verifica archivio Drive.',
+          'warning',
+        );
+        return;
+      }
+
+      await this.downloadDraftAttachmentBlob(attachment);
+    } catch (error) {
+      console.error('Errore download PDF firmato corrente:', error);
+      this.setDraftMessage(
+        'Impossibile scaricare il PDF firmato selezionato.',
+        'error',
+      );
+    }
+  }
+
+  openSignedPdfOnDrive(): void {
+    const link = this.currentSignedStoredAttachment?.drive_web_view_link;
+    if (!link) {
+      this.setDraftMessage(
+        'Link Drive non disponibile per questo referto firmato.',
+        'warning',
+      );
+      return;
+    }
+
+    window.open(link, '_blank', 'noopener,noreferrer');
+  }
+
+  async openSignedPdfForDraft(draft: ReportDraftSummary): Promise<void> {
+    try {
+      const attachment = await this.resolveSignedAttachmentForDraft(draft.id);
+      if (!attachment) {
+        this.setDraftMessage(
+          'PDF firmato non disponibile per il referto selezionato.',
+          'warning',
+        );
+        return;
+      }
+
+      await this.openDraftAttachmentBlob(attachment);
+    } catch (error) {
+      console.error('Errore apertura PDF firmato archivio:', error);
+      this.setDraftMessage(
+        'Impossibile aprire il PDF firmato del referto selezionato.',
+        'error',
+      );
+    }
+  }
+
+  async openArchivedDraft(id: string): Promise<void> {
+    await this.loadDraft(id);
   }
 
   private getFreshFormState() {
@@ -2038,20 +3348,23 @@ export class ReportEditor {
   }
 
   private filteredDoctors(): DoctorInfo[] {
-    return this.doctors.filter((doctor) => {
-      if (doctor.tipo === 'tecnico') return false;
-      if (!this.usesNeurologiaDoctors()) return true;
-      return doctor.specialita === this.getNeurologiaSpecialization();
-    });
+    if (this.reportType === 'emg') {
+      return this.refertatoriEmg;
+    }
+
+    if (this.reportType === 'psg') {
+      return this.refertatoriPsg;
+    }
+
+    return this.doctors.filter((doctor) => doctor.tipo !== 'tecnico');
   }
 
   private findDefaultNeurologist(): DoctorInfo | undefined {
-    return this.doctors.find(
+    return this.filteredDoctors().find(
       (doctor) =>
         doctor.tipo !== 'tecnico' &&
-        doctor.specialita === this.getNeurologiaSpecialization() &&
         doctor.nome === 'Sebastiano' &&
-        doctor.cognome === 'Arena',
+        doctor.cognome.includes('Arena'),
     );
   }
 
@@ -2149,7 +3462,827 @@ export class ReportEditor {
     return `${datePart}T${timePart}`;
   }
 
+  private async loadOperationalOptions(): Promise<void> {
+    try {
+      const [professionalsResponse, emgRefertatoriResponse, psgRefertatoriResponse] =
+        await Promise.all([
+          firstValueFrom(this.api.listProfessionals()),
+          firstValueFrom(this.api.listRefertatori('emg')),
+          firstValueFrom(this.api.listRefertatori('psg')),
+        ]);
+
+      this.professionals = professionalsResponse.items;
+      this.doctors = professionalsResponse.items.map((item) =>
+        this.mapProfessionalToDoctor(item),
+      );
+      this.refertatoriEmg = emgRefertatoriResponse.items.map((item) =>
+        this.mapRefertatoreToDoctor(item),
+      );
+      this.refertatoriPsg = psgRefertatoriResponse.items.map((item) =>
+        this.mapRefertatoreToDoctor(item),
+      );
+    } catch (error) {
+      console.error('Errore caricamento professionisti/refertatori:', error);
+      this.doctors = this.fallbackDoctors;
+      this.refertatoriEmg = this.fallbackDoctors.filter(
+        (item) => item.tipo !== 'tecnico' && item.specialita === EMG_DEFAULTS.specializzazione,
+      );
+      this.refertatoriPsg = this.fallbackDoctors.filter(
+        (item) => item.tipo !== 'tecnico' && item.specialita === PSG_DEFAULTS.specializzazione,
+      );
+    }
+  }
+
+  private async restoreReservedSession(): Promise<void> {
+    try {
+      const response = await firstValueFrom(this.api.me());
+      this.reservedUser = response.user;
+      this.neurologistUser = response.user;
+      this.neurologistToken = 'session';
+      await firstValueFrom(this.api.getCsrf());
+    } catch {
+      this.clearNeurologistSession();
+    }
+  }
+
+  private captureResetPasswordToken(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('resetToken') || '';
+    if (!token) {
+      return;
+    }
+
+    this.resetPasswordToken = token;
+    this.uiState = 'resetPassword';
+  }
+
+  openReservedArea(): void {
+    this.neurologistLoginError = '';
+    if (this.reservedUser) {
+      void this.routeReservedUserDashboard();
+      return;
+    }
+    this.uiState = 'reservedLogin';
+  }
+
+  goToReservedLogin(): void {
+    this.neurologistLoginError = '';
+    this.forgotPasswordMessage = '';
+    this.resetPasswordMessage = '';
+    this.uiState = 'reservedLogin';
+  }
+
+  goToForgotPassword(): void {
+    this.forgotPasswordMessage = '';
+    this.uiState = 'forgotPassword';
+  }
+
+  async routeReservedUserDashboard(): Promise<void> {
+    if (!this.reservedUser) {
+      this.uiState = 'reservedLogin';
+      return;
+    }
+
+    if (this.reservedUser.role === 'admin') {
+      await this.openAdminDashboard();
+      return;
+    }
+
+    await this.openNeurologistDashboard();
+  }
+
+  async openAdminDashboard(): Promise<void> {
+    this.adminDashboardLoading = true;
+    this.adminDashboardError = '';
+
+    try {
+      await firstValueFrom(this.api.getCsrf());
+      const [usersResponse, professionalsResponse, draftsResponse, archiveResponse, auditResponse] =
+        await Promise.all([
+          firstValueFrom(this.api.listAdminUsers()),
+          firstValueFrom(this.api.listAdminProfessionals()),
+          firstValueFrom(this.api.listAdminDrafts()),
+          firstValueFrom(this.api.listAdminArchive()),
+          firstValueFrom(this.api.listAuditLogs()),
+        ]);
+
+      this.adminUsers = usersResponse.items;
+      this.adminProfessionals = professionalsResponse.items;
+      this.adminDrafts = draftsResponse.items;
+      this.adminArchiveDrafts = archiveResponse.items;
+      this.auditLogs = auditResponse.items;
+      this.uiState = 'adminDashboard';
+    } catch (error) {
+      console.error('Errore caricamento dashboard admin:', error);
+      this.adminDashboardError =
+        'Impossibile caricare la dashboard admin in questo momento.';
+      this.uiState = 'reservedLogin';
+    } finally {
+      this.adminDashboardLoading = false;
+    }
+  }
+
+  async submitForgotPassword(): Promise<void> {
+    if (!this.forgotPasswordEmail.trim()) {
+      this.forgotPasswordMessage = 'Inserisci un indirizzo email valido.';
+      return;
+    }
+
+    this.forgotPasswordLoading = true;
+    try {
+      const response = await firstValueFrom(
+        this.api.forgotPassword(this.forgotPasswordEmail.trim()),
+      );
+      this.forgotPasswordMessage = response.message;
+    } catch (error) {
+      console.error('Errore richiesta reset password:', error);
+      this.forgotPasswordMessage =
+        "Impossibile completare la richiesta in questo momento. Riprova tra poco.";
+    } finally {
+      this.forgotPasswordLoading = false;
+    }
+  }
+
+  async toggleAdminUserStatus(user: AdminUserItem): Promise<void> {
+    try {
+      await firstValueFrom(this.api.getCsrf());
+      await firstValueFrom(this.api.updateAdminUserStatus(user.id, !user.active));
+      await this.openAdminDashboard();
+    } catch (error) {
+      console.error('Errore aggiornamento stato utente:', error);
+      this.adminDashboardError = "Impossibile aggiornare lo stato dell'utente.";
+    }
+  }
+
+  async toggleAdminProfessionalStatus(professional: ProfessionalItem): Promise<void> {
+    try {
+      await firstValueFrom(this.api.getCsrf());
+      await firstValueFrom(
+        this.api.updateAdminProfessionalStatus(professional.id, !professional.active),
+      );
+      await this.openAdminDashboard();
+      await this.loadOperationalOptions();
+    } catch (error) {
+      console.error('Errore aggiornamento stato professionista:', error);
+      this.adminDashboardError =
+        'Impossibile aggiornare lo stato del professionista.';
+    }
+  }
+
+  async openAdminDraftRecord(draft: ReportDraftSummary, readonlyMode = true): Promise<void> {
+    try {
+      const detail = await firstValueFrom(this.api.getDraft(draft.id));
+      await this.hydrateDraft(detail, {
+        readonlyMode:
+          readonlyMode ||
+          draft.stato === 'completato' ||
+          draft.stato === 'firmato_caricato',
+      });
+      this.setDraftMessage(
+        readonlyMode
+          ? 'Referto aperto in sola lettura dall’area admin.'
+          : 'Bozza aperta dall’area admin.',
+        'success',
+      );
+    } catch (error) {
+      console.error('Errore apertura referto admin:', error);
+      this.adminDashboardError = 'Impossibile aprire il referto selezionato.';
+    }
+  }
+
+  activeRefertatoreDrafts(tipo: 'emg' | 'psg'): ReportDraftSummary[] {
+    return this.refertatoreDrafts.filter((draft) => draft.tipo_referto === tipo);
+  }
+
+  archiveRefertatoreDrafts(tipo: 'emg' | 'psg'): ReportDraftSummary[] {
+    return this.refertatoreArchiveDrafts.filter((draft) => draft.tipo_referto === tipo);
+  }
+
+  reportTypeLabelFor(type: ReportType): string {
+    if (type === 'emg') return 'EMG';
+    if (type === 'psg') return 'PSG';
+    return 'Standard';
+  }
+
+  draftStatusLabel(status: ReportDraftStatus): string {
+    return (
+      this.draftStatusOptions.find((item) => item.value === status)?.label || status
+    );
+  }
+
+  async submitResetPassword(): Promise<void> {
+    this.resetPasswordMessage = '';
+
+    if (!this.resetPasswordToken) {
+      this.resetPasswordMessage = 'Token di reset non disponibile.';
+      return;
+    }
+
+    if (!this.resetPasswordValue || this.resetPasswordValue !== this.resetPasswordConfirm) {
+      this.resetPasswordMessage = 'Le password non coincidono.';
+      return;
+    }
+
+    this.resetPasswordLoading = true;
+    try {
+      const response = await firstValueFrom(
+        this.api.resetPassword(this.resetPasswordToken, this.resetPasswordValue),
+      );
+      this.resetPasswordMessage = response.message;
+      this.uiState = 'reservedLogin';
+      this.resetPasswordToken = '';
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('resetToken');
+        window.history.replaceState({}, '', url.toString());
+      }
+    } catch (error) {
+      console.error('Errore reset password:', error);
+      this.resetPasswordMessage =
+        'Impossibile reimpostare la password. Verifica il link o richiedine uno nuovo.';
+    } finally {
+      this.resetPasswordLoading = false;
+    }
+  }
+
+  async saveAdminUser(): Promise<void> {
+    try {
+      await firstValueFrom(this.api.getCsrf());
+      if (this.adminUserForm.id) {
+        await firstValueFrom(
+          this.api.updateAdminUser(this.adminUserForm.id, this.adminUserForm),
+        );
+      } else {
+        await firstValueFrom(this.api.createAdminUser(this.adminUserForm));
+      }
+      this.resetAdminUserForm();
+      await this.openAdminDashboard();
+    } catch (error) {
+      console.error('Errore salvataggio utente admin:', error);
+      this.adminDashboardError = 'Impossibile salvare il refertatore/admin.';
+    }
+  }
+
+  async saveAdminProfessional(): Promise<void> {
+    try {
+      await firstValueFrom(this.api.getCsrf());
+      if (this.adminProfessionalForm.id) {
+        await firstValueFrom(
+          this.api.updateAdminProfessional(
+            this.adminProfessionalForm.id,
+            this.adminProfessionalForm,
+          ),
+        );
+      } else {
+        await firstValueFrom(
+          this.api.createAdminProfessional(this.adminProfessionalForm),
+        );
+      }
+      this.resetAdminProfessionalForm();
+      await this.openAdminDashboard();
+      await this.loadOperationalOptions();
+    } catch (error) {
+      console.error('Errore salvataggio professionista admin:', error);
+      this.adminDashboardError = 'Impossibile salvare il professionista.';
+    }
+  }
+
+  editAdminUser(user: AdminUserItem): void {
+    this.adminTab = 'users';
+    this.adminUserForm = {
+      id: user.id,
+      role: user.role,
+      email: user.email,
+      password: '',
+      display_name: user.display_name,
+      specializzazione: user.specializzazione || '',
+      assignedTypes: [...user.assignedTypes],
+    };
+  }
+
+  editAdminProfessional(professional: ProfessionalItem): void {
+    this.adminTab = 'professionals';
+    this.adminProfessionalForm = {
+      id: professional.id,
+      first_name: professional.first_name || '',
+      last_name: professional.last_name || '',
+      display_name: professional.display_name,
+      title: professional.title || '',
+      email: professional.email || '',
+      phone: professional.phone || '',
+      specializzazione: professional.specializzazione || '',
+      role_label: professional.role_label || '',
+      professional_type: professional.professional_type,
+      visible_in_standard: professional.visible_in_standard,
+      is_refertatore: professional.is_refertatore,
+      active: professional.active,
+      sort_order: professional.sort_order,
+    };
+  }
+
+  toggleAdminAssignedType(
+    tipo: 'emg' | 'psg',
+    checked: boolean,
+  ): void {
+    const current = new Set(this.adminUserForm.assignedTypes);
+
+    if (checked) {
+      current.add(tipo);
+    } else {
+      current.delete(tipo);
+    }
+
+    this.adminUserForm.assignedTypes = [...current] as Array<'emg' | 'psg'>;
+  }
+
+  resetAdminUserForm(): void {
+    this.adminUserForm = {
+      id: '',
+      role: 'refertatore',
+      email: '',
+      password: '',
+      display_name: '',
+      specializzazione: '',
+      assignedTypes: [],
+    };
+  }
+
+  resetAdminProfessionalForm(): void {
+    this.adminProfessionalForm = {
+      id: '',
+      first_name: '',
+      last_name: '',
+      display_name: '',
+      title: '',
+      email: '',
+      phone: '',
+      specializzazione: '',
+      role_label: '',
+      professional_type: 'medico',
+      visible_in_standard: true,
+      is_refertatore: false,
+      active: true,
+      sort_order: 0,
+    };
+  }
+
+  private mapProfessionalToDoctor(item: ProfessionalItem): DoctorInfo {
+    return {
+      id: item.id,
+      nome: item.first_name || item.display_name,
+      cognome: item.last_name || '',
+      specialita: item.specializzazione || '',
+      ruolo: item.role_label || '',
+      tipo: item.professional_type,
+      displayName: item.display_name,
+      email: item.email,
+      isRefertatore: item.is_refertatore,
+      active: item.active,
+    };
+  }
+
+  private mapRefertatoreToDoctor(item: {
+    id: string;
+    email: string;
+    display_name: string;
+    specializzazione: string | null;
+    assignedTypes: Array<'emg' | 'psg'>;
+  }): DoctorInfo {
+    const [nome, ...rest] = item.display_name.replace(/^Dott\.ssa\s+|^Dott\.\s+/i, '').split(' ');
+    return {
+      id: item.id,
+      nome: nome || item.display_name,
+      cognome: rest.join(' '),
+      specialita: item.specializzazione || '',
+      ruolo: 'Refertatore',
+      tipo: 'medico',
+      displayName: item.display_name,
+      email: item.email,
+      assignedTypes: item.assignedTypes,
+      isRefertatore: true,
+      active: true,
+    };
+  }
+
+  private findDoctorEmailById(id: string): string | null {
+    if (!id) {
+      return null;
+    }
+
+    return (
+      this.refertatoriEmg.find((item) => item.id === id)?.email ||
+      this.refertatoriPsg.find((item) => item.id === id)?.email ||
+      this.doctors.find((item) => item.id === id)?.email ||
+      null
+    );
+  }
+
+  private setEmgNeurologistMode(enabled: boolean): void {
+    this.emgNeurologistMode = enabled;
+    this.reviewerMode = enabled;
+
+    this.form.enable({ emitEvent: false });
+    this.sections.enable({ emitEvent: false });
+
+    if (enabled && this.reportType === 'emg') {
+      [
+        'dataVisitaDisplay',
+        'dataVisita',
+        'prestazione',
+        'anagrafica',
+        'medico',
+        'emg.tecnicoEsecutoreId',
+        'emg.tecnicoEsecutore',
+        'emg.tecnicoRuolo',
+        'emg.medicoInviante',
+        'emg.quesitoDiagnostico',
+        'emg.sintomatologiaRiferita',
+        'emg.distrettoEsaminato',
+        'emg.esameEseguito',
+        'emg.consensoInformatoTesto',
+        'emg.dataOraAcquisizioneTecnica',
+        'emg.materialeProdotto',
+        'emg.noteTecnicheEsecutore',
+        'emg.attestazioneTecnico',
+        'emg.tracciati',
+        'emg.firmaTecnico',
+        'emg.checklistNeuropatie',
+      ].forEach((path) => this.form.get(path)?.disable({ emitEvent: false }));
+    }
+
+    if (enabled && this.reportType === 'psg') {
+      [
+        'dataVisitaDisplay',
+        'dataVisita',
+        'prestazione',
+        'anagrafica',
+        'medico',
+        'psg.dataRegistrazioneInizio',
+        'psg.dataRegistrazioneFine',
+        'psg.sistemaRegistrazione',
+        'psg.staturaCm',
+        'psg.pesoKg',
+        'psg.bmi',
+        'psg.consensoInformato',
+        'psg.dataRefertazione',
+        'psg.anamnesiRaccolta',
+        'psg.reportTecnico',
+        'psg.quesitoClinico',
+        'psg.reportStrumentalePdf',
+        'psg.anamnesiSonno',
+        'psg.ess',
+        'psg.essTotale',
+        'psg.interpretazioneEss',
+      ].forEach((path) => this.form.get(path)?.disable({ emitEvent: false }));
+
+      [
+        'psg.interpretazioneMedico',
+        'psg.conclusioneDiagnostica',
+        'psg.indicazioniCliniche',
+        'psg.notaDocumentale',
+      ].forEach((path) => this.form.get(path)?.enable({ emitEvent: false }));
+    }
+
+    this.updateModeValidators();
+  }
+
+  private async hydratePersistedAttachments(
+    draftId: string,
+    neurologistToken?: string,
+  ): Promise<void> {
+    if (!draftId) {
+      return;
+    }
+
+    try {
+      const response = await firstValueFrom(
+        this.api.listDraftAttachments(draftId, neurologistToken),
+      );
+      this.currentDraftAttachments = response.items;
+
+      if (this.reportType === 'psg') {
+        const reportMetadata = response.items.find(
+          (item) => item.kind === 'psg_report_strumentale',
+        );
+        const reportAsset = reportMetadata
+          ? await this.mapDraftAttachmentToAsset(
+              draftId,
+              reportMetadata,
+              neurologistToken,
+            )
+          : null;
+        this.form.get('psg.reportStrumentalePdf')?.setValue(reportAsset, {
+          emitEvent: false,
+        });
+        return;
+      }
+
+      if (this.reportType !== 'emg') {
+        return;
+      }
+
+      const traceMetadatas = response.items.filter(
+        (item) => item.kind === 'emg_tracciato',
+      );
+      const signatureMetadata = response.items.find(
+        (item) => item.kind === 'emg_firma_tnfp',
+      );
+
+      const traceAssets = await Promise.all(
+        traceMetadatas.map((item) =>
+          this.mapDraftAttachmentToAsset(draftId, item, neurologistToken),
+        ),
+      );
+
+      const signatureAsset = signatureMetadata
+        ? await this.mapDraftAttachmentToAsset(
+            draftId,
+            signatureMetadata,
+            neurologistToken,
+          )
+        : null;
+
+      this.form.get('emg.tracciati')?.setValue(traceAssets, { emitEvent: false });
+      this.form.get('emg.firmaTecnico')?.setValue(signatureAsset, {
+        emitEvent: false,
+      });
+    } catch (error) {
+      console.error('Errore ripristino allegati EMG persistiti:', error);
+      this.currentDraftAttachments = [];
+
+      if (this.reportType === 'psg') {
+        this.form.get('psg.reportStrumentalePdf')?.setValue(null, {
+          emitEvent: false,
+        });
+        this.setDraftMessage(
+          'Bozza caricata, ma non sono riuscito a ripristinare il report strumentale PSG persistito.',
+          'warning',
+        );
+        return;
+      }
+
+      if (this.reportType !== 'emg') {
+        return;
+      }
+
+      this.form.get('emg.tracciati')?.setValue([], { emitEvent: false });
+      this.form.get('emg.firmaTecnico')?.setValue(null, { emitEvent: false });
+      this.setDraftMessage(
+        'Bozza caricata, ma non sono riuscito a ripristinare tutti gli allegati EMG persistiti.',
+        'warning',
+      );
+    }
+  }
+
+  private async mapDraftAttachmentToAsset(
+    draftId: string,
+    metadata: DraftAttachmentMetadata,
+    neurologistToken?: string,
+  ): Promise<EmgUploadedAsset> {
+    const isPdf = metadata.mime_type === 'application/pdf';
+    const asset: EmgUploadedAsset = {
+      id: metadata.id,
+      attachmentId: metadata.id,
+      persisted: true,
+      source: 'draft',
+      name: metadata.original_name || metadata.file_name,
+      size: metadata.size_bytes,
+      mimeType: metadata.mime_type,
+      kind: isPdf ? 'pdf' : 'image',
+    };
+
+    if (isPdf) {
+      const response = await firstValueFrom(
+        this.api.getDraftAttachmentBase64(
+          draftId,
+          metadata.id,
+          neurologistToken,
+        ),
+      );
+      return {
+        ...asset,
+        base64: response.base64,
+      };
+    }
+
+    const response = await firstValueFrom(
+      this.api.getDraftAttachmentDataUrl(
+        draftId,
+        metadata.id,
+        neurologistToken,
+      ),
+    );
+
+    return {
+      ...asset,
+      dataUrl: response.dataUrl,
+    };
+  }
+
+  private async syncEmgDraftAttachments(draftId: string): Promise<void> {
+    const existingAttachments = await firstValueFrom(
+      this.api.listDraftAttachments(draftId),
+    );
+
+    const existingTraceAttachments = existingAttachments.items.filter(
+      (item) => item.kind === 'emg_tracciato',
+    );
+    const existingSignatureAttachments = existingAttachments.items.filter(
+      (item) => item.kind === 'emg_firma_tnfp',
+    );
+
+    for (const attachment of existingTraceAttachments) {
+      await firstValueFrom(
+        this.api.deleteDraftAttachment(draftId, attachment.id),
+      );
+    }
+
+    const signatureAsset = this.emgSignatureAsset();
+
+    if (!signatureAsset) {
+      for (const attachment of existingSignatureAttachments) {
+        await firstValueFrom(
+          this.api.deleteDraftAttachment(draftId, attachment.id),
+        );
+      }
+    }
+
+    for (const asset of this.emgTraceAssets()) {
+      await this.uploadEmgDraftAttachment(draftId, 'emg_tracciato', asset);
+    }
+
+    if (signatureAsset) {
+      await this.uploadEmgDraftAttachment(
+        draftId,
+        'emg_firma_tnfp',
+        signatureAsset,
+      );
+    }
+  }
+
+  private async syncPsgDraftAttachments(draftId: string): Promise<void> {
+    const existingAttachments = await firstValueFrom(
+      this.api.listDraftAttachments(draftId),
+    );
+
+    const existingReportAttachment = existingAttachments.items.find(
+      (item) => item.kind === 'psg_report_strumentale',
+    );
+
+    if (existingReportAttachment) {
+      await firstValueFrom(
+        this.api.deleteDraftAttachment(draftId, existingReportAttachment.id),
+      );
+    }
+
+    const reportAsset = this.psgReportAsset();
+    if (!reportAsset) {
+      return;
+    }
+
+    await this.uploadEmgDraftAttachment(
+      draftId,
+      'psg_report_strumentale',
+      reportAsset,
+    );
+  }
+
+  private async uploadEmgDraftAttachment(
+    draftId: string,
+    kind: DraftAttachmentUploadPayload['kind'],
+    asset: EmgUploadedAsset,
+  ): Promise<void> {
+    const base64 =
+      asset.kind === 'pdf'
+        ? asset.base64 || ''
+        : this.extractBase64FromDataUrl(asset.dataUrl);
+
+    if (!base64) {
+      throw new Error(
+        `Contenuto allegato non disponibile per il file ${asset.name}.`,
+      );
+    }
+
+    await firstValueFrom(
+      this.api.uploadDraftAttachment(draftId, {
+        kind,
+        fileName: asset.name,
+        mimeType: asset.mimeType,
+        base64,
+      }),
+    );
+  }
+
+  private extractBase64FromDataUrl(dataUrl?: string | null): string {
+    if (!dataUrl) {
+      return '';
+    }
+
+    const [, base64 = ''] = String(dataUrl).split(',');
+    return base64;
+  }
+
+  private isDraftDeletable(draft: ReportDraftSummary): boolean {
+    return draft.stato !== 'completato' && draft.stato !== 'firmato_caricato';
+  }
+
+  private buildDeleteDraftConfirmationMessage(draft: ReportDraftSummary): string {
+    const hasKnownServerAttachments =
+      draft.tipo_referto === 'emg' &&
+      draft.stato !== 'bozza';
+
+    return hasKnownServerAttachments
+      ? 'Vuoi eliminare questa bozza? Verranno eliminati anche eventuali allegati caricati nel sistema. L’azione non puo essere annullata.\n\nQuesta bozza contiene allegati, tracciati o firme salvati sul server.'
+      : 'Vuoi eliminare questa bozza? Verranno eliminati anche eventuali allegati caricati nel sistema. L’azione non puo essere annullata.';
+  }
+
+  private async resolveSignedAttachmentForDraft(
+    draftId: string,
+  ): Promise<DraftAttachmentMetadata | null> {
+    if (this.currentDraftId === draftId && this.currentSignedStoredAttachment) {
+      return this.currentSignedStoredAttachment;
+    }
+
+    const response = await firstValueFrom(this.api.listDraftAttachments(draftId));
+    const signedAttachment =
+      response.items.find((item) => item.kind === 'emg_pdf_firmato') ||
+      response.items.find((item) => item.kind === 'psg_pdf_firmato') ||
+      null;
+
+    if (this.currentDraftId === draftId) {
+      this.currentDraftAttachments = response.items;
+    }
+
+    return signedAttachment;
+  }
+
+  private async openDraftAttachmentBlob(
+    attachment: DraftAttachmentMetadata,
+  ): Promise<void> {
+    const blob = await firstValueFrom(
+      this.api.getDraftAttachmentBlob(
+        attachment.draft_id,
+        attachment.id,
+        this.emgNeurologistMode ? this.neurologistToken : undefined,
+      ),
+    );
+    this.openBlobInNewTab(blob, attachment.original_name || attachment.file_name);
+  }
+
+  private async downloadDraftAttachmentBlob(
+    attachment: DraftAttachmentMetadata,
+  ): Promise<void> {
+    const blob = await firstValueFrom(
+      this.api.getDraftAttachmentBlob(
+        attachment.draft_id,
+        attachment.id,
+        this.emgNeurologistMode ? this.neurologistToken : undefined,
+      ),
+    );
+    this.downloadBlob(blob, attachment.original_name || attachment.file_name);
+  }
+
+  private downloadBlob(blob: Blob, fileName: string): void {
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = fileName;
+    anchor.rel = 'noopener';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 5_000);
+  }
+
+  private emgTraceAssets(): EmgUploadedAsset[] {
+    return (
+      (this.form.get('emg.tracciati')?.value as EmgUploadedAsset[] | null) ?? []
+    );
+  }
+
+  private emgSignatureAsset(): EmgUploadedAsset | null {
+    return (
+      (this.form.get('emg.firmaTecnico')?.value as EmgUploadedAsset | null) ??
+      null
+    );
+  }
+
+  private psgReportAsset(): EmgUploadedAsset | null {
+    return (
+      (this.form.get('psg.reportStrumentalePdf')?.value as EmgUploadedAsset | null) ??
+      null
+    );
+  }
+
   private isEmgChecklistComplete(): boolean {
+    if (this.emgNeurologistMode) {
+      return true;
+    }
+
     return EMG_CHECKLIST_ITEMS.every((item: EmgChecklistItem) =>
       this.control(`emg.checklistNeuropatie.${item.key}.esito`).valid,
     );
@@ -2213,7 +4346,7 @@ export class ReportEditor {
   }
 
   private usesNeurologiaDoctors(): boolean {
-    return this.reportType === 'emg' || this.reportType === 'psg';
+    return false;
   }
 
   private getNeurologiaSpecialization(): string {
@@ -2222,3 +4355,4 @@ export class ReportEditor {
       : EMG_DEFAULTS.specializzazione;
   }
 }
+

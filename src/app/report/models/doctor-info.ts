@@ -6,4 +6,8 @@ export interface DoctorInfo {
   ruolo?: string;
   tipo?: 'medico' | 'tecnico';
   displayName?: string;
+  email?: string | null;
+  assignedTypes?: Array<'emg' | 'psg'>;
+  isRefertatore?: boolean;
+  active?: boolean;
 }

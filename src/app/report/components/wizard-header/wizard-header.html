@@ -20,6 +20,12 @@
       Riprendi referto
     </button>
   }
+
+  @if (showFlowButton) {
+    <button type="button" class="resumeBtn" (click)="changeFlow.emit()">
+      {{ flowButtonLabel }}
+    </button>
+  }
 </header>
 
 <!-- Stepper -->

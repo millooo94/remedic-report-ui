@@ -23,6 +23,7 @@ export class StepVisita {
     error: string,
   ) => boolean;
   @Input({ required: true }) reportType!: ReportType;
+  @Input() readonlyMode = false;
 
   @Output() selectDoctorEvent = new EventEmitter<DoctorInfo>();
   @Output() clearDoctorEvent = new EventEmitter<void>();
@@ -48,7 +49,7 @@ export class StepVisita {
   }
 
   get doctorLabel(): string {
-    return this.isEmg || this.isPsg ? 'Medico refertatore' : 'Medico';
+    return this.isEmg || this.isPsg ? 'Refertatore assegnato' : 'Medico';
   }
 
   onVisitDateInput(event: Event): void {

@@ -1,36 +1,4 @@
 <div class="section">
-  <h3 class="sectionTitle">Tipo referto</h3>
-
-  <div class="typeGrid typeGridWide">
-    <label class="typeCard">
-      <input type="radio" [formControl]="control('tipoReferto')" value="standard" />
-      <span>
-        <strong>Referto standard</strong>
-        <small>Flusso attuale con modalita guidata o testo libero.</small>
-      </span>
-    </label>
-
-    <label class="typeCard">
-      <input type="radio" [formControl]="control('tipoReferto')" value="emg" />
-      <span>
-        <strong>EMG / ENG</strong>
-        <small>Referto elettrofisiologico con allegato tecnico dedicato.</small>
-      </span>
-    </label>
-
-    <label class="typeCard">
-      <input type="radio" [formControl]="control('tipoReferto')" value="psg" />
-      <span>
-        <strong>PSG</strong>
-        <small>Polisonnografia cardio-respiratoria con report strumentale allegato.</small>
-      </span>
-    </label>
-  </div>
-</div>
-
-<div class="divider"></div>
-
-<div class="section">
   <h3 class="sectionTitle">
     {{ isEmg || isPsg ? 'Dati esame' : 'Dati visita' }}
   </h3>
@@ -190,23 +158,28 @@
         <button
           type="button"
           class="btn tiny ghost"
+          [disabled]="readonlyMode"
           (click)="clearTechnicianEvent.emit()"
         >
           Svuota
         </button>
       </div>
 
-      <doctor-autocomplete
-        style="margin-bottom: 16px"
-        [doctorSearch]="technicalSearch"
-        [doctorResults]="technicalResults"
-        [selectedDoctorInvalid]="selectedTechnicianInvalid"
-        label="Cerca tecnico TNFP *"
-        placeholder="Digita nome, cognome o ruolo"
-        invalidMessage="Seleziona un tecnico TNFP dalla lista"
-        (selectDoctor)="selectTechnicianEvent.emit($event)"
-      >
-      </doctor-autocomplete>
+      @if (!readonlyMode) {
+        <doctor-autocomplete
+          style="margin-bottom: 16px"
+          [doctorSearch]="technicalSearch"
+          [doctorResults]="technicalResults"
+          [selectedDoctorInvalid]="selectedTechnicianInvalid"
+          label="Cerca tecnico TNFP *"
+          placeholder="Digita nome, cognome o ruolo"
+          invalidMessage="Seleziona un tecnico TNFP dalla lista"
+          (selectDoctor)="selectTechnicianEvent.emit($event)"
+        >
+        </doctor-autocomplete>
+      } @else {
+        <p class="fieldHint">Compilato dal TNFP.</p>
+      }
 
       <div class="grid2" style="margin-top: 16px">
         <div class="field">
@@ -250,31 +223,36 @@
     <button
       type="button"
       class="btn tiny ghost"
+      [disabled]="readonlyMode"
       (click)="clearDoctorEvent.emit()"
     >
       Svuota
     </button>
   </div>
 
-  <doctor-autocomplete
-    style="margin-bottom: 16px"
-    [doctorSearch]="doctorSearch"
-    [doctorResults]="doctorResults"
-    [selectedDoctorInvalid]="selectedDoctorInvalid"
-    [label]="isEmg || isPsg ? 'Cerca neurologo *' : 'Cerca medico *'"
-    [placeholder]="
-      isEmg || isPsg
-        ? 'Digita nome, cognome o Neurologia'
-        : 'Digita nome, cognome o specialita'
-    "
-    [invalidMessage]="
-      isEmg || isPsg
-        ? 'Seleziona un medico refertatore di Neurologia'
-        : 'Seleziona un medico dalla lista'
-    "
-    (selectDoctor)="selectDoctorEvent.emit($event)"
-  >
-  </doctor-autocomplete>
+  @if (!readonlyMode) {
+    <doctor-autocomplete
+      style="margin-bottom: 16px"
+      [doctorSearch]="doctorSearch"
+      [doctorResults]="doctorResults"
+      [selectedDoctorInvalid]="selectedDoctorInvalid"
+      [label]="isEmg || isPsg ? 'Cerca refertatore *' : 'Cerca medico *'"
+      [placeholder]="
+        isEmg || isPsg
+          ? 'Digita nome, cognome o specializzazione'
+          : 'Digita nome, cognome o specialita'
+      "
+      [invalidMessage]="
+        isEmg || isPsg
+          ? 'Seleziona un refertatore assegnato dalla lista'
+          : 'Seleziona un medico dalla lista'
+      "
+      (selectDoctor)="selectDoctorEvent.emit($event)"
+    >
+    </doctor-autocomplete>
+  } @else {
+    <p class="fieldHint">Compilato dal TNFP.</p>
+  }
 
   <div class="grid2" style="margin-top: 16px">
     <div class="field">

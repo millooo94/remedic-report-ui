@@ -491,7 +491,11 @@ ${this.sharedStyles()}
         <h3>Firme</h3>
         <div class="signature-grid">
           ${this.renderSignatureCard('Tecnico esecutore', emg.firmaTecnico)}
-          ${this.renderSignatureCard('Il Neurologo refertatore')}
+          ${this.renderSignatureCard(
+            /neurologia/i.test(report.medico?.specialita || '')
+              ? 'Il Neurologo refertatore'
+              : 'Il Medico refertatore',
+          )}
         </div>
       </section>
 

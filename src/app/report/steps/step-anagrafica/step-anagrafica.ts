@@ -20,10 +20,16 @@ export class StepAnagrafica {
   @Input({ required: true }) reportType!: ReportType;
   @Input() currentDraftStatus: ReportDraftStatus | null = null;
   @Input() draftSaving = false;
+  @Input() readonlyMode = false;
   @Output() openPsgAnamnesis = new EventEmitter<void>();
+  @Output() openEmgAnamnesis = new EventEmitter<void>();
 
   get showPsgCard(): boolean {
     return this.reportType === 'psg';
+  }
+
+  get showEmgCard(): boolean {
+    return this.reportType === 'emg';
   }
 
   get psgStatusLabel(): string {
@@ -35,11 +41,43 @@ export class StepAnagrafica {
       return 'Referto in lavorazione';
     }
 
+    if (this.currentDraftStatus === 'in_attesa_neurologo') {
+      return 'In attesa refertatore';
+    }
+
+    if (this.currentDraftStatus === 'in_refertazione_neurologo') {
+      return 'Refertazione in corso';
+    }
+
     if (this.currentDraftStatus === 'completato') {
       return 'Referto completato';
     }
 
     return 'Anamnesi da compilare';
+  }
+
+  get emgStatusLabel(): string {
+    if (this.currentDraftStatus === 'anamnesi_raccolta') {
+      return 'Anamnesi EMG salvata';
+    }
+
+    if (this.currentDraftStatus === 'in_refertazione') {
+      return 'Referto in lavorazione';
+    }
+
+    if (this.currentDraftStatus === 'in_attesa_neurologo') {
+      return 'In attesa refertatore';
+    }
+
+    if (this.currentDraftStatus === 'in_refertazione_neurologo') {
+      return 'Refertazione in corso';
+    }
+
+    if (this.currentDraftStatus === 'completato') {
+      return 'Referto completato';
+    }
+
+    return 'Checklist da compilare';
   }
 
   onBirthDateInput(event: Event): void {

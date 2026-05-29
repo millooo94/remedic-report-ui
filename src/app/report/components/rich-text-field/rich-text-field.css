@@ -1,6 +1,8 @@
 :host {
   display: block;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .field {
@@ -13,8 +15,10 @@
 
 .field.stretch {
   height: 100%;
-  min-height: 0;
   flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
 }
 
 /* ================== TOOLBAR ================== */
@@ -116,9 +120,12 @@
 
 .editor-container.stretch {
   display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   height: 100%;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
 }
 
 .editor-host {
@@ -135,9 +142,14 @@
 
 .editor-host.stretch {
   display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   height: 100%;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  align-self: stretch;
 }
 
 .editor-host :deep(.ProseMirror) {
@@ -152,9 +164,14 @@
   word-break: break-word;
   overflow-wrap: anywhere;
   color: #111827;
+  height: auto;
 }
 
 .field.stretch .editor-host :deep(.ProseMirror) {
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
   min-height: 100%;
   height: 100%;
 }
