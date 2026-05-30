@@ -8,6 +8,7 @@ import {
   AuthLoginResponse,
   AuthMeResponse,
   CsrfResponse,
+  ChangePasswordResponse,
   DraftEmailDeliveriesResponse,
   DraftAttachmentListResponse,
   DraftAttachmentMetadata,
@@ -139,11 +140,34 @@ export class ReportApiService {
     );
   }
 
-  listProfessionals(): Observable<ProfessionalsResponse> {
+  changePassword(currentPassword: string, newPassword: string): Observable<ChangePasswordResponse> {
+    return this.http.post<ChangePasswordResponse>(
+      `${environment.API.BASE_URL}/auth/change-password`,
+      { currentPassword, newPassword },
+      {
+        headers: this.buildAuthHeaders(),
+        withCredentials: true,
+      },
+    );
+  }
+
+  listProfessionals(filters?: {
+    professional_type?: string;
+    visible_in_standard?: boolean;
+    active?: boolean;
+    q?: string;
+  }): Observable<ProfessionalsResponse> {
+    let params = new HttpParams();
+    if (filters?.professional_type) params = params.set('professional_type', filters.professional_type);
+    if (filters?.visible_in_standard !== undefined) params = params.set('visible_in_standard', filters.visible_in_standard ? '1' : '0');
+    if (filters?.active !== undefined) params = params.set('active', filters.active ? '1' : '0');
+    if (filters?.q?.trim()) params = params.set('q', filters.q.trim());
+
     return this.http.get<ProfessionalsResponse>(
       `${environment.API.BASE_URL}/professionals`,
       {
         headers: this.buildPublicHeaders(),
+        params,
       },
     );
   }
@@ -357,6 +381,13 @@ export class ReportApiService {
     );
   }
 
+  deleteAdminUser(id: string): Observable<any> {
+    return this.http.delete(`${environment.API.BASE_URL}/admin/users/${id}`, {
+      headers: this.buildAuthHeaders(),
+      withCredentials: true,
+    });
+  }
+
   listAdminProfessionals(): Observable<ProfessionalsResponse> {
     return this.http.get<ProfessionalsResponse>(
       `${environment.API.BASE_URL}/admin/professionals`,
@@ -387,6 +418,13 @@ export class ReportApiService {
         withCredentials: true,
       },
     );
+  }
+
+  deleteAdminProfessional(id: string): Observable<any> {
+    return this.http.delete(`${environment.API.BASE_URL}/admin/professionals/${id}`, {
+      headers: this.buildAuthHeaders(),
+      withCredentials: true,
+    });
   }
 
   listAdminDrafts(filters: Partial<ReportDraftFilters> = {}): Observable<ReportDraftListResponse> {
@@ -494,19 +532,19 @@ export class ReportApiService {
     );
   }
 
-  neurologistLogin(email: string, password: string): Observable<AuthLoginResponse> {
+  refertatoreLogin(email: string, password: string): Observable<AuthLoginResponse> {
     return this.login(email, password);
   }
 
-  listNeurologistEmgDrafts(_token?: string): Observable<ReportDraftListResponse> {
+  listRefertatoreEmgDrafts(_token?: string): Observable<ReportDraftListResponse> {
     return this.listRefertatoreDrafts('emg');
   }
 
-  getNeurologistEmgDraft(_token: string, id: string): Observable<ReportDraftDetail> {
+  getRefertatoreEmgDraft(_token: string, id: string): Observable<ReportDraftDetail> {
     return this.getRefertatoreDraft(id);
   }
 
-  updateNeurologistEmgDraft(
+  updateRefertatoreEmgDraft(
     _token: string,
     id: string,
     payload: ReportDraftPayload,

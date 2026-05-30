@@ -594,7 +594,8 @@
 .draftRowActions {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .loginForm {
@@ -632,7 +633,7 @@
   font-weight: 700;
 }
 
-.neurologistTable {
+.refertatoreTable {
   grid-template-columns:
     minmax(220px, 2fr)
     130px
@@ -648,6 +649,7 @@
 .dashboardTabs {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px;
   margin: 24px 0 18px;
 }
 
@@ -849,10 +851,6 @@
 }
 
 @media (max-width: 1024px) {
-  .entryMainCentered {
-    align-items: flex-start;
-  }
-
   .entryTypeGrid {
     grid-template-columns: 1fr;
   }
@@ -887,7 +885,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .neurologistTable {
+  .refertatoreTable {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -938,7 +936,7 @@
     grid-template-columns: 1fr;
   }
 
-  .neurologistTable {
+  .refertatoreTable {
     grid-template-columns: 1fr;
   }
 

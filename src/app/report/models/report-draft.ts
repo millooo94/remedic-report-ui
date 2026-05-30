@@ -4,8 +4,8 @@ export type ReportDraftStatus =
   | 'bozza'
   | 'anamnesi_raccolta'
   | 'in_refertazione'
-  | 'in_attesa_neurologo'
-  | 'in_refertazione_neurologo'
+  | 'in_attesa_refertatore'
+  | 'in_refertazione_refertatore'
   | 'pronto_per_firma'
   | 'firmato_caricato'
   | 'completato';
@@ -178,6 +178,10 @@ export interface ResetPasswordResponse {
   message: string;
 }
 
+export interface ChangePasswordResponse {
+  message: string;
+}
+
 export interface ProfessionalRecord {
   user: {
     id: string;
@@ -194,7 +198,16 @@ export interface ProfessionalItem {
   phone: string | null;
   specializzazione: string | null;
   role_label: string | null;
-  professional_type: 'medico' | 'tecnico';
+  professional_type:
+    | 'medico'
+    | 'dietista'
+    | 'ostetrica'
+    | 'psicoterapeuta'
+    | 'tnfp'
+    | 'altro'
+    | 'tecnico'
+    | 'professionista_sanitario'
+    | 'professionista sanitario';
   visible_in_standard: boolean;
   is_refertatore: boolean;
   active: boolean;
@@ -219,11 +232,11 @@ export interface RefertatoriResponse {
   items: RefertatoreItem[];
 }
 
-export interface NeurologistEmgDraftSummary {
+export interface RefertatoreEmgDraftSummary {
   id: string;
   stato: Extract<
     ReportDraftStatus,
-    'in_attesa_neurologo' | 'in_refertazione_neurologo' | 'pronto_per_firma'
+    'in_attesa_refertatore' | 'in_refertazione_refertatore' | 'pronto_per_firma'
   >;
   paziente_nome_completo: string | null;
   data_nascita: string | null;
@@ -234,13 +247,15 @@ export interface NeurologistEmgDraftSummary {
   attachment_count: number;
 }
 
-export interface NeurologistEmgDraftListResponse {
-  items: NeurologistEmgDraftSummary[];
+export interface RefertatoreEmgDraftListResponse {
+  items: RefertatoreEmgDraftSummary[];
 }
 
 export interface AdminUserItem {
   id: string;
   role: 'admin' | 'refertatore';
+  professional_id?: string | null;
+  professional_display_name?: string | null;
   email: string;
   display_name: string;
   specializzazione: string | null;

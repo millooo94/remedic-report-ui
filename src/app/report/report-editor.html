@@ -67,7 +67,7 @@
         </div>
       </section>
     </main>
-  } @else if (uiState === 'reservedLogin' || uiState === 'neurologistLogin') {
+  } @else if (uiState === 'reservedLogin') {
     <main class="entryMain entryMainCentered">
       <section class="entryCard entryCardNarrow">
         <header class="entryHeader">
@@ -81,27 +81,44 @@
           <p>Admin e refertatori accedono da qui. Il backend decide automaticamente ruolo e permessi disponibili.</p>
         </header>
 
-        <form class="loginForm" (ngSubmit)="submitNeurologistLogin()">
+        <form class="loginForm" (ngSubmit)="submitRefertatoreLogin()">
           <div class="field">
             <label>Email</label>
-            <input type="email" [(ngModel)]="neurologistEmail" placeholder="nome@remedic.it" name="reservedEmail" />
+            <input type="email" [(ngModel)]="refertatoreEmail" placeholder="nome@remedic.it" name="reservedEmail" />
           </div>
 
           <div class="field">
             <label>Password</label>
-            <input type="password" [(ngModel)]="neurologistPassword" placeholder="Inserisci la password" name="reservedPassword" />
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input
+                [type]="showReservedPassword ? 'text' : 'password'"
+                [(ngModel)]="refertatorePassword"
+                placeholder="Inserisci la password"
+                name="reservedPassword"
+                autocomplete="current-password"
+                style="flex:1;"
+              />
+              <button
+                type="button"
+                style="padding:0 8px;height:36px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;"
+                (click)="showReservedPassword = !showReservedPassword"
+                [attr.aria-label]="showReservedPassword ? 'Nascondi password' : 'Mostra password'"
+              >
+                {{ showReservedPassword ? 'Nascondi' : 'Mostra' }}
+              </button>
+            </div>
           </div>
 
-          @if (neurologistLoginError) {
-            <div class="draftAlert error">{{ neurologistLoginError }}</div>
+          @if (refertatoreLoginError) {
+            <div class="draftAlert error">{{ refertatoreLoginError }}</div>
           }
 
           <div class="loginActions loginActionsSplit">
             <button type="button" class="btn ghost" (click)="goToForgotPassword()">
               Password dimenticata?
             </button>
-            <button type="submit" class="btn primary" [disabled]="neurologistLoginLoading">
-              {{ neurologistLoginLoading ? 'Accesso...' : 'Accedi' }}
+            <button type="submit" class="btn primary" [disabled]="refertatoreLoginLoading">
+              {{ refertatoreLoginLoading ? 'Accesso...' : 'Accedi' }}
             </button>
           </div>
         </form>
@@ -190,7 +207,10 @@
             <div class="entryEyebrow">Area riservata</div>
             <div class="dashboardTopActions">
               <span class="dashboardUserBadge">{{ reservedUser?.displayName || 'Admin' }}</span>
-              <button type="button" class="ghostLinkBtn" (click)="logoutNeurologist()">
+              <button type="button" class="ghostLinkBtn" (click)="openChangePasswordModal()">
+                Cambia password
+              </button>
+              <button type="button" class="ghostLinkBtn" (click)="logoutRefertatore()">
                 Logout
               </button>
             </div>
@@ -234,8 +254,19 @@
                 Nuovo professionista
               </button>
             </div>
+            <div class="field" style="max-width: 360px; margin-bottom: 16px;">
+              <label>Cerca professionista</label>
+              <input
+                type="text"
+                [(ngModel)]="professionalSearchQuery"
+                (ngModelChange)="onProfessionalSearchChange()"
+                placeholder="Cerca professionista..."
+              />
+            </div>
             @if (!adminProfessionals.length) {
               <div class="emptyStateCard">Nessun professionista disponibile.</div>
+            } @else if (!filteredAdminProfessionals.length) {
+              <div class="emptyStateCard">Nessun professionista corrisponde alla ricerca.</div>
             } @else {
               <div class="draftTableWrap">
                 <div class="draftTable draftTableHead draftTableAdminProfessionals">
@@ -254,14 +285,20 @@
                     <div>{{ professional.specializzazione || '—' }}</div>
                     <div>{{ professionalTypeLabel(professional.professional_type) }}</div>
                     <div><span class="draftRowStatus">{{ professional.active ? 'Attivo' : 'Disattivato' }}</span></div>
-                    <div class="draftRowActions">
+                    <div class="draftRowActions adminRowActions">
                       <button type="button" class="btn tiny ghost" (click)="editAdminProfessional(professional)">
                         Modifica
                       </button>
-                      <button type="button" class="btn tiny ghost" (click)="deleteProfessional(professional)">
+                      <button type="button" class="btn tiny ghost danger" (click)="deleteProfessional(professional)">
                         Elimina
                       </button>
-                      <button type="button" class="btn tiny ghost" (click)="toggleAdminProfessionalStatus(professional)">
+                      <button
+                        type="button"
+                        class="btn tiny ghost"
+                        [style.color]="professional.active ? '#b54708' : '#067647'"
+                        [style.borderColor]="professional.active ? 'rgba(181, 71, 8, 0.35)' : 'rgba(6, 118, 71, 0.35)'"
+                        (click)="toggleAdminProfessionalStatus(professional)"
+                      >
                         {{ professional.active ? 'Disattiva' : 'Riattiva' }}
                       </button>
                     </div>
@@ -269,7 +306,7 @@
                 }
               </div>
               <div class="tablePagination">
-                <span>Totale: {{ adminProfessionals.length }}</span>
+                <span>Totale: {{ filteredAdminProfessionals.length }}</span>
                 <div class="tablePaginationActions">
                   <button type="button" class="btn tiny ghost" [disabled]="professionalsPage <= 1" (click)="prevProfessionalsPage()">
                     Precedente
@@ -313,14 +350,20 @@
                     <div>{{ user.role }}</div>
                     <div>{{ user.assignedTypes.length ? user.assignedTypes.join(', ').toUpperCase() : '—' }}</div>
                     <div><span class="draftRowStatus">{{ user.active ? 'Attivo' : 'Disattivato' }}</span></div>
-                    <div class="draftRowActions">
+                    <div class="draftRowActions adminRowActions">
                       <button type="button" class="btn tiny ghost" (click)="editAdminUser(user)">
                         Modifica
                       </button>
-                      <button type="button" class="btn tiny ghost" (click)="deleteRefertatore(user)">
+                      <button type="button" class="btn tiny ghost danger" (click)="deleteRefertatore(user)">
                         Elimina
                       </button>
-                      <button type="button" class="btn tiny ghost" (click)="toggleAdminUserStatus(user)">
+                      <button
+                        type="button"
+                        class="btn tiny ghost"
+                        [style.color]="user.active ? '#b54708' : '#067647'"
+                        [style.borderColor]="user.active ? 'rgba(181, 71, 8, 0.35)' : 'rgba(6, 118, 71, 0.35)'"
+                        (click)="toggleAdminUserStatus(user)"
+                      >
                         {{ user.active ? 'Disattiva' : 'Riattiva' }}
                       </button>
                     </div>
@@ -411,15 +454,18 @@
         }
       </section>
     </main>
-  } @else if (uiState === 'refertatoreDashboard' || uiState === 'neurologistDashboard') {
+  } @else if (uiState === 'refertatoreDashboard') {
     <main class="entryMain">
       <section class="entryCard dashboardCard">
         <header class="entryHeader">
           <div class="entryHeaderTop">
             <div class="entryEyebrow">Area refertatore</div>
             <div class="dashboardTopActions">
-              <span class="dashboardUserBadge">{{ neurologistDisplayName }}</span>
-              <button type="button" class="ghostLinkBtn" (click)="logoutNeurologist()">
+              <span class="dashboardUserBadge">{{ refertatoreDisplayName }}</span>
+              <button type="button" class="ghostLinkBtn" (click)="openChangePasswordModal()">
+                Cambia password
+              </button>
+              <button type="button" class="ghostLinkBtn" (click)="logoutRefertatore()">
                 Logout
               </button>
             </div>
@@ -428,11 +474,11 @@
           <p>Visualizza solo i referti assegnati a te, completa le aree abilitate e archivia il PDF firmato definitivo.</p>
         </header>
 
-        @if (neurologistDraftsError) {
-          <div class="draftAlert error">{{ neurologistDraftsError }}</div>
+        @if (refertatoreDraftsError) {
+          <div class="draftAlert error">{{ refertatoreDraftsError }}</div>
         }
 
-        @if (neurologistDraftsLoading) {
+        @if (refertatoreDraftsLoading) {
           <div class="emptyStateCard">Sto caricando i referti assegnati...</div>
         } @else {
           @if (hasEmgAssignment) {
@@ -442,7 +488,7 @@
                 <div class="emptyStateCard">Nessun referto EMG assegnato in lavorazione.</div>
               } @else {
                 <div class="draftTableWrap">
-                  <div class="draftTable draftTableHead neurologistTable">
+                  <div class="draftTable draftTableHead refertatoreTable">
                     <div>Paziente</div>
                     <div>Data esame</div>
                     <div>Refertatore</div>
@@ -451,7 +497,7 @@
                     <div>Azioni</div>
                   </div>
                   @for (draft of activeRefertatoreDrafts('emg'); track draft.id) {
-                    <div class="draftTable draftTableRow neurologistTable">
+                    <div class="draftTable draftTableRow refertatoreTable">
                       <div>
                         <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
                         <small>{{ draft.data_nascita || 'â€”' }}</small>
@@ -461,8 +507,8 @@
                       <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
                       <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
                       <div class="draftRowActions">
-                        <button type="button" class="btn tiny ghost" [disabled]="neurologistOpeningDraftId === draft.id" (click)="openNeurologistDraft(draft.id)">
-                          {{ neurologistOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
+                        <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
+                          {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
                         </button>
                       </div>
                     </div>
@@ -477,7 +523,7 @@
                 <div class="emptyStateCard">Nessun referto EMG completato nel tuo archivio.</div>
               } @else {
                 <div class="draftTableWrap">
-                  <div class="draftTable draftTableHead neurologistTable">
+                  <div class="draftTable draftTableHead refertatoreTable">
                     <div>Paziente</div>
                     <div>Data esame</div>
                     <div>Stato</div>
@@ -485,7 +531,7 @@
                     <div>Azioni</div>
                   </div>
                   @for (draft of archiveRefertatoreDrafts('emg'); track draft.id) {
-                    <div class="draftTable draftTableRow neurologistTable">
+                    <div class="draftTable draftTableRow refertatoreTable">
                       <div>
                         <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
                         <small>{{ draft.data_nascita || 'â€”' }}</small>
@@ -494,8 +540,8 @@
                       <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
                       <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
                       <div class="draftRowActions">
-                        <button type="button" class="btn tiny ghost" [disabled]="neurologistOpeningDraftId === draft.id" (click)="openNeurologistDraft(draft.id)">
-                          {{ neurologistOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
+                        <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
+                          {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
                         </button>
                         @if (canOpenSignedPdf(draft)) {
                           <button type="button" class="btn tiny ghost" (click)="openSignedPdfForDraft(draft)">
@@ -517,7 +563,7 @@
                 <div class="emptyStateCard">Nessun referto PSG assegnato in lavorazione.</div>
               } @else {
                 <div class="draftTableWrap">
-                  <div class="draftTable draftTableHead neurologistTable">
+                  <div class="draftTable draftTableHead refertatoreTable">
                     <div>Paziente</div>
                     <div>Data esame</div>
                     <div>Refertatore</div>
@@ -526,7 +572,7 @@
                     <div>Azioni</div>
                   </div>
                   @for (draft of activeRefertatoreDrafts('psg'); track draft.id) {
-                    <div class="draftTable draftTableRow neurologistTable">
+                    <div class="draftTable draftTableRow refertatoreTable">
                       <div>
                         <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
                         <small>{{ draft.data_nascita || 'â€”' }}</small>
@@ -536,8 +582,8 @@
                       <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
                       <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
                       <div class="draftRowActions">
-                        <button type="button" class="btn tiny ghost" [disabled]="neurologistOpeningDraftId === draft.id" (click)="openNeurologistDraft(draft.id)">
-                          {{ neurologistOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
+                        <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
+                          {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
                         </button>
                       </div>
                     </div>
@@ -552,7 +598,7 @@
                 <div class="emptyStateCard">Nessun referto PSG completato nel tuo archivio.</div>
               } @else {
                 <div class="draftTableWrap">
-                  <div class="draftTable draftTableHead neurologistTable">
+                  <div class="draftTable draftTableHead refertatoreTable">
                     <div>Paziente</div>
                     <div>Data esame</div>
                     <div>Stato</div>
@@ -560,7 +606,7 @@
                     <div>Azioni</div>
                   </div>
                   @for (draft of archiveRefertatoreDrafts('psg'); track draft.id) {
-                    <div class="draftTable draftTableRow neurologistTable">
+                    <div class="draftTable draftTableRow refertatoreTable">
                       <div>
                         <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
                         <small>{{ draft.data_nascita || 'â€”' }}</small>
@@ -569,8 +615,8 @@
                       <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
                       <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
                       <div class="draftRowActions">
-                        <button type="button" class="btn tiny ghost" [disabled]="neurologistOpeningDraftId === draft.id" (click)="openNeurologistDraft(draft.id)">
-                          {{ neurologistOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
+                        <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
+                          {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
                         </button>
                         @if (canOpenSignedPdf(draft)) {
                           <button type="button" class="btn tiny ghost" (click)="openSignedPdfForDraft(draft)">
@@ -701,6 +747,7 @@
               [doctorResults]="doctorResults"
               [technicalSearch]="technicalSearch"
               [technicalResults]="technicalResults"
+              [technicianAvailableCount]="technicianAvailableCount"
               [control]="control.bind(this)"
               [hasError]="hasError.bind(this)"
               [reportType]="reportType"
@@ -736,7 +783,7 @@
               [hasError]="hasError.bind(this)"
               [mode]="control('modalitaReferto').value"
               [reportType]="reportType"
-              [emgNeurologistMode]="emgNeurologistMode"
+              [emgRefertatoreMode]="emgRefertatoreMode"
               [readonlyMode]="isReadonlyWizardMode"
               [signedPdfAsset]="currentSignedPdfAsset"
               [signedPdfSaving]="signedPdfSaving"
@@ -911,7 +958,12 @@
             </div>
             <div class="field">
               <label>Specializzazione</label>
-              <input type="text" [(ngModel)]="adminProfessionalForm.specializzazione" />
+              <input
+                type="text"
+                list="professional-specializations"
+                [(ngModel)]="adminProfessionalForm.specializzazione"
+                placeholder="Cerca e seleziona una specializzazione"
+              />
             </div>
             <div class="field">
               <label>Ruolo / label</label>
@@ -921,9 +973,23 @@
               <label>Tipo</label>
               <select [(ngModel)]="adminProfessionalForm.professional_type">
                 <option value="medico">Medico</option>
-                <option value="tecnico">Professionista sanitario</option>
+                <option value="dietista">Dietista</option>
+                <option value="ostetrica">Ostetrica</option>
+                <option value="psicoterapeuta">Psicoterapeuta</option>
+                <option value="tnfp">TNFP</option>
+                <option value="altro">Altro</option>
+                @if (isLegacyProfessionalTypeSelected) {
+                  <option [value]="adminProfessionalForm.professional_type">
+                    {{ professionalTypeLabel(adminProfessionalForm.professional_type) }}
+                  </option>
+                }
               </select>
             </div>
+            @if (adminProfessionalForm.professional_type === 'tnfp') {
+              <p class="fieldHint" style="margin: 0;">
+                Il tipo TNFP rende il professionista selezionabile come tecnico esecutore nei referti EMG.
+              </p>
+            }
             <label class="checkline full">
               <input type="checkbox" [(ngModel)]="adminProfessionalForm.visible_in_standard" />
               <span>Visibile nei referti standard</span>
@@ -933,6 +999,11 @@
               <span>Disponibile anche come professionista refertatore</span>
             </label>
           </div>
+          <datalist id="professional-specializations">
+            @for (item of specializations; track item) {
+              <option [value]="item"></option>
+            }
+          </datalist>
         </div>
         <div class="modalFooter">
           <button type="button" class="btn ghost" (click)="closeProfessionalModal()">Annulla</button>
@@ -957,16 +1028,48 @@
         <div class="modalBody">
           <div class="dashboardFormGrid">
             <div class="field full">
-              <label>Email *</label>
+              <label>Professionista *</label>
+              @if (!adminUserForm.id) {
+                <div class="field" style="gap: 8px;">
+                  <input
+                    type="text"
+                    [(ngModel)]="adminUserProfessionalSearch"
+                    placeholder="Cerca un professionista compatibile"
+                  />
+                  @if (filteredRefertatoreProfessionals.length) {
+                    <ul style="position: static; max-height: 240px; overflow: auto; list-style: none; margin: 0; padding: 0; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff;">
+                      @for (professional of filteredRefertatoreProfessionals; track professional.id) {
+                        <li style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9;" (click)="selectProfessionalForRefertatore(professional)">
+                          <div>
+                            <strong>{{ professional.display_name }}</strong>
+                          </div>
+                          <div>
+                            <small>{{ professional.specializzazione || '—' }}</small>
+                          </div>
+                        </li>
+                      }
+                    </ul>
+                  }
+                </div>
+              } @else {
+                <input
+                  type="text"
+                  [value]="adminUserForm.professional_display_name || adminUserForm.display_name"
+                  readonly
+                />
+              }
+            </div>
+            <div class="field full">
+              <label>Email {{ adminUserEmailRequired ? '*' : '' }}</label>
               <input type="email" [(ngModel)]="adminUserForm.email" />
             </div>
             <div class="field full">
-              <label>Nome visualizzato *</label>
-              <input type="text" [(ngModel)]="adminUserForm.display_name" />
+              <label>Nome visualizzato</label>
+              <input type="text" [(ngModel)]="adminUserForm.display_name" readonly />
             </div>
             <div class="field">
               <label>Specializzazione</label>
-              <input type="text" [(ngModel)]="adminUserForm.specializzazione" />
+              <input type="text" [(ngModel)]="adminUserForm.specializzazione" readonly />
             </div>
             <div class="field">
               <label>Password {{ adminUserForm.id ? '(lascia vuoto per non cambiarla)' : '*' }}</label>
@@ -978,6 +1081,7 @@
                 <label class="checkline">
                   <input
                     type="checkbox"
+                    [disabled]="!canAssignEmgToSelectedProfessional"
                     [checked]="adminUserForm.assignedTypes.includes('emg')"
                     (change)="toggleAdminAssignedType('emg', $any($event.target).checked)"
                   />
@@ -986,6 +1090,7 @@
                 <label class="checkline">
                   <input
                     type="checkbox"
+                    [disabled]="!canAssignPsgToSelectedProfessional"
                     [checked]="adminUserForm.assignedTypes.includes('psg')"
                     (change)="toggleAdminAssignedType('psg', $any($event.target).checked)"
                   />
@@ -993,6 +1098,9 @@
                 </label>
               </div>
             </div>
+            @if (adminUserProfessionalError) {
+              <div class="draftAlert error">{{ adminUserProfessionalError }}</div>
+            }
           </div>
         </div>
         <div class="modalFooter">
@@ -1087,6 +1195,64 @@
             (click)="submitSendToPatient()"
           >
             {{ sendToPatientLoading ? 'Invio...' : 'Invia al paziente' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showChangePasswordModal) {
+    <div class="modalBackdrop">
+      <div class="modalSheet">
+        <div class="modalHead">
+          <div>
+            <div class="modalEyebrow">Area riservata</div>
+            <h3>Cambia password</h3>
+            <p>Aggiorna la password del tuo account. Le altre sessioni attive verranno revocate.</p>
+          </div>
+          <button type="button" class="iconCloseBtn" (click)="closeChangePasswordModal()">Chiudi</button>
+        </div>
+        <div class="modalBody">
+          <div class="dashboardFormGrid">
+            <div class="field full">
+              <label>Password attuale</label>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input [type]="showCurrentPassword ? 'text' : 'password'" [(ngModel)]="changePasswordForm.currentPassword" style="flex:1;" />
+                <button type="button" style="padding:0 8px;height:36px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;" (click)="showCurrentPassword = !showCurrentPassword" [attr.aria-label]="showCurrentPassword ? 'Nascondi password attuale' : 'Mostra password attuale'">
+                  {{ showCurrentPassword ? 'Nascondi' : 'Mostra' }}
+                </button>
+              </div>
+            </div>
+            <div class="field full">
+              <label>Nuova password</label>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input [type]="showNewPassword ? 'text' : 'password'" [(ngModel)]="changePasswordForm.newPassword" style="flex:1;" />
+                <button type="button" style="padding:0 8px;height:36px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;" (click)="showNewPassword = !showNewPassword" [attr.aria-label]="showNewPassword ? 'Nascondi nuova password' : 'Mostra nuova password'">
+                  {{ showNewPassword ? 'Nascondi' : 'Mostra' }}
+                </button>
+              </div>
+            </div>
+            <div class="field full">
+              <label>Conferma nuova password</label>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input [type]="showConfirmPassword ? 'text' : 'password'" [(ngModel)]="changePasswordForm.confirmPassword" style="flex:1;" />
+                <button type="button" style="padding:0 8px;height:36px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;" (click)="showConfirmPassword = !showConfirmPassword" [attr.aria-label]="showConfirmPassword ? 'Nascondi conferma password' : 'Mostra conferma password'">
+                  {{ showConfirmPassword ? 'Nascondi' : 'Mostra' }}
+                </button>
+              </div>
+            </div>
+          </div>
+          <p class="fieldHint" style="margin-top: 12px;">
+            La nuova password deve contenere almeno 10 caratteri, una maiuscola, una minuscola, un numero e un simbolo.
+          </p>
+          @if (changePasswordError) {
+            <div class="draftAlert error">{{ changePasswordError }}</div>
+          }
+        </div>
+        <div class="modalFooter">
+          <button type="button" class="btn ghost" (click)="closeChangePasswordModal()">Annulla</button>
+          <button type="button" class="btn primary" [disabled]="changePasswordLoading" (click)="submitChangePassword()">
+            {{ changePasswordLoading ? 'Aggiorno...' : 'Aggiorna password' }}
           </button>
         </div>
       </div>
@@ -1193,4 +1359,5 @@
     </div>
   }
 </div>
+
 

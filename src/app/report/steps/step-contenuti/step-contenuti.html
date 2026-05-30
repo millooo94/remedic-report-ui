@@ -20,13 +20,13 @@
       }
     </div>
 
-    <section class="readonlyFieldCard" [class.neurologistEditableCard]="emgNeurologistMode">
+    <section class="readonlyFieldCard" [class.refertatoreEditableCard]="emgRefertatoreMode">
       <div class="readonlyFieldHead">
         <div>
           <label>Reperti elettrofisiologici</label>
           <p class="fieldHint">
             {{
-              emgNeurologistMode
+              emgRefertatoreMode
                 ? 'Compilazione riservata al refertatore assegnato.'
                 : 'Campo visibile ma riservato al refertatore assegnato.'
             }}
@@ -34,7 +34,7 @@
         </div>
         <span class="readonlyBadge">
             {{
-              emgNeurologistMode
+              emgRefertatoreMode
               ? 'Compilazione refertatore'
               : 'Compilazione riservata al refertatore'
           }}
@@ -42,7 +42,7 @@
       </div>
       <rich-text-field
         [control]="control('emg.repertiElettrofisiologici')"
-        [readonly]="!emgNeurologistMode"
+        [readonly]="!emgRefertatoreMode"
       ></rich-text-field>
       <div class="metaRow">
         <span
@@ -55,13 +55,13 @@
       </div>
     </section>
 
-    <section class="readonlyFieldCard" [class.neurologistEditableCard]="emgNeurologistMode">
+    <section class="readonlyFieldCard" [class.refertatoreEditableCard]="emgRefertatoreMode">
       <div class="readonlyFieldHead">
         <div>
           <label>Conclusioni</label>
           <p class="fieldHint">
             {{
-              emgNeurologistMode
+              emgRefertatoreMode
                 ? 'Compilazione riservata al refertatore assegnato.'
                 : 'Campo visibile ma riservato al refertatore assegnato.'
             }}
@@ -69,7 +69,7 @@
         </div>
         <span class="readonlyBadge">
             {{
-              emgNeurologistMode
+              emgRefertatoreMode
               ? 'Compilazione refertatore'
               : 'Compilazione riservata al refertatore'
           }}
@@ -77,7 +77,7 @@
       </div>
       <rich-text-field
         [control]="control('emg.conclusioni')"
-        [readonly]="!emgNeurologistMode"
+        [readonly]="!emgRefertatoreMode"
       ></rich-text-field>
       <div class="metaRow">
         <span class="charCount" [class.overLimit]="isOverLimit('emg.conclusioni', limits.conclusioni.max)">
@@ -159,10 +159,10 @@
     <section class="uploadCard">
       <div class="uploadCardHead">
         <div>
-          <h3>{{ emgNeurologistMode ? 'Tracciati caricati dal TNFP' : 'Tracciati elettrofisiologici' }}</h3>
+          <h3>{{ emgRefertatoreMode ? 'Tracciati caricati dal TNFP' : 'Tracciati elettrofisiologici' }}</h3>
           <p>
             {{
-              emgNeurologistMode
+              emgRefertatoreMode
                 ? 'Visualizza i tracciati persistiti dal TNFP e usati nel PDF finale.'
                 : "Carica immagini o PDF prodotti durante l'esame. I file restano solo nella sessione corrente finche non invii il referto al refertatore."
             }}
@@ -230,10 +230,10 @@
     <section class="uploadCard signatureCard">
       <div class="uploadCardHead">
         <div>
-          <h3>{{ emgNeurologistMode ? 'Firma tecnico esecutore' : 'Firma' }}</h3>
+          <h3>{{ emgRefertatoreMode ? 'Firma tecnico esecutore' : 'Firma' }}</h3>
           <p>
             {{
-              emgNeurologistMode
+              emgRefertatoreMode
                 ? 'Firma TNFP acquisita e inclusa nel PDF finale.'
                 : "Firma tecnico esecutore. Carica un'immagine della firma su sfondo bianco o trasparente."
             }}

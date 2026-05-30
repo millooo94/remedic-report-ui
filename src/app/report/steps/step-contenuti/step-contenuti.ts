@@ -20,7 +20,7 @@ export class StepContenuti {
   ) => boolean;
   @Input({ required: true }) mode!: 'sezioni' | 'libero';
   @Input({ required: true }) reportType!: ReportType;
-  @Input() emgNeurologistMode = false;
+  @Input() emgRefertatoreMode = false;
   @Input() readonlyMode = false;
   @Input() signedPdfAsset: EmgUploadedAsset | null = null;
   @Input() signedPdfSaving = false;
@@ -59,11 +59,11 @@ export class StepContenuti {
   }
 
   get contentReadonlyMode(): boolean {
-    return this.readonlyMode || this.emgNeurologistMode;
+    return this.readonlyMode || this.emgRefertatoreMode;
   }
 
   get showSignedPdfSection(): boolean {
-    return !this.readonlyMode && this.emgNeurologistMode;
+    return !this.readonlyMode && this.emgRefertatoreMode;
   }
 
   get emgTraceFiles(): EmgUploadedAsset[] {

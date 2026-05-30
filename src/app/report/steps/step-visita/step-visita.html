@@ -177,6 +177,11 @@
           (selectDoctor)="selectTechnicianEvent.emit($event)"
         >
         </doctor-autocomplete>
+        @if (technicianAvailableCount === 0) {
+          <p class="fieldHint" style="margin: -4px 0 0;">
+            Nessun TNFP attivo configurato. Aggiungi o modifica un professionista di tipo TNFP dall'Area Admin.
+          </p>
+        }
       } @else {
         <p class="fieldHint">Compilato dal TNFP.</p>
       }

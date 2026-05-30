@@ -67,14 +67,19 @@ import { StepContenuti } from './steps/step-contenuti/step-contenuti';
 import { ReportType } from './types/report-type';
 import { EmgUploadedAsset } from './models/emg-uploaded-asset';
 import { ReportPdfRequest } from './models/report-pdf-request';
+import {
+  isEmgAssignableSpecialization,
+  isPsgAssignableSpecialization,
+  isRefertatoreCompatibleSpecialization,
+  normalizeSpecialization,
+  PROFESSIONAL_SPECIALIZATIONS,
+} from './config/professional-taxonomy';
 
 type SectionKey = (typeof REPORT_SECTION_KEYS)[number];
 type EditorUiState =
   | 'initialTypeSelection'
   | 'typeActionSelection'
   | 'wizard'
-  | 'neurologistLogin'
-  | 'neurologistDashboard'
   | 'reservedLogin'
   | 'forgotPassword'
   | 'resetPassword'
@@ -142,14 +147,21 @@ export class ReportEditor {
   adminTab: 'professionals' | 'users' | 'drafts' | 'archive' | 'audit' = 'professionals';
   showAdminProfessionalModal = false;
   showAdminUserModal = false;
+  showChangePasswordModal = false;
   professionalsPage = 1;
   professionalsPageSize = 10;
   refertatoriPage = 1;
   refertatoriPageSize = 10;
+  professionalSearchQuery = '';
+  adminUserProfessionalSearch = '';
+  adminUserProfessionalError = '';
+  specializations = [...PROFESSIONAL_SPECIALIZATIONS];
   draftActionLoadingId: string | null = null;
   adminUserForm = {
     id: '',
     role: 'refertatore' as 'admin' | 'refertatore',
+    professional_id: '',
+    professional_display_name: '',
     email: '',
     password: '',
     display_name: '',
@@ -166,7 +178,17 @@ export class ReportEditor {
     phone: '',
     specializzazione: '',
     role_label: '',
-    professional_type: 'medico' as 'medico' | 'tecnico',
+    professional_type:
+      'medico' as
+        | 'medico'
+        | 'dietista'
+        | 'ostetrica'
+        | 'psicoterapeuta'
+        | 'tnfp'
+        | 'altro'
+        | 'tecnico'
+        | 'professionista_sanitario'
+        | 'professionista sanitario',
     visible_in_standard: true,
     is_refertatore: false,
     active: true,
@@ -214,23 +236,23 @@ export class ReportEditor {
     { value: 'bozza', label: 'Bozza' },
     { value: 'anamnesi_raccolta', label: 'Anamnesi raccolta' },
     { value: 'in_refertazione', label: 'In refertazione' },
-    { value: 'in_attesa_neurologo', label: 'In attesa refertatore' },
-    { value: 'in_refertazione_neurologo', label: 'Refertazione in corso' },
+    { value: 'in_attesa_refertatore', label: 'In attesa refertatore' },
+    { value: 'in_refertazione_refertatore', label: 'Refertazione in corso' },
     { value: 'pronto_per_firma', label: 'Pronto per firma' },
     { value: 'firmato_caricato', label: 'Firmato caricato' },
     { value: 'completato', label: 'Completato' },
   ];
-  neurologistEmail = '';
-  neurologistPassword = '';
-  neurologistLoginLoading = false;
-  neurologistLoginError = '';
-  neurologistUser: AuthUser | null = null;
-  neurologistToken = '';
-  neurologistDrafts: ReportDraftSummary[] = [];
-  neurologistDraftsLoading = false;
-  neurologistDraftsError = '';
-  neurologistOpeningDraftId: string | null = null;
-  emgNeurologistMode = false;
+  refertatoreEmail = '';
+  refertatorePassword = '';
+  showReservedPassword = false;
+  refertatoreLoginLoading = false;
+  refertatoreLoginError = '';
+  refertatoreUser: AuthUser | null = null;
+  refertatoreToken = '';
+  refertatoreDraftsLoading = false;
+  refertatoreDraftsError = '';
+  refertatoreOpeningDraftId: string | null = null;
+  emgRefertatoreMode = false;
   reviewerMode = false;
   signedPdfSaving = false;
   showSendToPatientModal = false;
@@ -245,6 +267,17 @@ export class ReportEditor {
   };
   emgSignedPdfAsset: EmgUploadedAsset | null = null;
   psgSignedPdfAsset: EmgUploadedAsset | null = null;
+  changePasswordLoading = false;
+  changePasswordError = '';
+  changePasswordMessage = '';
+  showCurrentPassword = false;
+  showNewPassword = false;
+  showConfirmPassword = false;
+  changePasswordForm = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  };
   constructor(
     private fb: FormBuilder,
     private payloadBuilder: ReportPayloadBuilderService,
@@ -407,7 +440,7 @@ export class ReportEditor {
     return 'Referto medico generico con sezioni personalizzabili.';
   }
 
-  get showNeurologistAreaCard(): boolean {
+  get showRefertatoreAreaCard(): boolean {
     return false;
   }
 
@@ -490,8 +523,8 @@ export class ReportEditor {
         );
   }
 
-  get neurologistDisplayName(): string {
-    return this.reservedUser?.displayName || this.neurologistUser?.displayName || 'Refertatore';
+  get refertatoreDisplayName(): string {
+    return this.reservedUser?.displayName || this.refertatoreUser?.displayName || 'Refertatore';
   }
 
   get showControlPreviewButton(): boolean {
@@ -499,7 +532,7 @@ export class ReportEditor {
       !this.completedReadonlyMode &&
       this.step === this.steps.length - 1 &&
       (this.reportType === 'psg' ||
-        (this.reportType === 'emg' && !this.emgNeurologistMode))
+        (this.reportType === 'emg' && !this.emgRefertatoreMode))
     );
   }
 
@@ -529,11 +562,31 @@ export class ReportEditor {
 
   get pagedAdminProfessionals(): ProfessionalItem[] {
     const start = (this.professionalsPage - 1) * this.professionalsPageSize;
-    return this.adminProfessionals.slice(start, start + this.professionalsPageSize);
+    return this.filteredAdminProfessionals.slice(start, start + this.professionalsPageSize);
   }
 
   get professionalsTotalPages(): number {
-    return Math.max(1, Math.ceil(this.adminProfessionals.length / this.professionalsPageSize));
+    return Math.max(1, Math.ceil(this.filteredAdminProfessionals.length / this.professionalsPageSize));
+  }
+
+  get filteredAdminProfessionals(): ProfessionalItem[] {
+    const query = this.professionalSearchQuery.trim().toLowerCase();
+    if (!query) {
+      return this.adminProfessionals;
+    }
+
+    return this.adminProfessionals.filter((professional) =>
+      [
+        professional.first_name,
+        professional.last_name,
+        professional.display_name,
+        professional.specializzazione,
+        professional.email,
+        professional.professional_type,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)),
+    );
   }
 
   get pagedAdminRefertatori(): AdminUserItem[] {
@@ -550,8 +603,108 @@ export class ReportEditor {
     return Math.max(1, Math.ceil(this.refertatoriTotal / this.refertatoriPageSize));
   }
 
-  professionalTypeLabel(value: 'medico' | 'tecnico'): string {
-    return value === 'tecnico' ? 'Professionista sanitario' : 'Medico';
+  get technicianAvailableCount(): number {
+    return this.filteredTechnicians().length;
+  }
+
+  get selectedAdminUserProfessional(): ProfessionalItem | null {
+    if (!this.adminUserForm.professional_id) {
+      return null;
+    }
+
+    return (
+      this.adminProfessionals.find(
+        (professional) => professional.id === this.adminUserForm.professional_id,
+      ) || null
+    );
+  }
+
+  get filteredRefertatoreProfessionals(): ProfessionalItem[] {
+    const query = this.adminUserProfessionalSearch.trim().toLowerCase();
+
+    return this.adminProfessionals.filter((professional) => {
+      if (!professional.active) {
+        return false;
+      }
+
+      if (
+        !isRefertatoreCompatibleSpecialization(professional.specializzazione)
+      ) {
+        return false;
+      }
+
+      const alreadyLinked =
+        this.adminUsers.some(
+          (user) =>
+            user.role === 'refertatore' &&
+            user.professional_id === professional.id &&
+            user.id !== this.adminUserForm.id,
+        );
+
+      if (alreadyLinked) {
+        return false;
+      }
+
+      if (!query) {
+        return true;
+      }
+
+      return [
+        professional.display_name,
+        professional.specializzazione,
+        professional.email,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query));
+    });
+  }
+
+  get adminUserEmailRequired(): boolean {
+    const professionalEmail =
+      this.selectedAdminUserProfessional?.email?.trim() || '';
+    return !professionalEmail;
+  }
+
+  get canAssignEmgToSelectedProfessional(): boolean {
+    return isEmgAssignableSpecialization(
+      this.adminUserForm.specializzazione,
+    );
+  }
+
+  get canAssignPsgToSelectedProfessional(): boolean {
+    return isPsgAssignableSpecialization(
+      this.adminUserForm.specializzazione,
+    );
+  }
+
+  professionalTypeLabel(value: ProfessionalItem['professional_type']): string {
+    switch (value) {
+      case 'dietista':
+        return 'Dietista';
+      case 'ostetrica':
+        return 'Ostetrica';
+      case 'psicoterapeuta':
+        return 'Psicoterapeuta';
+      case 'tnfp':
+        return 'TNFP';
+      case 'altro':
+        return 'Altro';
+      case 'tecnico':
+        return 'Tipo legacy da riclassificare';
+      case 'professionista_sanitario':
+      case 'professionista sanitario':
+        return 'Tipo legacy da riclassificare';
+      default:
+        return 'Medico';
+    }
+  }
+
+  get isLegacyProfessionalTypeSelected(): boolean {
+    return (
+      this.adminProfessionalForm.professional_type === 'tecnico' ||
+      this.adminProfessionalForm.professional_type === 'professionista_sanitario' ||
+      this.adminProfessionalForm.professional_type === 'professionista sanitario'
+    );
   }
 
   stepHint(): string {
@@ -582,7 +735,7 @@ export class ReportEditor {
       case 2:
         return "Raccogli il quesito clinico. La checklist anamnestica EMG e disponibile nella card dedicata in Anagrafica.";
       case 3:
-        return this.emgNeurologistMode
+        return this.emgRefertatoreMode
           ? "Completa Reperti e Conclusioni, esporta il PDF temporaneo da firmare e poi carica il PDF firmato per il salvataggio definitivo su Drive."
           : "Completa il contenuto tecnico EMG e invia l'acquisizione al refertatore. La copia di controllo resta temporanea e non viene salvata su Drive.";
       default:
@@ -594,7 +747,7 @@ export class ReportEditor {
     if (type === 'emg') {
       this.ensureTechnicalAcquisitionDefault();
 
-      const defaultNeurologist = this.findDefaultNeurologist();
+      const defaultRefertatore = this.findDefaultRefertatore();
       const medicoId = this.control('medico.id').value;
       const medicoNome = this.control('medico.nome').value;
       const medicoCognome = this.control('medico.cognome').value;
@@ -603,15 +756,15 @@ export class ReportEditor {
         !medicoId || medicoSpecialita.trim() === EMG_DEFAULTS.specializzazione;
       const selectedDoctor = doctorStillValid
         ? {
-            id: medicoId || defaultNeurologist?.id || '',
-            nome: medicoNome || defaultNeurologist?.nome || '',
-            cognome: medicoCognome || defaultNeurologist?.cognome || '',
+            id: medicoId || defaultRefertatore?.id || '',
+            nome: medicoNome || defaultRefertatore?.nome || '',
+            cognome: medicoCognome || defaultRefertatore?.cognome || '',
             specialita: EMG_DEFAULTS.specializzazione,
           }
         : {
-            id: defaultNeurologist?.id || '',
-            nome: defaultNeurologist?.nome || '',
-            cognome: defaultNeurologist?.cognome || '',
+            id: defaultRefertatore?.id || '',
+            nome: defaultRefertatore?.nome || '',
+            cognome: defaultRefertatore?.cognome || '',
             specialita: EMG_DEFAULTS.specializzazione,
           };
 
@@ -651,7 +804,7 @@ export class ReportEditor {
     }
 
     if (type === 'psg') {
-      const defaultNeurologist = this.findDefaultNeurologist();
+      const defaultRefertatore = this.findDefaultRefertatore();
       const medicoId = this.control('medico.id').value;
       const medicoNome = this.control('medico.nome').value;
       const medicoCognome = this.control('medico.cognome').value;
@@ -660,15 +813,15 @@ export class ReportEditor {
         !medicoId || medicoSpecialita.trim() === PSG_DEFAULTS.specializzazione;
       const selectedDoctor = doctorStillValid
         ? {
-            id: medicoId || defaultNeurologist?.id || '',
-            nome: medicoNome || defaultNeurologist?.nome || '',
-            cognome: medicoCognome || defaultNeurologist?.cognome || '',
+            id: medicoId || defaultRefertatore?.id || '',
+            nome: medicoNome || defaultRefertatore?.nome || '',
+            cognome: medicoCognome || defaultRefertatore?.cognome || '',
             specialita: PSG_DEFAULTS.specializzazione,
           }
         : {
-            id: defaultNeurologist?.id || '',
-            nome: defaultNeurologist?.nome || '',
-            cognome: defaultNeurologist?.cognome || '',
+            id: defaultRefertatore?.id || '',
+            nome: defaultRefertatore?.nome || '',
+            cognome: defaultRefertatore?.cognome || '',
             specialita: PSG_DEFAULTS.specializzazione,
           };
 
@@ -780,14 +933,14 @@ export class ReportEditor {
   canGoNext(): boolean {
     switch (this.step) {
       case 0:
-        if (this.reportType === 'emg' && this.emgNeurologistMode) {
+        if (this.reportType === 'emg' && this.emgRefertatoreMode) {
           return true;
         }
         return this.form.get('anagrafica')?.valid ?? false;
 
       case 1:
         if (this.reportType === 'emg') {
-          if (this.emgNeurologistMode) {
+          if (this.emgRefertatoreMode) {
             return true;
           }
 
@@ -826,7 +979,7 @@ export class ReportEditor {
 
       case 2:
         if (this.reportType === 'emg') {
-          if (this.emgNeurologistMode) {
+          if (this.emgRefertatoreMode) {
             return true;
           }
 
@@ -849,7 +1002,7 @@ export class ReportEditor {
 
       case 3:
         if (this.reportType === 'emg') {
-          return this.emgNeurologistMode
+          return this.emgRefertatoreMode
             ? (
                 this.control('emg.repertiElettrofisiologici').valid &&
                 this.control('emg.conclusioni').valid
@@ -944,7 +1097,7 @@ export class ReportEditor {
 
       case 3:
         if (this.reportType === 'emg') {
-          if (this.emgNeurologistMode) {
+          if (this.emgRefertatoreMode) {
             mark(this.control('emg.repertiElettrofisiologici'));
             mark(this.control('emg.conclusioni'));
           } else {
@@ -1100,7 +1253,7 @@ export class ReportEditor {
         Validators.required,
         this.plainTextMaxLength(3000),
       ]);
-      if (this.emgNeurologistMode) {
+      if (this.emgRefertatoreMode) {
         repertiElettrofisiologici.setValidators([
           Validators.required,
           this.plainTextMaxLength(4000),
@@ -1118,13 +1271,13 @@ export class ReportEditor {
       noteTecnicheEsecutore.setValidators([this.plainTextMaxLength(2000)]);
       attestazioneTecnico.setValidators([this.plainTextMaxLength(2500)]);
       firmaTecnico.setValidators(
-        this.emgNeurologistMode ? [] : [Validators.required],
+        this.emgRefertatoreMode ? [] : [Validators.required],
       );
       checklistControls.forEach((control: FormControl) =>
         control.setValidators([Validators.required]),
       );
 
-      if (this.emgNeurologistMode) {
+      if (this.emgRefertatoreMode) {
         repertiElettrofisiologici.enable({ emitEvent: false });
         conclusioni.enable({ emitEvent: false });
       } else {
@@ -1591,7 +1744,7 @@ export class ReportEditor {
   goToInitialTypeSelection(): void {
     this.uiState = 'initialTypeSelection';
     this.selectedReportType = null;
-    this.setEmgNeurologistMode(false);
+    this.setEmgRefertatoreMode(false);
     this.closeResumeDraftModal();
     this.closePsgAnamnesisModal();
     this.closeEmgAnamnesisModal();
@@ -1604,7 +1757,7 @@ export class ReportEditor {
     }
 
     this.uiState = 'typeActionSelection';
-    this.setEmgNeurologistMode(false);
+    this.setEmgRefertatoreMode(false);
     this.closeResumeDraftModal();
     this.closePsgAnamnesisModal();
     this.closeEmgAnamnesisModal();
@@ -1620,7 +1773,7 @@ export class ReportEditor {
     this.currentDraftId = null;
     this.currentDraftStatus = null;
     this.draftLoaded = false;
-    this.setEmgNeurologistMode(false);
+    this.setEmgRefertatoreMode(false);
     this.step = 0;
     this.doctorSearch.reset('');
     this.technicalSearch.reset('');
@@ -1660,7 +1813,7 @@ export class ReportEditor {
     this.openArchiveModal();
   }
 
-  startNeurologistArea(): void {
+  startRefertatoreArea(): void {
     this.openReservedArea();
   }
 
@@ -1723,7 +1876,7 @@ export class ReportEditor {
       return;
     }
 
-    const savedDraft = await this.saveNeurologistDraftProgress(false);
+    const savedDraft = await this.saveRefertatoreDraftProgress(false);
     if (!savedDraft) {
       return;
     }
@@ -1809,7 +1962,7 @@ export class ReportEditor {
       return true;
     }
 
-    if (this.reportType === 'emg' && this.emgNeurologistMode) {
+    if (this.reportType === 'emg' && this.emgRefertatoreMode) {
       const repertiControl = this.control('emg.repertiElettrofisiologici');
       const conclusioniControl = this.control('emg.conclusioni');
 
@@ -1946,7 +2099,7 @@ export class ReportEditor {
             mimeType: 'application/pdf',
             base64: asset.base64,
           },
-          this.emgNeurologistMode ? this.neurologistToken : undefined,
+          this.emgRefertatoreMode ? this.refertatoreToken : undefined,
         ),
       );
 
@@ -1961,14 +2114,14 @@ export class ReportEditor {
       if (this.currentDraftId) {
         await this.hydratePersistedAttachments(
           this.currentDraftId,
-          this.emgNeurologistMode ? this.neurologistToken : undefined,
+          this.emgRefertatoreMode ? this.refertatoreToken : undefined,
         );
       }
 
       this.completedReadonlyMode = true;
       await this.refreshDraftList(false);
-      if (this.emgNeurologistMode) {
-        await this.openNeurologistDashboard();
+      if (this.emgRefertatoreMode) {
+        await this.openRefertatoreDashboard();
       }
 
       this.setDraftMessage(
@@ -1987,8 +2140,8 @@ export class ReportEditor {
   }
 
   async saveDraft(status?: ReportDraftStatus): Promise<void> {
-    if (this.emgNeurologistMode && this.currentDraftId) {
-      await this.saveNeurologistDraftProgress();
+    if (this.emgRefertatoreMode && this.currentDraftId) {
+      await this.saveRefertatoreDraftProgress();
       return;
     }
 
@@ -2048,62 +2201,128 @@ export class ReportEditor {
     }
   }
 
-  async submitNeurologistLogin(): Promise<void> {
-    this.neurologistLoginError = '';
+  async submitRefertatoreLogin(): Promise<void> {
+    this.refertatoreLoginError = '';
 
-    if (!this.neurologistEmail.trim() || !this.neurologistPassword.trim()) {
-      this.neurologistLoginError = 'Inserisci email e password dell’Area Riservata.';
+    if (!this.refertatoreEmail.trim() || !this.refertatorePassword.trim()) {
+      this.refertatoreLoginError = 'Inserisci email e password dell’Area Riservata.';
       return;
     }
 
-    this.neurologistLoginLoading = true;
+    this.refertatoreLoginLoading = true;
 
     try {
       const response = await firstValueFrom(
         this.api.login(
-          this.neurologistEmail.trim(),
-          this.neurologistPassword,
+          this.refertatoreEmail.trim(),
+          this.refertatorePassword,
         ),
       );
 
-      this.neurologistUser = response.user;
+      this.refertatoreUser = response.user;
       this.reservedUser = response.user;
-      this.neurologistToken = 'session';
-      this.neurologistPassword = '';
-      this.persistNeurologistSession();
+      this.refertatoreToken = 'session';
+      this.refertatorePassword = '';
+      this.showReservedPassword = false;
+      this.persistRefertatoreSession();
       await this.routeReservedUserDashboard();
     } catch (error) {
       console.error('Errore login area riservata:', error);
-      this.neurologistLoginError = 'Credenziali non valide.';
+      this.refertatoreLoginError = 'Credenziali non valide.';
     } finally {
-      this.neurologistLoginLoading = false;
+      this.refertatoreLoginLoading = false;
     }
   }
 
-  async logoutNeurologist(): Promise<void> {
+  async logoutRefertatore(): Promise<void> {
     try {
       await firstValueFrom(this.api.logout());
     } catch (error) {
       console.error('Errore logout area riservata:', error);
     }
 
-    this.neurologistPassword = '';
-    this.neurologistLoginError = '';
-    this.neurologistDrafts = [];
+    this.refertatorePassword = '';
+    this.showReservedPassword = false;
+    this.refertatoreLoginError = '';
     this.refertatoreDrafts = [];
     this.refertatoreArchiveDrafts = [];
-    this.clearNeurologistSession();
+    this.clearRefertatoreSession();
     this.uiState = 'initialTypeSelection';
   }
 
-  async openNeurologistDashboard(): Promise<void> {
+  openChangePasswordModal(): void {
+    this.changePasswordError = '';
+    this.changePasswordMessage = '';
+    this.changePasswordForm = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    };
+    this.showCurrentPassword = false;
+    this.showNewPassword = false;
+    this.showConfirmPassword = false;
+    this.showChangePasswordModal = true;
+  }
+
+  closeChangePasswordModal(): void {
+    this.showChangePasswordModal = false;
+  }
+
+  async submitChangePassword(): Promise<void> {
+    this.changePasswordError = '';
+    this.changePasswordMessage = '';
+
+    const currentPassword = this.changePasswordForm.currentPassword.trim();
+    const newPassword = this.changePasswordForm.newPassword.trim();
+    const confirmPassword = this.changePasswordForm.confirmPassword.trim();
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      this.changePasswordError = 'Compila tutti i campi password.';
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      this.changePasswordError = 'La conferma password non coincide.';
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      this.changePasswordError = 'La nuova password deve essere diversa da quella attuale.';
+      return;
+    }
+
+    this.changePasswordLoading = true;
+
+    try {
+      await firstValueFrom(this.api.getCsrf());
+      const response = await firstValueFrom(
+        this.api.changePassword(currentPassword, newPassword),
+      );
+      this.changePasswordMessage = response.message;
+      this.changePasswordForm = {
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      };
+      this.setDraftMessage('Password aggiornata correttamente.', 'success');
+      this.showChangePasswordModal = false;
+    } catch (error: any) {
+      console.error('Errore cambio password:', error);
+      this.changePasswordError =
+        error?.error?.error || "Impossibile aggiornare la password in questo momento.";
+    } finally {
+      this.changePasswordLoading = false;
+    }
+  }
+
+  async openRefertatoreDashboard(): Promise<void> {
     if (!this.reservedUser || this.reservedUser.role !== 'refertatore') {
       this.uiState = 'reservedLogin';
       return;
     }
 
-    this.neurologistDraftsLoading = true;
-    this.neurologistDraftsError = '';
+    this.refertatoreDraftsLoading = true;
+    this.refertatoreDraftsError = '';
 
     try {
       const assignedTypes = this.reservedUser.assignedTypes || [];
@@ -2123,18 +2342,15 @@ export class ReportEditor {
 
       this.refertatoreDrafts = pairs.flatMap((item) => item.active);
       this.refertatoreArchiveDrafts = pairs.flatMap((item) => item.archive);
-      this.neurologistDrafts = this.refertatoreDrafts.filter(
-        (draft) => draft.tipo_referto === 'emg',
-      );
       this.uiState = 'refertatoreDashboard';
     } catch (error) {
       console.error('Errore caricamento area refertatore:', error);
-      this.neurologistDraftsError =
+      this.refertatoreDraftsError =
         'Impossibile caricare i referti assegnati al refertatore.';
       this.uiState = 'reservedLogin';
-      this.clearNeurologistSession();
+      this.clearRefertatoreSession();
     } finally {
-      this.neurologistDraftsLoading = false;
+      this.refertatoreDraftsLoading = false;
     }
   }
 
@@ -2235,31 +2451,31 @@ export class ReportEditor {
     }
   }
 
-  async openNeurologistDraft(id: string): Promise<void> {
+  async openRefertatoreDraft(id: string): Promise<void> {
     if (!this.reservedUser) {
       this.uiState = 'reservedLogin';
       return;
     }
 
-    this.neurologistOpeningDraftId = id;
-    this.neurologistDraftsError = '';
+    this.refertatoreOpeningDraftId = id;
+    this.refertatoreDraftsError = '';
 
     try {
       const draft = await firstValueFrom(
         this.api.getRefertatoreDraft(id),
       );
       await this.hydrateDraft(draft, {
-        neurologistMode: true,
-        neurologistToken: 'session',
+        refertatoreMode: true,
+        refertatoreToken: 'session',
       });
       this.uiState = 'wizard';
       this.setDraftMessage('Referto assegnato aperto in area refertatore.', 'success');
     } catch (error) {
       console.error('Errore apertura referto refertatore:', error);
-      this.neurologistDraftsError =
+      this.refertatoreDraftsError =
         'Impossibile aprire il referto assegnato selezionato.';
     } finally {
-      this.neurologistOpeningDraftId = null;
+      this.refertatoreOpeningDraftId = null;
     }
   }
 
@@ -2302,8 +2518,8 @@ export class ReportEditor {
   async hydrateDraft(
     draft: ReportDraftDetail,
     options: {
-      neurologistMode?: boolean;
-      neurologistToken?: string;
+      refertatoreMode?: boolean;
+      refertatoreToken?: string;
       readonlyMode?: boolean;
     } = {},
   ): Promise<void> {
@@ -2315,12 +2531,12 @@ export class ReportEditor {
     const tipoReferto = draft.tipo_referto || formData.tipoReferto || 'standard';
     this.selectedReportType = tipoReferto;
 
-    this.emgNeurologistMode =
-      !!options.neurologistMode &&
+    this.emgRefertatoreMode =
+      !!options.refertatoreMode &&
       draft.stato !== 'completato' &&
       draft.stato !== 'firmato_caricato';
     this.resetTransientUiState();
-    this.setEmgNeurologistMode(false);
+    this.setEmgRefertatoreMode(false);
     this.form.reset(rawForm as any);
     this.sections.reset(rawSections as any);
     this.step = 0;
@@ -2356,15 +2572,15 @@ export class ReportEditor {
     this.refreshDerivedStateAfterDraftLoad();
     await this.hydratePersistedAttachments(
       draft.id,
-      options.neurologistToken,
+      options.refertatoreToken,
     );
     if (this.completedReadonlyMode) {
       this.form.disable({ emitEvent: false });
       this.sections.disable({ emitEvent: false });
       this.reviewerMode = false;
-      this.emgNeurologistMode = false;
+      this.emgRefertatoreMode = false;
     } else {
-      this.setEmgNeurologistMode(this.emgNeurologistMode);
+      this.setEmgRefertatoreMode(this.emgRefertatoreMode);
     }
     this.attachmentsReloadNotice = this.buildAttachmentsReloadNotice();
   }
@@ -2391,8 +2607,8 @@ export class ReportEditor {
       return;
     }
 
-    if (this.reportType === 'emg' && this.emgNeurologistMode && this.currentDraftId) {
-      const saved = await this.saveNeurologistDraftProgress(false);
+    if (this.reportType === 'emg' && this.emgRefertatoreMode && this.currentDraftId) {
+      const saved = await this.saveRefertatoreDraftProgress(false);
       if (!saved) {
         return;
       }
@@ -2727,18 +2943,18 @@ export class ReportEditor {
     }
   }
 
-  private restoreNeurologistSession(): void {
+  private restoreRefertatoreSession(): void {
     void this.restoreReservedSession();
   }
 
-  private persistNeurologistSession(): void {
+  private persistRefertatoreSession(): void {
     // Gestione sessione delegata ai cookie HttpOnly del backend.
   }
 
-  private clearNeurologistSession(): void {
+  private clearRefertatoreSession(): void {
     this.api.clearAuthState();
-    this.neurologistToken = '';
-    this.neurologistUser = null;
+    this.refertatoreToken = '';
+    this.refertatoreUser = null;
     this.reservedUser = null;
   }
 
@@ -2845,10 +3061,10 @@ export class ReportEditor {
     }
   }
 
-  private async saveNeurologistDraftProgress(
+  private async saveRefertatoreDraftProgress(
     showSuccessMessage = true,
   ): Promise<ReportDraftDetail | null> {
-    if (!this.currentDraftId || !this.neurologistToken) {
+    if (!this.currentDraftId || !this.refertatoreToken) {
       this.setDraftMessage(
         'Sessione refertatore non disponibile per il salvataggio.',
         'warning',
@@ -2862,15 +3078,11 @@ export class ReportEditor {
     try {
       const payload = this.buildDraftPayload(
         this.reportType === 'emg'
-          ? 'in_refertazione_neurologo'
+          ? 'in_refertazione_refertatore'
           : 'in_refertazione',
       );
       const savedDraft = await firstValueFrom(
-        this.api.updateNeurologistEmgDraft(
-          this.neurologistToken,
-          this.currentDraftId,
-          payload,
-        ),
+        this.api.updateRefertatoreDraft(this.currentDraftId, payload),
       );
 
       this.currentDraftStatus = savedDraft.stato;
@@ -2924,8 +3136,8 @@ export class ReportEditor {
           draftStatus: status,
           sentToRefertatore:
             this.draftSentToRefertatore ||
-            status === 'in_attesa_neurologo' ||
-            status === 'in_refertazione_neurologo' ||
+            status === 'in_attesa_refertatore' ||
+            status === 'in_refertazione_refertatore' ||
             status === 'pronto_per_firma' ||
             status === 'completato' ||
             status === 'firmato_caricato',
@@ -2980,12 +3192,12 @@ export class ReportEditor {
   }
 
   private resolveDraftStatusForSave(): ReportDraftStatus {
-    if (this.emgNeurologistMode) {
+    if (this.emgRefertatoreMode) {
       if (this.currentDraftStatus === 'pronto_per_firma') {
         return 'pronto_per_firma';
       }
 
-      return 'in_refertazione_neurologo';
+      return 'in_refertazione_refertatore';
     }
 
     if (this.reportType === 'psg') {
@@ -3007,16 +3219,16 @@ export class ReportEditor {
     }
 
     if (this.reportType === 'emg') {
-      if (this.currentDraftStatus === 'in_attesa_neurologo') {
-        return 'in_attesa_neurologo';
+      if (this.currentDraftStatus === 'in_attesa_refertatore') {
+        return 'in_attesa_refertatore';
       }
 
       if (this.currentDraftStatus === 'pronto_per_firma') {
         return 'pronto_per_firma';
       }
 
-      if (this.currentDraftStatus === 'in_refertazione_neurologo') {
-        return 'in_refertazione_neurologo';
+      if (this.currentDraftStatus === 'in_refertazione_refertatore') {
+        return 'in_refertazione_refertatore';
       }
     }
 
@@ -3548,13 +3760,15 @@ export class ReportEditor {
       return this.refertatoriPsg;
     }
 
-    return this.doctors.filter((doctor) => doctor.tipo !== 'tecnico');
+    return this.doctors.filter(
+      (doctor) => doctor.visibleInStandard !== false && doctor.tipo !== 'tnfp',
+    );
   }
 
-  private findDefaultNeurologist(): DoctorInfo | undefined {
+  private findDefaultRefertatore(): DoctorInfo | undefined {
     return this.filteredDoctors().find(
       (doctor) =>
-        doctor.tipo !== 'tecnico' &&
+        doctor.tipo !== 'tnfp' &&
         doctor.nome === 'Sebastiano' &&
         doctor.cognome.includes('Arena'),
     );
@@ -3562,7 +3776,10 @@ export class ReportEditor {
 
   private filteredTechnicians(): DoctorInfo[] {
     return this.doctors.filter(
-      (doctor) => doctor.tipo === 'tecnico' && doctor.ruolo === 'TNFP',
+      (doctor) =>
+        doctor.active !== false &&
+        (doctor.tipo === 'tnfp' ||
+          doctor.specialita === 'Tecnico di Neurofisiopatologia'),
     );
   }
 
@@ -3658,7 +3875,7 @@ export class ReportEditor {
     try {
       const [professionalsResponse, emgRefertatoriResponse, psgRefertatoriResponse] =
         await Promise.all([
-          firstValueFrom(this.api.listProfessionals()),
+          firstValueFrom(this.api.listProfessionals({ active: true })),
           firstValueFrom(this.api.listRefertatori('emg')),
           firstValueFrom(this.api.listRefertatori('psg')),
         ]);
@@ -3677,10 +3894,10 @@ export class ReportEditor {
       console.error('Errore caricamento professionisti/refertatori:', error);
       this.doctors = this.fallbackDoctors;
       this.refertatoriEmg = this.fallbackDoctors.filter(
-        (item) => item.tipo !== 'tecnico' && item.specialita === EMG_DEFAULTS.specializzazione,
+        (item) => item.tipo !== 'tnfp' && isEmgAssignableSpecialization(item.specialita),
       );
       this.refertatoriPsg = this.fallbackDoctors.filter(
-        (item) => item.tipo !== 'tecnico' && item.specialita === PSG_DEFAULTS.specializzazione,
+        (item) => item.tipo !== 'tnfp' && isPsgAssignableSpecialization(item.specialita),
       );
     }
   }
@@ -3689,11 +3906,11 @@ export class ReportEditor {
     try {
       const response = await firstValueFrom(this.api.me());
       this.reservedUser = response.user;
-      this.neurologistUser = response.user;
-      this.neurologistToken = 'session';
+      this.refertatoreUser = response.user;
+      this.refertatoreToken = 'session';
       await firstValueFrom(this.api.getCsrf());
     } catch {
-      this.clearNeurologistSession();
+      this.clearRefertatoreSession();
     }
   }
 
@@ -3713,7 +3930,7 @@ export class ReportEditor {
   }
 
   openReservedArea(): void {
-    this.neurologistLoginError = '';
+    this.refertatoreLoginError = '';
     if (this.reservedUser) {
       void this.routeReservedUserDashboard();
       return;
@@ -3722,7 +3939,7 @@ export class ReportEditor {
   }
 
   goToReservedLogin(): void {
-    this.neurologistLoginError = '';
+    this.refertatoreLoginError = '';
     this.forgotPasswordMessage = '';
     this.resetPasswordMessage = '';
     this.uiState = 'reservedLogin';
@@ -3744,7 +3961,7 @@ export class ReportEditor {
       return;
     }
 
-    await this.openNeurologistDashboard();
+    await this.openRefertatoreDashboard();
   }
 
   async openAdminDashboard(): Promise<void> {
@@ -3904,6 +4121,44 @@ export class ReportEditor {
   }
 
   async saveAdminUser(): Promise<void> {
+    this.adminUserProfessionalError = '';
+
+    if (!this.adminUserForm.professional_id) {
+      this.adminUserProfessionalError =
+        'Seleziona un professionista esistente prima di creare il refertatore.';
+      return;
+    }
+
+    if (!this.adminUserForm.email.trim() && this.adminUserEmailRequired) {
+      this.adminUserProfessionalError =
+        "L'email e obbligatoria se il professionista selezionato non ne ha una.";
+      return;
+    }
+
+    if (!this.adminUserForm.id && !this.adminUserForm.password.trim()) {
+      this.adminUserProfessionalError =
+        'La password temporanea e obbligatoria per creare il refertatore.';
+      return;
+    }
+
+    if (
+      !this.canAssignEmgToSelectedProfessional &&
+      this.adminUserForm.assignedTypes.includes('emg')
+    ) {
+      this.adminUserProfessionalError =
+        'Il professionista selezionato non puo essere assegnato a EMG.';
+      return;
+    }
+
+    if (
+      !this.canAssignPsgToSelectedProfessional &&
+      this.adminUserForm.assignedTypes.includes('psg')
+    ) {
+      this.adminUserProfessionalError =
+        'Il professionista selezionato non puo essere assegnato a PSG.';
+      return;
+    }
+
     try {
       await firstValueFrom(this.api.getCsrf());
       if (this.adminUserForm.id) {
@@ -3923,6 +4178,16 @@ export class ReportEditor {
   }
 
   async saveAdminProfessional(): Promise<void> {
+    const normalizedSpecialization = normalizeSpecialization(
+      this.adminProfessionalForm.specializzazione,
+    );
+    if (!normalizedSpecialization) {
+      this.adminDashboardError =
+        'Seleziona una specializzazione valida dall’elenco disponibile.';
+      return;
+    }
+
+    this.adminProfessionalForm.specializzazione = normalizedSpecialization;
     try {
       await firstValueFrom(this.api.getCsrf());
       if (this.adminProfessionalForm.id) {
@@ -3952,12 +4217,18 @@ export class ReportEditor {
     this.adminUserForm = {
       id: user.id,
       role: user.role,
+      professional_id: user.professional_id || '',
+      professional_display_name:
+        user.professional_display_name || user.display_name,
       email: user.email,
       password: '',
       display_name: user.display_name,
       specializzazione: user.specializzazione || '',
       assignedTypes: [...user.assignedTypes],
     };
+    this.adminUserProfessionalSearch =
+      user.professional_display_name || user.display_name;
+    this.adminUserProfessionalError = '';
     this.showAdminUserModal = true;
   }
 
@@ -3986,6 +4257,14 @@ export class ReportEditor {
     tipo: 'emg' | 'psg',
     checked: boolean,
   ): void {
+    if (tipo === 'emg' && !this.canAssignEmgToSelectedProfessional) {
+      return;
+    }
+
+    if (tipo === 'psg' && !this.canAssignPsgToSelectedProfessional) {
+      return;
+    }
+
     const current = new Set(this.adminUserForm.assignedTypes);
 
     if (checked) {
@@ -4001,12 +4280,16 @@ export class ReportEditor {
     this.adminUserForm = {
       id: '',
       role: 'refertatore',
+      professional_id: '',
+      professional_display_name: '',
       email: '',
       password: '',
       display_name: '',
       specializzazione: '',
       assignedTypes: [],
     };
+    this.adminUserProfessionalSearch = '';
+    this.adminUserProfessionalError = '';
   }
 
   resetAdminProfessionalForm(): void {
@@ -4047,6 +4330,22 @@ export class ReportEditor {
     this.showAdminUserModal = false;
   }
 
+  selectProfessionalForRefertatore(professional: ProfessionalItem): void {
+    this.adminUserForm.professional_id = professional.id;
+    this.adminUserForm.professional_display_name = professional.display_name;
+    this.adminUserForm.display_name = professional.display_name;
+    this.adminUserForm.specializzazione = professional.specializzazione || '';
+    this.adminUserForm.email = professional.email || '';
+    this.adminUserProfessionalSearch = professional.display_name;
+    this.adminUserProfessionalError = '';
+
+    this.adminUserForm.assignedTypes = this.adminUserForm.assignedTypes.filter(
+      (tipo) =>
+        (tipo === 'emg' && this.canAssignEmgToSelectedProfessional) ||
+        (tipo === 'psg' && this.canAssignPsgToSelectedProfessional),
+    );
+  }
+
   async deleteProfessional(professional: ProfessionalItem): Promise<void> {
     const confirmed = window.confirm(
       "Vuoi eliminare questo professionista? L'azione non puo essere annullata.",
@@ -4057,9 +4356,10 @@ export class ReportEditor {
 
     try {
       await firstValueFrom(this.api.getCsrf());
-      await firstValueFrom(this.api.updateAdminProfessionalStatus(professional.id, false));
+      await firstValueFrom(this.api.deleteAdminProfessional(professional.id));
       this.setDraftMessage('Professionista eliminato (disattivato).', 'success');
-      await this.openAdminDashboard();
+      this.adminProfessionals = this.adminProfessionals.filter((item) => item.id !== professional.id);
+      this.professionalsPage = Math.min(this.professionalsPage, this.professionalsTotalPages);
       await this.loadOperationalOptions();
     } catch (error) {
       console.error('Errore eliminazione professionista:', error);
@@ -4077,17 +4377,22 @@ export class ReportEditor {
 
     try {
       await firstValueFrom(this.api.getCsrf());
-      await firstValueFrom(this.api.updateAdminUserStatus(user.id, false));
+      await firstValueFrom(this.api.deleteAdminUser(user.id));
       this.setDraftMessage(
         'Refertatore disattivato. Se ha referti collegati non viene rimosso definitivamente.',
         'success',
       );
-      await this.openAdminDashboard();
+      this.adminUsers = this.adminUsers.filter((item) => item.id !== user.id);
+      this.refertatoriPage = Math.min(this.refertatoriPage, this.refertatoriTotalPages);
     } catch (error) {
       console.error('Errore eliminazione refertatore:', error);
       this.adminDashboardError =
         'Questo refertatore ha referti collegati. Puoi disattivarlo ma non eliminarlo definitivamente.';
     }
+  }
+
+  onProfessionalSearchChange(): void {
+    this.professionalsPage = 1;
   }
 
   nextProfessionalsPage(): void {
@@ -4126,6 +4431,7 @@ export class ReportEditor {
       email: item.email,
       isRefertatore: item.is_refertatore,
       active: item.active,
+      visibleInStandard: item.visible_in_standard,
     };
   }
 
@@ -4165,8 +4471,8 @@ export class ReportEditor {
     );
   }
 
-  private setEmgNeurologistMode(enabled: boolean): void {
-    this.emgNeurologistMode = enabled;
+  private setEmgRefertatoreMode(enabled: boolean): void {
+    this.emgRefertatoreMode = enabled;
     this.reviewerMode = enabled;
 
     this.form.enable({ emitEvent: false });
@@ -4236,7 +4542,7 @@ export class ReportEditor {
 
   private async hydratePersistedAttachments(
     draftId: string,
-    neurologistToken?: string,
+    refertatoreToken?: string,
   ): Promise<void> {
     if (!draftId) {
       return;
@@ -4244,7 +4550,7 @@ export class ReportEditor {
 
     try {
       const response = await firstValueFrom(
-        this.api.listDraftAttachments(draftId, neurologistToken),
+        this.api.listDraftAttachments(draftId, refertatoreToken),
       );
       this.currentDraftAttachments = response.items;
 
@@ -4256,7 +4562,7 @@ export class ReportEditor {
           ? await this.mapDraftAttachmentToAsset(
               draftId,
               reportMetadata,
-              neurologistToken,
+              refertatoreToken,
             )
           : null;
         this.form.get('psg.reportStrumentalePdf')?.setValue(reportAsset, {
@@ -4278,7 +4584,7 @@ export class ReportEditor {
 
       const traceAssets = await Promise.all(
         traceMetadatas.map((item) =>
-          this.mapDraftAttachmentToAsset(draftId, item, neurologistToken),
+          this.mapDraftAttachmentToAsset(draftId, item, refertatoreToken),
         ),
       );
 
@@ -4286,7 +4592,7 @@ export class ReportEditor {
         ? await this.mapDraftAttachmentToAsset(
             draftId,
             signatureMetadata,
-            neurologistToken,
+            refertatoreToken,
           )
         : null;
 
@@ -4325,7 +4631,7 @@ export class ReportEditor {
   private async mapDraftAttachmentToAsset(
     draftId: string,
     metadata: DraftAttachmentMetadata,
-    neurologistToken?: string,
+    refertatoreToken?: string,
   ): Promise<EmgUploadedAsset> {
     const isPdf = metadata.mime_type === 'application/pdf';
     const asset: EmgUploadedAsset = {
@@ -4344,7 +4650,7 @@ export class ReportEditor {
         this.api.getDraftAttachmentBase64(
           draftId,
           metadata.id,
-          neurologistToken,
+          refertatoreToken,
         ),
       );
       return {
@@ -4357,7 +4663,7 @@ export class ReportEditor {
       this.api.getDraftAttachmentDataUrl(
         draftId,
         metadata.id,
-        neurologistToken,
+        refertatoreToken,
       ),
     );
 
@@ -4511,7 +4817,7 @@ export class ReportEditor {
       this.api.getDraftAttachmentBlob(
         attachment.draft_id,
         attachment.id,
-        this.emgNeurologistMode ? this.neurologistToken : undefined,
+        this.emgRefertatoreMode ? this.refertatoreToken : undefined,
       ),
     );
     this.openBlobInNewTab(blob, attachment.original_name || attachment.file_name);
@@ -4524,7 +4830,7 @@ export class ReportEditor {
       this.api.getDraftAttachmentBlob(
         attachment.draft_id,
         attachment.id,
-        this.emgNeurologistMode ? this.neurologistToken : undefined,
+        this.emgRefertatoreMode ? this.refertatoreToken : undefined,
       ),
     );
     this.downloadBlob(blob, attachment.original_name || attachment.file_name);
@@ -4563,7 +4869,7 @@ export class ReportEditor {
   }
 
   private isEmgChecklistComplete(): boolean {
-    if (this.emgNeurologistMode) {
+    if (this.emgRefertatoreMode) {
       return true;
     }
 

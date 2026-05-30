@@ -41,11 +41,11 @@ export class StepAnagrafica {
       return 'Referto in lavorazione';
     }
 
-    if (this.currentDraftStatus === 'in_attesa_neurologo') {
+    if (this.currentDraftStatus === 'in_attesa_refertatore') {
       return 'In attesa refertatore';
     }
 
-    if (this.currentDraftStatus === 'in_refertazione_neurologo') {
+    if (this.currentDraftStatus === 'in_refertazione_refertatore') {
       return 'Refertazione in corso';
     }
 
@@ -65,11 +65,11 @@ export class StepAnagrafica {
       return 'Referto in lavorazione';
     }
 
-    if (this.currentDraftStatus === 'in_attesa_neurologo') {
+    if (this.currentDraftStatus === 'in_attesa_refertatore') {
       return 'In attesa refertatore';
     }
 
-    if (this.currentDraftStatus === 'in_refertazione_neurologo') {
+    if (this.currentDraftStatus === 'in_refertazione_refertatore') {
       return 'Refertazione in corso';
     }
 
