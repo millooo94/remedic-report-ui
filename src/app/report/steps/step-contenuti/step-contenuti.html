@@ -294,7 +294,7 @@
             <p>Carica il PDF gia firmato digitalmente fuori dal programma. Solo questo file verra salvato su Drive come referto definitivo.</p>
           </div>
 
-          <button type="button" class="uploadBtn" (click)="openFilePicker(signedPdfInput)">
+          <button type="button" class="uploadBtn" (click)="openSignedPdfPicker(signedPdfInput)">
             {{ signedPdfAsset ? 'Sostituisci PDF firmato' : 'Carica PDF firmato' }}
           </button>
         </div>
@@ -352,7 +352,7 @@
           <p>Carica il report strumentale in PDF. Verra unito come pagine finali del referto.</p>
         </div>
 
-        @if (!readonlyMode) {
+        @if (!psgReadonlyMode) {
           <button type="button" class="uploadBtn" (click)="openFilePicker(psgReportInput)">
           {{ psgReportAsset ? 'Sostituisci report' : 'Carica report strumentale' }}
           </button>
@@ -382,7 +382,7 @@
               <small>{{ fileSizeLabel(psgReportAsset.size) }}</small>
               <span class="uploadHint">Verra unito come pagine finali del referto.</span>
             </div>
-            @if (!readonlyMode) {
+            @if (!psgReadonlyMode) {
               <button type="button" class="removeBtn" (click)="removePsgReport()">Rimuovi</button>
             }
           </article>
@@ -402,7 +402,7 @@
             <p>Carica il PDF PSG gia firmato digitalmente. Solo questo documento verra salvato in via definitiva su Drive.</p>
           </div>
 
-          <button type="button" class="uploadBtn" (click)="openFilePicker(signedPdfInput)">
+          <button type="button" class="uploadBtn" (click)="openSignedPdfPicker(signedPdfInput)">
             {{ signedPdfAsset ? 'Sostituisci PDF firmato' : 'Carica PDF firmato' }}
           </button>
         </div>

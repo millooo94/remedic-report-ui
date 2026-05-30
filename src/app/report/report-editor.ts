@@ -86,6 +86,8 @@ type EditorUiState =
   | 'adminDashboard'
   | 'refertatoreDashboard';
 
+type EntryContext = 'public' | 'admin' | 'refertatore';
+
 @Component({
   selector: 'report-editor',
   imports: [
@@ -148,13 +150,27 @@ export class ReportEditor {
   showAdminProfessionalModal = false;
   showAdminUserModal = false;
   showChangePasswordModal = false;
+  showDeleteResourceModal = false;
   professionalsPage = 1;
   professionalsPageSize = 10;
   refertatoriPage = 1;
   refertatoriPageSize = 10;
   professionalSearchQuery = '';
+  professionalSpecializationSearch = '';
+  showProfessionalSpecializationSuggestions = false;
   adminUserProfessionalSearch = '';
+  showAdminUserProfessionalSuggestions = false;
   adminUserProfessionalError = '';
+  adminProfessionalFieldErrors: Record<string, string> = {};
+  adminUserFieldErrors: Record<string, string> = {};
+  deleteResourceLoading = false;
+  deleteResourceError = '';
+  deleteResourceTarget: {
+    kind: 'professional' | 'refertatore';
+    id: string;
+    name: string;
+  } | null = null;
+  entryContext: EntryContext = 'public';
   specializations = [...PROFESSIONAL_SPECIALIZATIONS];
   draftActionLoadingId: string | null = null;
   adminUserForm = {
@@ -173,22 +189,9 @@ export class ReportEditor {
     first_name: '',
     last_name: '',
     display_name: '',
-    title: '',
     email: '',
-    phone: '',
     specializzazione: '',
     role_label: '',
-    professional_type:
-      'medico' as
-        | 'medico'
-        | 'dietista'
-        | 'ostetrica'
-        | 'psicoterapeuta'
-        | 'tnfp'
-        | 'altro'
-        | 'tecnico'
-        | 'professionista_sanitario'
-        | 'professionista sanitario',
     visible_in_standard: true,
     is_refertatore: false,
     active: true,
@@ -457,7 +460,11 @@ export class ReportEditor {
   }
 
   get showDraftWriteActions(): boolean {
-    return !this.completedReadonlyMode;
+    return !this.completedReadonlyMode && this.entryContext === 'public';
+  }
+
+  get showReviewerSaveAction(): boolean {
+    return !this.completedReadonlyMode && this.entryContext === 'refertatore';
   }
 
   get draftBrowserTitle(): string {
@@ -530,6 +537,7 @@ export class ReportEditor {
   get showControlPreviewButton(): boolean {
     return (
       !this.completedReadonlyMode &&
+      !this.reviewerMode &&
       this.step === this.steps.length - 1 &&
       (this.reportType === 'psg' ||
         (this.reportType === 'emg' && !this.emgRefertatoreMode))
@@ -582,10 +590,20 @@ export class ReportEditor {
         professional.display_name,
         professional.specializzazione,
         professional.email,
-        professional.professional_type,
       ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query)),
+    );
+  }
+
+  get filteredProfessionalSpecializations(): string[] {
+    const query = this.professionalSpecializationSearch.trim().toLowerCase();
+    if (!query) {
+      return this.specializations;
+    }
+
+    return this.specializations.filter((item) =>
+      item.toLowerCase().includes(query),
     );
   }
 
@@ -677,34 +695,16 @@ export class ReportEditor {
     );
   }
 
-  professionalTypeLabel(value: ProfessionalItem['professional_type']): string {
-    switch (value) {
-      case 'dietista':
-        return 'Dietista';
-      case 'ostetrica':
-        return 'Ostetrica';
-      case 'psicoterapeuta':
-        return 'Psicoterapeuta';
-      case 'tnfp':
-        return 'TNFP';
-      case 'altro':
-        return 'Altro';
-      case 'tecnico':
-        return 'Tipo legacy da riclassificare';
-      case 'professionista_sanitario':
-      case 'professionista sanitario':
-        return 'Tipo legacy da riclassificare';
-      default:
-        return 'Medico';
+  get wizardFlowButtonLabel(): string {
+    if (this.entryContext === 'admin') {
+      return "Torna all'Area Admin";
     }
-  }
 
-  get isLegacyProfessionalTypeSelected(): boolean {
-    return (
-      this.adminProfessionalForm.professional_type === 'tecnico' ||
-      this.adminProfessionalForm.professional_type === 'professionista_sanitario' ||
-      this.adminProfessionalForm.professional_type === 'professionista sanitario'
-    );
+    if (this.entryContext === 'refertatore') {
+      return "Torna all'Area Refertatore";
+    }
+
+    return 'Cambia flusso';
   }
 
   stepHint(): string {
@@ -1643,6 +1643,7 @@ export class ReportEditor {
         d.nome.toLowerCase().startsWith(q) ||
         d.cognome.toLowerCase().startsWith(q) ||
         (d.ruolo ?? '').toLowerCase().startsWith(q) ||
+        (d.specialita ?? '').toLowerCase().startsWith(q) ||
         (d.displayName ?? '').toLowerCase().startsWith(q),
     );
   }
@@ -1742,6 +1743,7 @@ export class ReportEditor {
   }
 
   goToInitialTypeSelection(): void {
+    this.entryContext = 'public';
     this.uiState = 'initialTypeSelection';
     this.selectedReportType = null;
     this.setEmgRefertatoreMode(false);
@@ -1757,6 +1759,7 @@ export class ReportEditor {
     }
 
     this.uiState = 'typeActionSelection';
+    this.entryContext = 'public';
     this.setEmgRefertatoreMode(false);
     this.closeResumeDraftModal();
     this.closePsgAnamnesisModal();
@@ -1773,6 +1776,7 @@ export class ReportEditor {
     this.currentDraftId = null;
     this.currentDraftStatus = null;
     this.draftLoaded = false;
+    this.entryContext = 'public';
     this.setEmgRefertatoreMode(false);
     this.step = 0;
     this.doctorSearch.reset('');
@@ -1815,6 +1819,36 @@ export class ReportEditor {
 
   startRefertatoreArea(): void {
     this.openReservedArea();
+  }
+
+  async handleWizardFlowAction(): Promise<void> {
+    if (this.entryContext === 'admin') {
+      if (this.hasUnsavedWizardChanges()) {
+        const confirmed = window.confirm(
+          'Ci sono modifiche non salvate. Vuoi davvero tornare all’Area Admin?',
+        );
+        if (!confirmed) {
+          return;
+        }
+      }
+      await this.openAdminDashboard();
+      return;
+    }
+
+    if (this.entryContext === 'refertatore') {
+      if (this.hasUnsavedWizardChanges()) {
+        const confirmed = window.confirm(
+          'Ci sono modifiche non salvate. Vuoi davvero tornare all’Area Refertatore?',
+        );
+        if (!confirmed) {
+          return;
+        }
+      }
+      await this.openRefertatoreDashboard();
+      return;
+    }
+
+    this.goToTypeActionSelection();
   }
 
   primaryAction(): void {
@@ -2099,7 +2133,7 @@ export class ReportEditor {
             mimeType: 'application/pdf',
             base64: asset.base64,
           },
-          this.emgRefertatoreMode ? this.refertatoreToken : undefined,
+          this.reviewerMode ? this.refertatoreToken : undefined,
         ),
       );
 
@@ -2114,13 +2148,13 @@ export class ReportEditor {
       if (this.currentDraftId) {
         await this.hydratePersistedAttachments(
           this.currentDraftId,
-          this.emgRefertatoreMode ? this.refertatoreToken : undefined,
+          this.reviewerMode ? this.refertatoreToken : undefined,
         );
       }
 
       this.completedReadonlyMode = true;
       await this.refreshDraftList(false);
-      if (this.emgRefertatoreMode) {
+      if (this.reviewerMode) {
         await this.openRefertatoreDashboard();
       }
 
@@ -2247,6 +2281,7 @@ export class ReportEditor {
     this.refertatoreDrafts = [];
     this.refertatoreArchiveDrafts = [];
     this.clearRefertatoreSession();
+    this.entryContext = 'public';
     this.uiState = 'initialTypeSelection';
   }
 
@@ -2342,6 +2377,7 @@ export class ReportEditor {
 
       this.refertatoreDrafts = pairs.flatMap((item) => item.active);
       this.refertatoreArchiveDrafts = pairs.flatMap((item) => item.archive);
+      this.entryContext = 'refertatore';
       this.uiState = 'refertatoreDashboard';
     } catch (error) {
       console.error('Errore caricamento area refertatore:', error);
@@ -2429,6 +2465,7 @@ export class ReportEditor {
       }
 
       await this.hydrateDraft(draft, {
+        entryContext: 'public',
         readonlyMode:
           this.isArchiveBrowserMode ||
           draft.stato === 'completato' ||
@@ -2467,6 +2504,7 @@ export class ReportEditor {
       await this.hydrateDraft(draft, {
         refertatoreMode: true,
         refertatoreToken: 'session',
+        entryContext: 'refertatore',
       });
       this.uiState = 'wizard';
       this.setDraftMessage('Referto assegnato aperto in area refertatore.', 'success');
@@ -2521,6 +2559,7 @@ export class ReportEditor {
       refertatoreMode?: boolean;
       refertatoreToken?: string;
       readonlyMode?: boolean;
+      entryContext?: EntryContext;
     } = {},
   ): Promise<void> {
     const formData = draft.form_data?.form ?? {};
@@ -2529,12 +2568,13 @@ export class ReportEditor {
     const rawForm = this.getFreshFormState();
     const rawSections = this.getFreshSectionsState();
     const tipoReferto = draft.tipo_referto || formData.tipoReferto || 'standard';
-    this.selectedReportType = tipoReferto;
-
-    this.emgRefertatoreMode =
+    const reviewerEnabled =
       !!options.refertatoreMode &&
       draft.stato !== 'completato' &&
       draft.stato !== 'firmato_caricato';
+    this.selectedReportType = tipoReferto;
+    this.entryContext = options.entryContext || 'public';
+
     this.resetTransientUiState();
     this.setEmgRefertatoreMode(false);
     this.form.reset(rawForm as any);
@@ -2580,7 +2620,7 @@ export class ReportEditor {
       this.reviewerMode = false;
       this.emgRefertatoreMode = false;
     } else {
-      this.setEmgRefertatoreMode(this.emgRefertatoreMode);
+      this.setEmgRefertatoreMode(reviewerEnabled);
     }
     this.attachmentsReloadNotice = this.buildAttachmentsReloadNotice();
   }
@@ -3761,14 +3801,16 @@ export class ReportEditor {
     }
 
     return this.doctors.filter(
-      (doctor) => doctor.visibleInStandard !== false && doctor.tipo !== 'tnfp',
+      (doctor) =>
+        doctor.visibleInStandard !== false &&
+        !this.isTechnicianSpecialization(doctor.specialita),
     );
   }
 
   private findDefaultRefertatore(): DoctorInfo | undefined {
     return this.filteredDoctors().find(
       (doctor) =>
-        doctor.tipo !== 'tnfp' &&
+        !this.isTechnicianSpecialization(doctor.specialita) &&
         doctor.nome === 'Sebastiano' &&
         doctor.cognome.includes('Arena'),
     );
@@ -3778,8 +3820,7 @@ export class ReportEditor {
     return this.doctors.filter(
       (doctor) =>
         doctor.active !== false &&
-        (doctor.tipo === 'tnfp' ||
-          doctor.specialita === 'Tecnico di Neurofisiopatologia'),
+        this.isTechnicianSpecialization(doctor.specialita),
     );
   }
 
@@ -3894,10 +3935,14 @@ export class ReportEditor {
       console.error('Errore caricamento professionisti/refertatori:', error);
       this.doctors = this.fallbackDoctors;
       this.refertatoriEmg = this.fallbackDoctors.filter(
-        (item) => item.tipo !== 'tnfp' && isEmgAssignableSpecialization(item.specialita),
+        (item) =>
+          !this.isTechnicianSpecialization(item.specialita) &&
+          isEmgAssignableSpecialization(item.specialita),
       );
       this.refertatoriPsg = this.fallbackDoctors.filter(
-        (item) => item.tipo !== 'tnfp' && isPsgAssignableSpecialization(item.specialita),
+        (item) =>
+          !this.isTechnicianSpecialization(item.specialita) &&
+          isPsgAssignableSpecialization(item.specialita),
       );
     }
   }
@@ -3986,6 +4031,7 @@ export class ReportEditor {
       this.auditLogs = auditResponse.items;
       this.professionalsPage = 1;
       this.refertatoriPage = 1;
+      this.entryContext = 'admin';
       this.uiState = 'adminDashboard';
     } catch (error) {
       console.error('Errore caricamento dashboard admin:', error);
@@ -4048,6 +4094,7 @@ export class ReportEditor {
     try {
       const detail = await firstValueFrom(this.api.getDraft(draft.id));
       await this.hydrateDraft(detail, {
+        entryContext: 'admin',
         readonlyMode:
           readonlyMode ||
           draft.stato === 'completato' ||
@@ -4121,22 +4168,24 @@ export class ReportEditor {
   }
 
   async saveAdminUser(): Promise<void> {
+    this.adminDashboardError = '';
     this.adminUserProfessionalError = '';
+    this.adminUserFieldErrors = {};
 
     if (!this.adminUserForm.professional_id) {
-      this.adminUserProfessionalError =
+      this.adminUserFieldErrors['professional_id'] =
         'Seleziona un professionista esistente prima di creare il refertatore.';
       return;
     }
 
     if (!this.adminUserForm.email.trim() && this.adminUserEmailRequired) {
-      this.adminUserProfessionalError =
+      this.adminUserFieldErrors['email'] =
         "L'email e obbligatoria se il professionista selezionato non ne ha una.";
       return;
     }
 
     if (!this.adminUserForm.id && !this.adminUserForm.password.trim()) {
-      this.adminUserProfessionalError =
+      this.adminUserFieldErrors['password'] =
         'La password temporanea e obbligatoria per creare il refertatore.';
       return;
     }
@@ -4145,7 +4194,7 @@ export class ReportEditor {
       !this.canAssignEmgToSelectedProfessional &&
       this.adminUserForm.assignedTypes.includes('emg')
     ) {
-      this.adminUserProfessionalError =
+      this.adminUserFieldErrors['assignedTypes'] =
         'Il professionista selezionato non puo essere assegnato a EMG.';
       return;
     }
@@ -4154,7 +4203,7 @@ export class ReportEditor {
       !this.canAssignPsgToSelectedProfessional &&
       this.adminUserForm.assignedTypes.includes('psg')
     ) {
-      this.adminUserProfessionalError =
+      this.adminUserFieldErrors['assignedTypes'] =
         'Il professionista selezionato non puo essere assegnato a PSG.';
       return;
     }
@@ -4173,21 +4222,26 @@ export class ReportEditor {
       await this.openAdminDashboard();
     } catch (error) {
       console.error('Errore salvataggio utente admin:', error);
-      this.adminDashboardError = 'Impossibile salvare il refertatore/admin.';
+      if (!this.applyAdminFieldErrors(error, this.adminUserFieldErrors)) {
+        this.adminDashboardError = 'Impossibile salvare il refertatore/admin.';
+      }
     }
   }
 
   async saveAdminProfessional(): Promise<void> {
+    this.adminDashboardError = '';
+    this.adminProfessionalFieldErrors = {};
     const normalizedSpecialization = normalizeSpecialization(
-      this.adminProfessionalForm.specializzazione,
+      this.professionalSpecializationSearch,
     );
     if (!normalizedSpecialization) {
-      this.adminDashboardError =
-        'Seleziona una specializzazione valida dall’elenco disponibile.';
+      this.adminProfessionalFieldErrors['specializzazione'] =
+        "Seleziona una specializzazione valida dall'elenco disponibile.";
       return;
     }
 
     this.adminProfessionalForm.specializzazione = normalizedSpecialization;
+    this.professionalSpecializationSearch = normalizedSpecialization;
     try {
       await firstValueFrom(this.api.getCsrf());
       if (this.adminProfessionalForm.id) {
@@ -4208,7 +4262,9 @@ export class ReportEditor {
       await this.loadOperationalOptions();
     } catch (error) {
       console.error('Errore salvataggio professionista admin:', error);
-      this.adminDashboardError = 'Impossibile salvare il professionista.';
+      if (!this.applyAdminFieldErrors(error, this.adminProfessionalFieldErrors)) {
+        this.adminDashboardError = 'Impossibile salvare il professionista.';
+      }
     }
   }
 
@@ -4229,6 +4285,7 @@ export class ReportEditor {
     this.adminUserProfessionalSearch =
       user.professional_display_name || user.display_name;
     this.adminUserProfessionalError = '';
+    this.adminUserFieldErrors = {};
     this.showAdminUserModal = true;
   }
 
@@ -4239,17 +4296,17 @@ export class ReportEditor {
       first_name: professional.first_name || '',
       last_name: professional.last_name || '',
       display_name: professional.display_name,
-      title: professional.title || '',
       email: professional.email || '',
-      phone: professional.phone || '',
       specializzazione: professional.specializzazione || '',
       role_label: professional.role_label || '',
-      professional_type: professional.professional_type,
       visible_in_standard: professional.visible_in_standard,
       is_refertatore: professional.is_refertatore,
       active: professional.active,
       sort_order: professional.sort_order,
     };
+    this.professionalSpecializationSearch =
+      professional.specializzazione || '';
+    this.adminProfessionalFieldErrors = {};
     this.showAdminProfessionalModal = true;
   }
 
@@ -4290,6 +4347,8 @@ export class ReportEditor {
     };
     this.adminUserProfessionalSearch = '';
     this.adminUserProfessionalError = '';
+    this.adminUserFieldErrors = {};
+    this.showAdminUserProfessionalSuggestions = false;
   }
 
   resetAdminProfessionalForm(): void {
@@ -4298,17 +4357,17 @@ export class ReportEditor {
       first_name: '',
       last_name: '',
       display_name: '',
-      title: '',
       email: '',
-      phone: '',
       specializzazione: '',
       role_label: '',
-      professional_type: 'medico',
       visible_in_standard: true,
       is_refertatore: false,
       active: true,
       sort_order: 0,
     };
+    this.professionalSpecializationSearch = '';
+    this.showProfessionalSpecializationSuggestions = false;
+    this.adminProfessionalFieldErrors = {};
   }
 
   openNewProfessionalModal(): void {
@@ -4318,6 +4377,7 @@ export class ReportEditor {
 
   closeProfessionalModal(): void {
     this.showAdminProfessionalModal = false;
+    this.adminProfessionalFieldErrors = {};
   }
 
   openNewRefertatoreModal(): void {
@@ -4328,6 +4388,7 @@ export class ReportEditor {
 
   closeRefertatoreModal(): void {
     this.showAdminUserModal = false;
+    this.adminUserFieldErrors = {};
   }
 
   selectProfessionalForRefertatore(professional: ProfessionalItem): void {
@@ -4338,6 +4399,9 @@ export class ReportEditor {
     this.adminUserForm.email = professional.email || '';
     this.adminUserProfessionalSearch = professional.display_name;
     this.adminUserProfessionalError = '';
+    this.adminUserFieldErrors['professional_id'] = '';
+    this.adminUserFieldErrors['email'] = '';
+    this.showAdminUserProfessionalSuggestions = false;
 
     this.adminUserForm.assignedTypes = this.adminUserForm.assignedTypes.filter(
       (tipo) =>
@@ -4346,49 +4410,131 @@ export class ReportEditor {
     );
   }
 
-  async deleteProfessional(professional: ProfessionalItem): Promise<void> {
-    const confirmed = window.confirm(
-      "Vuoi eliminare questo professionista? L'azione non puo essere annullata.",
+  requestDeleteProfessional(professional: ProfessionalItem): void {
+    this.openDeleteResourceModal(
+      'professional',
+      professional.id,
+      professional.display_name,
     );
-    if (!confirmed) {
+  }
+
+  requestDeleteRefertatore(user: AdminUserItem): void {
+    this.openDeleteResourceModal('refertatore', user.id, user.display_name);
+  }
+
+  openDeleteResourceModal(
+    kind: 'professional' | 'refertatore',
+    id: string,
+    name: string,
+  ): void {
+    this.deleteResourceTarget = { kind, id, name };
+    this.deleteResourceError = '';
+    this.deleteResourceLoading = false;
+    this.showDeleteResourceModal = true;
+  }
+
+  closeDeleteResourceModal(): void {
+    if (this.deleteResourceLoading) {
       return;
     }
 
+    this.showDeleteResourceModal = false;
+    this.deleteResourceError = '';
+    this.deleteResourceTarget = null;
+  }
+
+  async confirmDeleteResource(): Promise<void> {
+    if (!this.deleteResourceTarget) {
+      return;
+    }
+
+    this.deleteResourceLoading = true;
+    this.deleteResourceError = '';
+
     try {
       await firstValueFrom(this.api.getCsrf());
-      await firstValueFrom(this.api.deleteAdminProfessional(professional.id));
-      this.setDraftMessage('Professionista eliminato (disattivato).', 'success');
-      this.adminProfessionals = this.adminProfessionals.filter((item) => item.id !== professional.id);
-      this.professionalsPage = Math.min(this.professionalsPage, this.professionalsTotalPages);
-      await this.loadOperationalOptions();
-    } catch (error) {
-      console.error('Errore eliminazione professionista:', error);
-      this.adminDashboardError = 'Impossibile eliminare il professionista.';
+
+      if (this.deleteResourceTarget.kind === 'professional') {
+        await firstValueFrom(
+          this.api.deleteAdminProfessional(this.deleteResourceTarget.id),
+        );
+        this.adminProfessionals = this.adminProfessionals.filter(
+          (item) => item.id !== this.deleteResourceTarget?.id,
+        );
+        this.professionalsPage = Math.min(
+          this.professionalsPage,
+          this.professionalsTotalPages,
+        );
+        await this.loadOperationalOptions();
+        this.setDraftMessage('Professionista eliminato (disattivato).', 'success');
+      } else {
+        await firstValueFrom(this.api.deleteAdminUser(this.deleteResourceTarget.id));
+        this.adminUsers = this.adminUsers.filter(
+          (item) => item.id !== this.deleteResourceTarget?.id,
+        );
+        this.refertatoriPage = Math.min(
+          this.refertatoriPage,
+          this.refertatoriTotalPages,
+        );
+        this.setDraftMessage(
+          'Refertatore disattivato. I referti storici restano conservati.',
+          'success',
+        );
+      }
+
+      this.closeDeleteResourceModal();
+    } catch (error: any) {
+      console.error('Errore eliminazione risorsa admin:', error);
+      this.deleteResourceError =
+        error?.error?.message ||
+        error?.error?.error ||
+        'Impossibile eliminare la risorsa selezionata.';
+    } finally {
+      this.deleteResourceLoading = false;
     }
   }
 
-  async deleteRefertatore(user: AdminUserItem): Promise<void> {
-    const confirmed = window.confirm(
-      'Vuoi eliminare questo refertatore? Se ha referti collegati verra disattivato.',
-    );
-    if (!confirmed) {
-      return;
+  onProfessionalSpecializationSearchFocus(): void {
+    this.showProfessionalSpecializationSuggestions = true;
+  }
+
+  onProfessionalSpecializationSearchBlur(): void {
+    window.setTimeout(() => {
+      this.showProfessionalSpecializationSuggestions = false;
+    }, 120);
+  }
+
+  onAdminUserProfessionalFocus(): void {
+    this.showAdminUserProfessionalSuggestions = true;
+  }
+
+  onAdminUserProfessionalBlur(): void {
+    window.setTimeout(() => {
+      this.showAdminUserProfessionalSuggestions = false;
+    }, 120);
+  }
+
+  selectProfessionalSpecialization(value: string): void {
+    this.professionalSpecializationSearch = value;
+    this.adminProfessionalForm.specializzazione = value;
+    this.adminProfessionalFieldErrors['specializzazione'] = '';
+    this.showProfessionalSpecializationSuggestions = false;
+  }
+
+  private applyAdminFieldErrors(
+    error: any,
+    target: Record<string, string>,
+  ): boolean {
+    const fieldErrors = error?.error?.fieldErrors;
+    if (!fieldErrors || typeof fieldErrors !== 'object') {
+      return false;
     }
 
-    try {
-      await firstValueFrom(this.api.getCsrf());
-      await firstValueFrom(this.api.deleteAdminUser(user.id));
-      this.setDraftMessage(
-        'Refertatore disattivato. Se ha referti collegati non viene rimosso definitivamente.',
-        'success',
-      );
-      this.adminUsers = this.adminUsers.filter((item) => item.id !== user.id);
-      this.refertatoriPage = Math.min(this.refertatoriPage, this.refertatoriTotalPages);
-    } catch (error) {
-      console.error('Errore eliminazione refertatore:', error);
-      this.adminDashboardError =
-        'Questo refertatore ha referti collegati. Puoi disattivarlo ma non eliminarlo definitivamente.';
-    }
+    Object.keys(target).forEach((key) => delete target[key]);
+    Object.entries(fieldErrors).forEach(([key, value]) => {
+      target[key] = String(value || '');
+    });
+    return true;
   }
 
   onProfessionalSearchChange(): void {
@@ -4426,7 +4572,6 @@ export class ReportEditor {
       cognome: item.last_name || '',
       specialita: item.specializzazione || '',
       ruolo: item.role_label || '',
-      tipo: item.professional_type,
       displayName: item.display_name,
       email: item.email,
       isRefertatore: item.is_refertatore,
@@ -4449,13 +4594,21 @@ export class ReportEditor {
       cognome: rest.join(' '),
       specialita: item.specializzazione || '',
       ruolo: 'Refertatore',
-      tipo: 'medico',
       displayName: item.display_name,
       email: item.email,
       assignedTypes: item.assignedTypes,
       isRefertatore: true,
       active: true,
     };
+  }
+
+  private isTechnicianSpecialization(
+    specializzazione?: string | null,
+  ): boolean {
+    return (
+      normalizeSpecialization(specializzazione) ===
+      'Tecnico di Neurofisiopatologia'
+    );
   }
 
   private findDoctorEmailById(id: string): string | null {
@@ -4472,8 +4625,8 @@ export class ReportEditor {
   }
 
   private setEmgRefertatoreMode(enabled: boolean): void {
-    this.emgRefertatoreMode = enabled;
     this.reviewerMode = enabled;
+    this.emgRefertatoreMode = enabled && this.reportType === 'emg';
 
     this.form.enable({ emitEvent: false });
     this.sections.enable({ emitEvent: false });
@@ -4780,6 +4933,15 @@ export class ReportEditor {
     return draft.stato !== 'completato' && draft.stato !== 'firmato_caricato';
   }
 
+  private hasUnsavedWizardChanges(): boolean {
+    return (
+      !this.completedReadonlyMode &&
+      (this.form.dirty ||
+        this.sections.dirty ||
+        !!this.currentSignedPdfAsset)
+    );
+  }
+
   private buildDeleteDraftConfirmationMessage(draft: ReportDraftSummary): string {
     const hasKnownServerAttachments =
       draft.tipo_referto === 'emg' &&
@@ -4817,7 +4979,7 @@ export class ReportEditor {
       this.api.getDraftAttachmentBlob(
         attachment.draft_id,
         attachment.id,
-        this.emgRefertatoreMode ? this.refertatoreToken : undefined,
+        this.reviewerMode ? this.refertatoreToken : undefined,
       ),
     );
     this.openBlobInNewTab(blob, attachment.original_name || attachment.file_name);
@@ -4830,7 +4992,7 @@ export class ReportEditor {
       this.api.getDraftAttachmentBlob(
         attachment.draft_id,
         attachment.id,
-        this.emgRefertatoreMode ? this.refertatoreToken : undefined,
+        this.reviewerMode ? this.refertatoreToken : undefined,
       ),
     );
     this.downloadBlob(blob, attachment.original_name || attachment.file_name);
@@ -4945,4 +5107,5 @@ export class ReportEditor {
       : EMG_DEFAULTS.specializzazione;
   }
 }
+
 

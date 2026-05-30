@@ -171,19 +171,21 @@
           [doctorSearch]="technicalSearch"
           [doctorResults]="technicalResults"
           [selectedDoctorInvalid]="selectedTechnicianInvalid"
-          label="Cerca tecnico TNFP *"
+          label="Cerca Tecnico di Neurofisiopatologia *"
           placeholder="Digita nome, cognome o ruolo"
-          invalidMessage="Seleziona un tecnico TNFP dalla lista"
+          invalidMessage="Seleziona un Tecnico di Neurofisiopatologia dalla lista"
           (selectDoctor)="selectTechnicianEvent.emit($event)"
         >
         </doctor-autocomplete>
         @if (technicianAvailableCount === 0) {
           <p class="fieldHint" style="margin: -4px 0 0;">
-            Nessun TNFP attivo configurato. Aggiungi o modifica un professionista di tipo TNFP dall'Area Admin.
+            Nessun Tecnico di Neurofisiopatologia attivo configurato. Aggiungi o modifica un professionista dall'Area Admin con specializzazione Tecnico di Neurofisiopatologia.
           </p>
         }
       } @else {
-        <p class="fieldHint">Compilato dal TNFP.</p>
+        <p class="fieldHint">
+          {{ isEmg ? 'Compilato dal TNFP.' : 'Campo disponibile in sola lettura nell’area refertatore.' }}
+        </p>
       }
 
       <div class="grid2" style="margin-top: 16px">
@@ -256,7 +258,9 @@
     >
     </doctor-autocomplete>
   } @else {
-    <p class="fieldHint">Compilato dal TNFP.</p>
+    <p class="fieldHint">
+      {{ isEmg ? 'Compilato dal TNFP.' : 'Campo disponibile in sola lettura nell’area refertatore.' }}
+    </p>
   }
 
   <div class="grid2" style="margin-top: 16px">

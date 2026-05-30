@@ -1,4 +1,4 @@
-﻿<div class="page">
+<div class="page">
   @if (uiState === 'initialTypeSelection') {
     <main class="entryMain entryMainCentered">
       <section class="entryCard">
@@ -223,6 +223,12 @@
           <div class="draftAlert error">{{ adminDashboardError }}</div>
         }
 
+        @if (draftMessage) {
+          <div class="draftAlert" [class.error]="draftMessageType === 'error'" [class.success]="draftMessageType === 'success'" [class.warning]="draftMessageType === 'warning'">
+            {{ draftMessage }}
+          </div>
+        }
+
         <div class="dashboardTabs">
           <button type="button" class="ghostLinkBtn" [class.isActive]="adminTab === 'professionals'" (click)="adminTab = 'professionals'">
             Professionisti
@@ -272,7 +278,6 @@
                 <div class="draftTable draftTableHead draftTableAdminProfessionals">
                   <div>Professionista</div>
                   <div>Specializzazione</div>
-                  <div>Tipo</div>
                   <div>Stato</div>
                   <div>Azioni</div>
                 </div>
@@ -280,16 +285,15 @@
                   <div class="draftTable draftTableRow draftTableAdminProfessionals">
                     <div>
                       <strong>{{ professional.display_name }}</strong>
-                      <small>{{ professional.role_label || '—' }}</small>
+                      <small>{{ professional.role_label || '-' }}</small>
                     </div>
-                    <div>{{ professional.specializzazione || '—' }}</div>
-                    <div>{{ professionalTypeLabel(professional.professional_type) }}</div>
+                    <div>{{ professional.specializzazione || '-' }}</div>
                     <div><span class="draftRowStatus">{{ professional.active ? 'Attivo' : 'Disattivato' }}</span></div>
                     <div class="draftRowActions adminRowActions">
                       <button type="button" class="btn tiny ghost" (click)="editAdminProfessional(professional)">
                         Modifica
                       </button>
-                      <button type="button" class="btn tiny ghost danger" (click)="deleteProfessional(professional)">
+                      <button type="button" class="btn tiny ghost danger" (click)="requestDeleteProfessional(professional)">
                         Elimina
                       </button>
                       <button
@@ -348,13 +352,13 @@
                       <small>{{ user.email }}</small>
                     </div>
                     <div>{{ user.role }}</div>
-                    <div>{{ user.assignedTypes.length ? user.assignedTypes.join(', ').toUpperCase() : '—' }}</div>
+                    <div>{{ user.assignedTypes.length ? user.assignedTypes.join(', ').toUpperCase() : '-' }}</div>
                     <div><span class="draftRowStatus">{{ user.active ? 'Attivo' : 'Disattivato' }}</span></div>
                     <div class="draftRowActions adminRowActions">
                       <button type="button" class="btn tiny ghost" (click)="editAdminUser(user)">
                         Modifica
                       </button>
-                      <button type="button" class="btn tiny ghost danger" (click)="deleteRefertatore(user)">
+                      <button type="button" class="btn tiny ghost danger" (click)="requestDeleteRefertatore(user)">
                         Elimina
                       </button>
                       <button
@@ -403,10 +407,10 @@
                   <div class="draftTable draftTableRow draftTableAdminDrafts">
                     <div>
                       <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                      <small>{{ draft.data_nascita || 'â€”' }}</small>
+                      <small>{{ draft.data_nascita || '-' }}</small>
                     </div>
                     <div>{{ reportTypeLabelFor(draft.tipo_referto) }}</div>
-                    <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || 'â€”' }}</div>
+                    <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '-' }}</div>
                     <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
                     <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
                     <div class="draftRowActions">
@@ -444,8 +448,8 @@
                   <div class="draftTable draftTableRow draftTableAudit">
                     <div>{{ log.created_at | date: 'dd/MM/yyyy HH:mm' }}</div>
                     <div>{{ log.action }}</div>
-                    <div>{{ log.role || 'â€”' }}</div>
-                    <div>{{ log.entity_type || 'â€”' }}</div>
+                    <div>{{ log.role || '-' }}</div>
+                    <div>{{ log.entity_type || '-' }}</div>
                   </div>
                 }
               </div>
@@ -478,6 +482,12 @@
           <div class="draftAlert error">{{ refertatoreDraftsError }}</div>
         }
 
+        @if (draftMessage) {
+          <div class="draftAlert" [class.error]="draftMessageType === 'error'" [class.success]="draftMessageType === 'success'" [class.warning]="draftMessageType === 'warning'">
+            {{ draftMessage }}
+          </div>
+        }
+
         @if (refertatoreDraftsLoading) {
           <div class="emptyStateCard">Sto caricando i referti assegnati...</div>
         } @else {
@@ -500,10 +510,10 @@
                     <div class="draftTable draftTableRow refertatoreTable">
                       <div>
                         <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                        <small>{{ draft.data_nascita || 'â€”' }}</small>
+                        <small>{{ draft.data_nascita || '-' }}</small>
                       </div>
-                      <div>{{ draft.data_esame || 'â€”' }}</div>
-                      <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || 'â€”' }}</div>
+                      <div>{{ draft.data_esame || '-' }}</div>
+                      <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '-' }}</div>
                       <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
                       <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
                       <div class="draftRowActions">
@@ -534,9 +544,9 @@
                     <div class="draftTable draftTableRow refertatoreTable">
                       <div>
                         <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                        <small>{{ draft.data_nascita || 'â€”' }}</small>
+                        <small>{{ draft.data_nascita || '-' }}</small>
                       </div>
-                      <div>{{ draft.data_esame || 'â€”' }}</div>
+                      <div>{{ draft.data_esame || '-' }}</div>
                       <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
                       <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
                       <div class="draftRowActions">
@@ -575,10 +585,10 @@
                     <div class="draftTable draftTableRow refertatoreTable">
                       <div>
                         <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                        <small>{{ draft.data_nascita || 'â€”' }}</small>
+                        <small>{{ draft.data_nascita || '-' }}</small>
                       </div>
-                      <div>{{ draft.data_esame || 'â€”' }}</div>
-                      <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || 'â€”' }}</div>
+                      <div>{{ draft.data_esame || '-' }}</div>
+                      <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '-' }}</div>
                       <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
                       <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
                       <div class="draftRowActions">
@@ -609,9 +619,9 @@
                     <div class="draftTable draftTableRow refertatoreTable">
                       <div>
                         <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                        <small>{{ draft.data_nascita || 'â€”' }}</small>
+                        <small>{{ draft.data_nascita || '-' }}</small>
                       </div>
-                      <div>{{ draft.data_esame || 'â€”' }}</div>
+                      <div>{{ draft.data_esame || '-' }}</div>
                       <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
                       <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
                       <div class="draftRowActions">
@@ -640,9 +650,9 @@
       [pct]="pct()"
       [showResumeButton]="false"
       [showFlowButton]="true"
-      flowButtonLabel="Cambia flusso"
+      [flowButtonLabel]="wizardFlowButtonLabel"
       (goTo)="goTo($event)"
-      (changeFlow)="goToTypeActionSelection()"
+      (changeFlow)="handleWizardFlowAction()"
     >
     </wizard-header>
 
@@ -784,7 +794,8 @@
               [mode]="control('modalitaReferto').value"
               [reportType]="reportType"
               [emgRefertatoreMode]="emgRefertatoreMode"
-              [readonlyMode]="isReadonlyWizardMode"
+              [readonlyMode]="completedReadonlyMode"
+              [reviewerMode]="reviewerMode"
               [signedPdfAsset]="currentSignedPdfAsset"
               [signedPdfSaving]="signedPdfSaving"
               (signedPdfSelected)="onSignedPdfSelected($event)"
@@ -803,6 +814,12 @@
 
               <button type="button" class="btn danger ghost" (click)="openResetModal()">
                 Cancella tutto
+              </button>
+            }
+
+            @if (showReviewerSaveAction) {
+              <button type="button" class="btn ghost" (click)="saveDraft()" [disabled]="draftSaving">
+                {{ draftSaving ? 'Salvataggio...' : 'Salva lavoro' }}
               </button>
             }
 
@@ -935,59 +952,52 @@
             <div class="field">
               <label>Nome</label>
               <input type="text" [(ngModel)]="adminProfessionalForm.first_name" />
+              <div class="fieldErrorSlot">{{ adminProfessionalFieldErrors['first_name'] || '' }}</div>
             </div>
             <div class="field">
               <label>Cognome</label>
               <input type="text" [(ngModel)]="adminProfessionalForm.last_name" />
+              <div class="fieldErrorSlot">{{ adminProfessionalFieldErrors['last_name'] || '' }}</div>
             </div>
             <div class="field full">
               <label>Nome visualizzato *</label>
               <input type="text" [(ngModel)]="adminProfessionalForm.display_name" />
-            </div>
-            <div class="field">
-              <label>Titolo</label>
-              <input type="text" [(ngModel)]="adminProfessionalForm.title" />
+              <div class="fieldErrorSlot">{{ adminProfessionalFieldErrors['display_name'] || '' }}</div>
             </div>
             <div class="field">
               <label>Email</label>
               <input type="email" [(ngModel)]="adminProfessionalForm.email" />
+              <div class="fieldErrorSlot">{{ adminProfessionalFieldErrors['email'] || '' }}</div>
             </div>
             <div class="field">
-              <label>Telefono</label>
-              <input type="text" [(ngModel)]="adminProfessionalForm.phone" />
-            </div>
-            <div class="field">
-              <label>Specializzazione</label>
+              <label>Specializzazione *</label>
               <input
                 type="text"
-                list="professional-specializations"
-                [(ngModel)]="adminProfessionalForm.specializzazione"
+                [(ngModel)]="professionalSpecializationSearch"
+                (focus)="onProfessionalSpecializationSearchFocus()"
+                (blur)="onProfessionalSpecializationSearchBlur()"
                 placeholder="Cerca e seleziona una specializzazione"
+                autocomplete="off"
               />
+              @if (showProfessionalSpecializationSuggestions && filteredProfessionalSpecializations.length) {
+                <ul class="autocomplete adminAutocomplete">
+                  @for (item of filteredProfessionalSpecializations; track item) {
+                    <li (mousedown)="$event.preventDefault()" (click)="selectProfessionalSpecialization(item)">
+                      <div class="line1"><strong>{{ item }}</strong></div>
+                    </li>
+                  }
+                </ul>
+              }
+              <div class="fieldErrorSlot">{{ adminProfessionalFieldErrors['specializzazione'] || '' }}</div>
             </div>
             <div class="field">
               <label>Ruolo / label</label>
               <input type="text" [(ngModel)]="adminProfessionalForm.role_label" />
+              <div class="fieldErrorSlot">{{ adminProfessionalFieldErrors['role_label'] || '' }}</div>
             </div>
-            <div class="field">
-              <label>Tipo</label>
-              <select [(ngModel)]="adminProfessionalForm.professional_type">
-                <option value="medico">Medico</option>
-                <option value="dietista">Dietista</option>
-                <option value="ostetrica">Ostetrica</option>
-                <option value="psicoterapeuta">Psicoterapeuta</option>
-                <option value="tnfp">TNFP</option>
-                <option value="altro">Altro</option>
-                @if (isLegacyProfessionalTypeSelected) {
-                  <option [value]="adminProfessionalForm.professional_type">
-                    {{ professionalTypeLabel(adminProfessionalForm.professional_type) }}
-                  </option>
-                }
-              </select>
-            </div>
-            @if (adminProfessionalForm.professional_type === 'tnfp') {
-              <p class="fieldHint" style="margin: 0;">
-                Il tipo TNFP rende il professionista selezionabile come tecnico esecutore nei referti EMG.
+            @if (professionalSpecializationSearch === 'Tecnico di Neurofisiopatologia') {
+              <p class="fieldHint fieldHintFull" style="margin: 0;">
+                Questa specializzazione rende il professionista selezionabile come tecnico esecutore nei referti EMG.
               </p>
             }
             <label class="checkline full">
@@ -999,11 +1009,6 @@
               <span>Disponibile anche come professionista refertatore</span>
             </label>
           </div>
-          <datalist id="professional-specializations">
-            @for (item of specializations; track item) {
-              <option [value]="item"></option>
-            }
-          </datalist>
         </div>
         <div class="modalFooter">
           <button type="button" class="btn ghost" (click)="closeProfessionalModal()">Annulla</button>
@@ -1030,21 +1035,24 @@
             <div class="field full">
               <label>Professionista *</label>
               @if (!adminUserForm.id) {
-                <div class="field" style="gap: 8px;">
+                <div class="field adminAutocompleteField">
                   <input
                     type="text"
                     [(ngModel)]="adminUserProfessionalSearch"
+                    (focus)="onAdminUserProfessionalFocus()"
+                    (blur)="onAdminUserProfessionalBlur()"
                     placeholder="Cerca un professionista compatibile"
+                    autocomplete="off"
                   />
-                  @if (filteredRefertatoreProfessionals.length) {
-                    <ul style="position: static; max-height: 240px; overflow: auto; list-style: none; margin: 0; padding: 0; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff;">
+                  @if (showAdminUserProfessionalSuggestions && filteredRefertatoreProfessionals.length) {
+                    <ul class="autocomplete adminAutocomplete">
                       @for (professional of filteredRefertatoreProfessionals; track professional.id) {
-                        <li style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9;" (click)="selectProfessionalForRefertatore(professional)">
+                        <li (mousedown)="$event.preventDefault()" (click)="selectProfessionalForRefertatore(professional)">
                           <div>
                             <strong>{{ professional.display_name }}</strong>
                           </div>
                           <div>
-                            <small>{{ professional.specializzazione || '—' }}</small>
+                            <small>{{ professional.specializzazione || '-' }}</small>
                           </div>
                         </li>
                       }
@@ -1058,22 +1066,27 @@
                   readonly
                 />
               }
+              <div class="fieldErrorSlot">{{ adminUserFieldErrors['professional_id'] || '' }}</div>
             </div>
             <div class="field full">
               <label>Email {{ adminUserEmailRequired ? '*' : '' }}</label>
               <input type="email" [(ngModel)]="adminUserForm.email" />
+              <div class="fieldErrorSlot">{{ adminUserFieldErrors['email'] || '' }}</div>
             </div>
             <div class="field full">
               <label>Nome visualizzato</label>
               <input type="text" [(ngModel)]="adminUserForm.display_name" readonly />
+              <div class="fieldErrorSlot">{{ adminUserFieldErrors['display_name'] || '' }}</div>
             </div>
             <div class="field">
               <label>Specializzazione</label>
               <input type="text" [(ngModel)]="adminUserForm.specializzazione" readonly />
+              <div class="fieldErrorSlot">{{ adminUserFieldErrors['specializzazione'] || '' }}</div>
             </div>
             <div class="field">
               <label>Password {{ adminUserForm.id ? '(lascia vuoto per non cambiarla)' : '*' }}</label>
               <input type="password" [(ngModel)]="adminUserForm.password" />
+              <div class="fieldErrorSlot">{{ adminUserFieldErrors['password'] || '' }}</div>
             </div>
             <div class="field full">
               <label>Assegnazioni</label>
@@ -1097,6 +1110,7 @@
                   <span>PSG</span>
                 </label>
               </div>
+              <div class="fieldErrorSlot">{{ adminUserFieldErrors['assignedTypes'] || '' }}</div>
             </div>
             @if (adminUserProfessionalError) {
               <div class="draftAlert error">{{ adminUserProfessionalError }}</div>
@@ -1108,6 +1122,38 @@
           <button type="button" class="btn primary" (click)="saveAdminUser()">
             {{ adminUserForm.id ? 'Salva modifiche' : 'Salva refertatore' }}
           </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showDeleteResourceModal && deleteResourceTarget) {
+    <div class="modalBackdrop">
+      <div class="modalSheet modalSheetNarrow">
+        <div class="modalHead">
+          <div>
+            <div class="modalEyebrow">Area Admin</div>
+            <h3>Elimina risorsa</h3>
+            <p>
+              Sei sicuro di voler eliminare/disattivare
+              <strong>{{ deleteResourceTarget.name }}</strong>?
+            </p>
+            <p>
+              L'azione non puo essere annullata dalla dashboard. Eventuali referti storici collegati resteranno conservati.
+            </p>
+          </div>
+          <button type="button" class="iconCloseBtn" (click)="closeDeleteResourceModal()">Chiudi</button>
+        </div>
+        <div class="modalFooter modalFooterBetween">
+          <div class="fieldErrorSlot modalInlineError">{{ deleteResourceError }}</div>
+          <div class="modalFooterActions">
+            <button type="button" class="btn ghost" (click)="closeDeleteResourceModal()" [disabled]="deleteResourceLoading">
+              Annulla
+            </button>
+            <button type="button" class="btn danger" (click)="confirmDeleteResource()" [disabled]="deleteResourceLoading">
+              {{ deleteResourceLoading ? 'Eliminazione...' : 'Elimina' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1131,8 +1177,8 @@
         <div class="modalBody">
           <div class="sendPatientSummary">
             <div><strong>Paziente</strong><span>{{ sendToPatientDraft?.paziente_nome_completo || 'Paziente senza nome' }}</span></div>
-            <div><strong>Tipo referto</strong><span>{{ sendToPatientDraft ? reportTypeLabelFor(sendToPatientDraft.tipo_referto) : 'â€”' }}</span></div>
-            <div><strong>Refertatore</strong><span>{{ sendToPatientDraft?.assigned_refertatore_name || sendToPatientDraft?.medico_refertatore || 'â€”' }}</span></div>
+            <div><strong>Tipo referto</strong><span>{{ sendToPatientDraft ? reportTypeLabelFor(sendToPatientDraft.tipo_referto) : '-' }}</span></div>
+            <div><strong>Refertatore</strong><span>{{ sendToPatientDraft?.assigned_refertatore_name || sendToPatientDraft?.medico_refertatore || '-' }}</span></div>
           </div>
 
           <div class="dashboardFormGrid">
@@ -1330,7 +1376,7 @@
                     }
                   </div>
                   <div><span class="draftRowStatus">{{ draft.stato }}</span></div>
-                  <div>{{ draft.data_nascita || 'â€”' }}</div>
+                  <div>{{ draft.data_nascita || '-' }}</div>
                   <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
                   <div class="draftRowActions">
                     <button
@@ -1359,5 +1405,8 @@
     </div>
   }
 </div>
+
+
+
 
 

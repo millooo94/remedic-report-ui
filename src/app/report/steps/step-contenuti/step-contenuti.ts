@@ -22,6 +22,7 @@ export class StepContenuti {
   @Input({ required: true }) reportType!: ReportType;
   @Input() emgRefertatoreMode = false;
   @Input() readonlyMode = false;
+  @Input() reviewerMode = false;
   @Input() signedPdfAsset: EmgUploadedAsset | null = null;
   @Input() signedPdfSaving = false;
   @Output() signedPdfSelected = new EventEmitter<EmgUploadedAsset | null>();
@@ -62,8 +63,12 @@ export class StepContenuti {
     return this.readonlyMode || this.emgRefertatoreMode;
   }
 
+  get psgReadonlyMode(): boolean {
+    return this.readonlyMode || this.reviewerMode;
+  }
+
   get showSignedPdfSection(): boolean {
-    return !this.readonlyMode && this.emgRefertatoreMode;
+    return this.reviewerMode && !this.readonlyMode;
   }
 
   get emgTraceFiles(): EmgUploadedAsset[] {
@@ -94,6 +99,14 @@ export class StepContenuti {
 
   openFilePicker(input: HTMLInputElement): void {
     if (this.contentReadonlyMode) {
+      return;
+    }
+
+    input.click();
+  }
+
+  openSignedPdfPicker(input: HTMLInputElement): void {
+    if (this.readonlyMode) {
       return;
     }
 
@@ -164,7 +177,7 @@ export class StepContenuti {
   }
 
   async onPsgReportSelected(event: Event): Promise<void> {
-    if (this.readonlyMode) {
+    if (this.psgReadonlyMode) {
       return;
     }
 
@@ -221,7 +234,7 @@ export class StepContenuti {
   }
 
   removePsgReport(): void {
-    if (this.readonlyMode) {
+    if (this.psgReadonlyMode) {
       return;
     }
 
@@ -233,6 +246,10 @@ export class StepContenuti {
   }
 
   async onSignedPdfSelected(event: Event): Promise<void> {
+    if (this.readonlyMode) {
+      return;
+    }
+
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     this.signedPdfUploadError = '';

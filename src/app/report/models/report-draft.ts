@@ -193,21 +193,9 @@ export interface ProfessionalItem {
   first_name: string | null;
   last_name: string | null;
   display_name: string;
-  title: string | null;
   email: string | null;
-  phone: string | null;
   specializzazione: string | null;
   role_label: string | null;
-  professional_type:
-    | 'medico'
-    | 'dietista'
-    | 'ostetrica'
-    | 'psicoterapeuta'
-    | 'tnfp'
-    | 'altro'
-    | 'tecnico'
-    | 'professionista_sanitario'
-    | 'professionista sanitario';
   visible_in_standard: boolean;
   is_refertatore: boolean;
   active: boolean;

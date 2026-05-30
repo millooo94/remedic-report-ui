@@ -152,13 +152,11 @@ export class ReportApiService {
   }
 
   listProfessionals(filters?: {
-    professional_type?: string;
     visible_in_standard?: boolean;
     active?: boolean;
     q?: string;
   }): Observable<ProfessionalsResponse> {
     let params = new HttpParams();
-    if (filters?.professional_type) params = params.set('professional_type', filters.professional_type);
     if (filters?.visible_in_standard !== undefined) params = params.set('visible_in_standard', filters.visible_in_standard ? '1' : '0');
     if (filters?.active !== undefined) params = params.set('active', filters.active ? '1' : '0');
     if (filters?.q?.trim()) params = params.set('q', filters.q.trim());
