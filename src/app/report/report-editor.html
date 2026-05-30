@@ -16,7 +16,9 @@
         <div class="entryTypeGrid">
           <button type="button" class="entryTypeCard" (click)="selectReportType('standard')">
             <div class="entryTypeIcon">
-              <img src="doctor.svg" alt="Icona referto standard" class="entryTypeIconImg" />
+              <svg viewBox="0 0 24 24" aria-hidden="true" class="entryTypeIconSvg">
+                <path d="M12 2a4 4 0 0 1 4 4v1.1a5.5 5.5 0 0 1 2.38 2.27l1.84 3.18A2 2 0 0 1 18.49 15H17v4a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-4H5.51a2 2 0 0 1-1.73-3.05l1.84-3.18A5.5 5.5 0 0 1 8 7.1V6a4 4 0 0 1 4-4Zm0 2a2 2 0 0 0-2 2v.54c.64-.2 1.32-.31 2-.31s1.36.11 2 .31V6a2 2 0 0 0-2-2Zm-2.9 6.2A3.5 3.5 0 0 0 6.07 12L5 13.84h14L17.93 12a3.5 3.5 0 0 0-3.03-1.8H9.1ZM9 15v4h6v-4H9Z"/>
+              </svg>
             </div>
             <h3>Referto standard</h3>
             <p>Crea un referto medico generico con sezioni personalizzabili.</p>
@@ -24,7 +26,9 @@
 
           <button type="button" class="entryTypeCard" (click)="selectReportType('emg')">
             <div class="entryTypeIcon">
-              <img src="nerve.svg" alt="Icona EMG" class="entryTypeIconImg" />
+              <svg viewBox="0 0 24 24" aria-hidden="true" class="entryTypeIconSvg">
+                <path d="M10.25 3a3.25 3.25 0 0 1 3.2 2.69l.05.31h1a3.5 3.5 0 0 1 3.5 3.5c0 .94-.37 1.8-.97 2.43A3.49 3.49 0 0 1 17.5 18H16a3 3 0 0 1-3 3h-1a3 3 0 0 1-3-3H7.5a3.5 3.5 0 0 1-.53-6.96A3.48 3.48 0 0 1 6.5 9.5 3.5 3.5 0 0 1 10 6.01 3.24 3.24 0 0 1 10.25 3Zm0 2A1.25 1.25 0 0 0 9 6.25c0 .2.03.39.1.57l.39 1.04-1.1.08A1.5 1.5 0 0 0 7 9.5c0 .35.12.67.33.93l.7.84-1.06.24A1.5 1.5 0 0 0 7.5 16H11v2a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-2h1.5a1.5 1.5 0 0 0 .53-2.9l-1.06-.38.78-.8c.47-.49.75-1.16.75-1.92A1.5 1.5 0 0 0 14.5 8h-2.9l-.08-1.1A1.25 1.25 0 0 0 10.25 5Z"/>
+              </svg>
             </div>
             <h3>EMG / ENG</h3>
             <p>Refertazione elettrofisiologica con dati tecnici, anamnesi mirata e tracciati.</p>
@@ -32,7 +36,9 @@
 
           <button type="button" class="entryTypeCard" (click)="selectReportType('psg')">
             <div class="entryTypeIcon">
-              <img src="sleepy.svg" alt="Icona PSG" class="entryTypeIconImg" />
+              <svg viewBox="0 0 24 24" aria-hidden="true" class="entryTypeIconSvg">
+                <path d="M14.78 3.28a1 1 0 0 1 .94 1.64A7 7 0 1 0 19.08 15a1 1 0 0 1 1.64.94A9 9 0 1 1 14.78 3.28ZM8 10a1 1 0 0 1 1 1v.25h.25a1 1 0 1 1 0 2H9v.25a1 1 0 1 1-2 0v-.25h-.25a1 1 0 1 1 0-2H7V11a1 1 0 0 1 1-1Zm8-1a1 1 0 0 1 1 1v.25h.25a1 1 0 1 1 0 2H17v.25a1 1 0 1 1-2 0v-.25h-.25a1 1 0 1 1 0-2H15V10a1 1 0 0 1 1-1Z"/>
+              </svg>
             </div>
             <h3>PSG</h3>
             <p>Refertazione polisonnografica cardio-respiratoria con anamnesi del sonno, ESS e report strumentale.</p>
@@ -78,7 +84,7 @@
             </button>
           </div>
           <h1>Accedi all'area riservata</h1>
-          <p>Admin e refertatori accedono da qui. Il backend decide automaticamente ruolo e permessi disponibili.</p>
+          <p>Accedi alla tua area riservata per consultare e gestire i referti.</p>
         </header>
 
         <form class="loginForm" (ngSubmit)="submitRefertatoreLogin()">
@@ -89,18 +95,18 @@
 
           <div class="field">
             <label>Password</label>
-            <div style="display:flex;align-items:center;gap:8px;">
+            <div class="passwordFieldRow">
               <input
                 [type]="showReservedPassword ? 'text' : 'password'"
                 [(ngModel)]="refertatorePassword"
                 placeholder="Inserisci la password"
                 name="reservedPassword"
                 autocomplete="current-password"
-                style="flex:1;"
+                class="passwordFieldInput"
               />
               <button
                 type="button"
-                style="padding:0 8px;height:36px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;"
+                class="passwordToggleBtn"
                 (click)="showReservedPassword = !showReservedPassword"
                 [attr.aria-label]="showReservedPassword ? 'Nascondi password' : 'Mostra password'"
               >
@@ -108,6 +114,11 @@
               </button>
             </div>
           </div>
+
+          <label class="rememberCheck">
+            <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" />
+            <span>Ricordami</span>
+          </label>
 
           @if (refertatoreLoginError) {
             <div class="draftAlert error">{{ refertatoreLoginError }}</div>
@@ -206,13 +217,29 @@
           <div class="entryHeaderTop">
             <div class="entryEyebrow">Area riservata</div>
             <div class="dashboardTopActions">
-              <span class="dashboardUserBadge">{{ reservedUser?.displayName || 'Admin' }}</span>
-              <button type="button" class="ghostLinkBtn" (click)="openChangePasswordModal()">
-                Cambia password
-              </button>
-              <button type="button" class="ghostLinkBtn" (click)="logoutRefertatore()">
-                Logout
-              </button>
+              <div class="userMenuWrap">
+                <button type="button" class="userMenuTrigger" (click)="toggleReservedUserMenu()">
+                  <span class="userAvatarCircle">{{ reservedUserInitials }}</span>
+                </button>
+                @if (showReservedUserMenu) {
+                  <div class="userMenuPanel">
+                    <div class="userMenuHead">
+                      <span class="userAvatarCircle large">{{ reservedUserInitials }}</span>
+                      <div>
+                        <strong>{{ reservedUser?.displayName || 'Admin' }}</strong>
+                        <small>{{ reservedUser?.email || '-' }}</small>
+                      </div>
+                    </div>
+                    <div class="userMenuMeta">
+                      <div><span>Ruolo</span><strong>{{ reservedUserRoleLabel }}</strong></div>
+                    </div>
+                    <div class="userMenuActions">
+                      <button type="button" class="ghostLinkBtn" (click)="openChangePasswordFromMenu()">Cambia password</button>
+                      <button type="button" class="ghostLinkBtn" (click)="logoutRefertatore()">Logout</button>
+                    </div>
+                  </div>
+                }
+              </div>
             </div>
           </div>
           <h1>Dashboard admin</h1>
@@ -221,12 +248,6 @@
 
         @if (adminDashboardError) {
           <div class="draftAlert error">{{ adminDashboardError }}</div>
-        }
-
-        @if (draftMessage) {
-          <div class="draftAlert" [class.error]="draftMessageType === 'error'" [class.success]="draftMessageType === 'success'" [class.warning]="draftMessageType === 'warning'">
-            {{ draftMessage }}
-          </div>
         }
 
         <div class="dashboardTabs">
@@ -425,6 +446,11 @@
                           Invia al paziente
                         </button>
                       }
+                      @if (adminTab === 'archive') {
+                        <button type="button" class="btn tiny ghost danger" (click)="requestDeleteArchiveDraft(draft)">
+                          Elimina
+                        </button>
+                      }
                     </div>
                   </div>
                 }
@@ -453,6 +479,18 @@
                   </div>
                 }
               </div>
+              <div class="tablePagination">
+                <span>Totale: {{ auditTotal }}</span>
+                <div class="tablePaginationActions">
+                  <button type="button" class="btn tiny ghost" [disabled]="auditPage <= 1" (click)="prevAuditPage()">
+                    Precedente
+                  </button>
+                  <span>Pagina {{ auditPage }} / {{ auditTotalPages }}</span>
+                  <button type="button" class="btn tiny ghost" [disabled]="auditPage >= auditTotalPages" (click)="nextAuditPage()">
+                    Successiva
+                  </button>
+                </div>
+              </div>
             }
           </section>
         }
@@ -465,13 +503,35 @@
           <div class="entryHeaderTop">
             <div class="entryEyebrow">Area refertatore</div>
             <div class="dashboardTopActions">
-              <span class="dashboardUserBadge">{{ refertatoreDisplayName }}</span>
-              <button type="button" class="ghostLinkBtn" (click)="openChangePasswordModal()">
-                Cambia password
-              </button>
-              <button type="button" class="ghostLinkBtn" (click)="logoutRefertatore()">
-                Logout
-              </button>
+              <div class="userMenuWrap">
+                <button type="button" class="userMenuTrigger" (click)="toggleReservedUserMenu()">
+                  <span class="userAvatarCircle">{{ reservedUserInitials }}</span>
+                </button>
+                @if (showReservedUserMenu) {
+                  <div class="userMenuPanel">
+                    <div class="userMenuHead">
+                      <span class="userAvatarCircle large">{{ reservedUserInitials }}</span>
+                      <div>
+                        <strong>{{ refertatoreDisplayName }}</strong>
+                        <small>{{ reservedUser?.email || '-' }}</small>
+                      </div>
+                    </div>
+                    <div class="userMenuMeta">
+                      <div><span>Ruolo</span><strong>{{ reservedUserRoleLabel }}</strong></div>
+                      @if (reservedUser?.specializzazione) {
+                        <div><span>Specializzazione</span><strong>{{ reservedUser?.specializzazione }}</strong></div>
+                      }
+                      @if (reservedUserAssignedAreasLabel) {
+                        <div><span>Aree abilitate</span><strong>{{ reservedUserAssignedAreasLabel }}</strong></div>
+                      }
+                    </div>
+                    <div class="userMenuActions">
+                      <button type="button" class="ghostLinkBtn" (click)="openChangePasswordFromMenu()">Cambia password</button>
+                      <button type="button" class="ghostLinkBtn" (click)="logoutRefertatore()">Logout</button>
+                    </div>
+                  </div>
+                }
+              </div>
             </div>
           </div>
           <h1>Dashboard refertatore</h1>
@@ -480,12 +540,6 @@
 
         @if (refertatoreDraftsError) {
           <div class="draftAlert error">{{ refertatoreDraftsError }}</div>
-        }
-
-        @if (draftMessage) {
-          <div class="draftAlert" [class.error]="draftMessageType === 'error'" [class.success]="draftMessageType === 'success'" [class.warning]="draftMessageType === 'warning'">
-            {{ draftMessage }}
-          </div>
         }
 
         @if (refertatoreDraftsLoading) {
@@ -854,12 +908,6 @@
             </section>
           }
 
-          @if (draftMessage) {
-            <div class="draftAlert" [class.error]="draftMessageType === 'error'" [class.success]="draftMessageType === 'success'" [class.warning]="draftMessageType === 'warning'">
-              {{ draftMessage }}
-            </div>
-          }
-
           @if (attachmentsReloadNotice) {
             <div class="draftAlert warning">
               {{ attachmentsReloadNotice }}
@@ -991,6 +1039,20 @@
     </main>
   }
 
+  @if (draftMessage) {
+    <div class="toastViewport" aria-live="polite" aria-atomic="true">
+      <div class="toastCard" [class.error]="draftMessageType === 'error'" [class.success]="draftMessageType === 'success'" [class.warning]="draftMessageType === 'warning'">
+        <div class="toastContent">
+          <strong>{{ draftMessageType === 'error' ? 'Errore' : draftMessageType === 'warning' ? 'Attenzione' : 'Conferma' }}</strong>
+          <span>{{ draftMessage }}</span>
+        </div>
+        <button type="button" class="toastCloseBtn" (click)="dismissDraftMessage()" aria-label="Chiudi notifica">
+          Chiudi
+        </button>
+      </div>
+    </div>
+  }
+
   @if (showResetModal) {
     <reset-modal (cancel)="closeResetModal()" (confirm)="confirmReset()">
     </reset-modal>
@@ -1029,8 +1091,8 @@
                 class="srOnly"
                 (change)="onDashboardSignedPdfSelected($event)"
               />
-              <button type="button" class="uploadBtn" (click)="dashboardSignedPdfInput.click()">
-                Seleziona PDF firmato
+              <button type="button" class="btn ghost" (click)="dashboardSignedPdfInput.click()">
+                Carica PDF firmato
               </button>
             </div>
 
@@ -1330,12 +1392,21 @@
           <div>
             <div class="modalEyebrow">Area Admin</div>
             <h3>Elimina risorsa</h3>
+            @if (deleteResourceTarget.kind === 'archiveDraft') {
+              <p>Eliminare questo referto archiviato?</p>
+              <p><strong>{{ deleteResourceTarget.name }}</strong></p>
+            } @else {
+              <p>
+                Sei sicuro di voler eliminare/disattivare
+                <strong>{{ deleteResourceTarget.name }}</strong>?
+              </p>
+            }
             <p>
-              Sei sicuro di voler eliminare/disattivare
-              <strong>{{ deleteResourceTarget.name }}</strong>?
-            </p>
-            <p>
-              L'azione non puo essere annullata dalla dashboard. Eventuali referti storici collegati resteranno conservati.
+              {{
+                deleteResourceTarget.kind === 'archiveDraft'
+                  ? 'Il referto non sara piu visibile nell\'archivio admin. I file gia salvati resteranno gestiti secondo la logica server.'
+                  : 'L\'azione non puo essere annullata dalla dashboard. Eventuali referti storici collegati resteranno conservati.'
+              }}
             </p>
           </div>
           <button type="button" class="iconCloseBtn" (click)="closeDeleteResourceModal()">Chiudi</button>

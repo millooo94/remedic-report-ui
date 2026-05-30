@@ -143,6 +143,9 @@ export class ReportEditor {
   adminDrafts: ReportDraftSummary[] = [];
   adminArchiveDrafts: ReportDraftSummary[] = [];
   auditLogs: AuditLogItem[] = [];
+  auditPage = 1;
+  auditPageSize = 20;
+  auditTotal = 0;
   draftEmailDeliveries: DraftEmailDeliveryItem[] = [];
   adminDashboardLoading = false;
   adminDashboardError = '';
@@ -166,7 +169,7 @@ export class ReportEditor {
   deleteResourceLoading = false;
   deleteResourceError = '';
   deleteResourceTarget: {
-    kind: 'professional' | 'refertatore';
+    kind: 'professional' | 'refertatore' | 'archiveDraft';
     id: string;
     name: string;
   } | null = null;
@@ -247,6 +250,7 @@ export class ReportEditor {
   ];
   refertatoreEmail = '';
   refertatorePassword = '';
+  rememberMe = false;
   showReservedPassword = false;
   refertatoreLoginLoading = false;
   refertatoreLoginError = '';
@@ -279,6 +283,7 @@ export class ReportEditor {
   changePasswordLoading = false;
   changePasswordError = '';
   changePasswordMessage = '';
+  showReservedUserMenu = false;
   showCurrentPassword = false;
   showNewPassword = false;
   showConfirmPassword = false;
@@ -287,6 +292,7 @@ export class ReportEditor {
     newPassword: '',
     confirmPassword: '',
   };
+  private draftMessageTimeoutId: ReturnType<typeof window.setTimeout> | null = null;
   constructor(
     private fb: FormBuilder,
     private payloadBuilder: ReportPayloadBuilderService,
@@ -355,7 +361,7 @@ export class ReportEditor {
   @HostListener('document:keydown.enter', ['$event'])
   onEnterKey(event: Event): void {
     if (!(event instanceof KeyboardEvent)) return;
-    if (this.showResetModal) return;
+    if (this.uiState !== 'wizard' || this.showResetModal) return;
 
     const target = event.target as HTMLElement | null;
     if (!target) return;
@@ -374,6 +380,18 @@ export class ReportEditor {
 
     event.preventDefault();
     this.primaryAction();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event): void {
+    const target = event.target as HTMLElement | null;
+    if (!target) {
+      return;
+    }
+
+    if (!target.closest('.userMenuWrap')) {
+      this.showReservedUserMenu = false;
+    }
   }
 
   control(path: string): FormControl {
@@ -548,6 +566,36 @@ export class ReportEditor {
     return this.reservedUser?.displayName || this.refertatoreUser?.displayName || 'Refertatore';
   }
 
+  get reservedUserInitials(): string {
+    const source = this.reservedUser?.displayName || this.refertatoreDisplayName || 'RR';
+    const parts = source
+      .split(/\s+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (!parts.length) {
+      return 'RR';
+    }
+
+    if (parts.length === 1) {
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+
+    return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
+  }
+
+  get reservedUserRoleLabel(): string {
+    return this.reservedUser?.role === 'admin' ? 'Admin' : 'Refertatore';
+  }
+
+  get reservedUserAssignedAreasLabel(): string {
+    if (this.reservedUser?.role !== 'refertatore') {
+      return '';
+    }
+
+    return (this.reservedUser.assignedTypes || []).map((item) => item.toUpperCase()).join(', ');
+  }
+
   get showControlPreviewButton(): boolean {
     return (
       !this.completedReadonlyMode &&
@@ -645,6 +693,10 @@ export class ReportEditor {
 
   get refertatoriTotalPages(): number {
     return Math.max(1, Math.ceil(this.refertatoriTotal / this.refertatoriPageSize));
+  }
+
+  get auditTotalPages(): number {
+    return Math.max(1, Math.ceil(this.auditTotal / this.auditPageSize));
   }
 
   get technicianAvailableCount(): number {
@@ -760,10 +812,10 @@ export class ReportEditor {
         return "Configura i dati dell'esame, il medico refertatore e il tecnico esecutore.";
       case 2:
         return "Raccogli il quesito clinico. La checklist anamnestica EMG e disponibile nella card dedicata in Anagrafica.";
-      case 3:
-        return this.emgRefertatoreMode
-          ? "Completa Reperti e Conclusioni e conferma la refertazione. L'export PDF da firmare e il caricamento del firmato avvengono dalla dashboard refertatore."
-          : "Completa il contenuto tecnico EMG e invia l'acquisizione al refertatore. La copia di controllo resta temporanea e non viene salvata su Drive.";
+        case 3:
+          return this.emgRefertatoreMode
+            ? "Completa Reperti e Conclusioni e conferma la refertazione. L'export PDF da firmare e il caricamento del firmato avvengono dalla dashboard refertatore."
+          : "Completa il contenuto tecnico EMG e invia l'acquisizione al refertatore.";
       default:
         return 'Compila l\'anagrafica del paziente una sola volta per tutto il documento.';
     }
@@ -2263,6 +2315,10 @@ export class ReportEditor {
   async submitRefertatoreLogin(): Promise<void> {
     this.refertatoreLoginError = '';
 
+    if (this.refertatoreLoginLoading) {
+      return;
+    }
+
     if (!this.refertatoreEmail.trim() || !this.refertatorePassword.trim()) {
       this.refertatoreLoginError = 'Inserisci email e password dell’Area Riservata.';
       return;
@@ -2275,6 +2331,7 @@ export class ReportEditor {
         this.api.login(
           this.refertatoreEmail.trim(),
           this.refertatorePassword,
+          this.rememberMe,
         ),
       );
 
@@ -2282,6 +2339,7 @@ export class ReportEditor {
       this.reservedUser = response.user;
       this.refertatoreToken = 'session';
       this.refertatorePassword = '';
+      this.rememberMe = false;
       this.showReservedPassword = false;
       this.persistRefertatoreSession();
       await this.routeReservedUserDashboard();
@@ -2301,13 +2359,24 @@ export class ReportEditor {
     }
 
     this.refertatorePassword = '';
+    this.rememberMe = false;
     this.showReservedPassword = false;
     this.refertatoreLoginError = '';
+    this.showReservedUserMenu = false;
     this.refertatoreDrafts = [];
     this.refertatoreArchiveDrafts = [];
     this.clearRefertatoreSession();
     this.entryContext = 'public';
     this.uiState = 'initialTypeSelection';
+  }
+
+  toggleReservedUserMenu(): void {
+    this.showReservedUserMenu = !this.showReservedUserMenu;
+  }
+
+  openChangePasswordFromMenu(): void {
+    this.showReservedUserMenu = false;
+    this.openChangePasswordModal();
   }
 
   openChangePasswordModal(): void {
@@ -2408,6 +2477,7 @@ export class ReportEditor {
           : this.hasEmgAssignment
             ? 'emg'
             : 'psg';
+      this.showReservedUserMenu = false;
       this.entryContext = 'refertatore';
       this.uiState = 'refertatoreDashboard';
     } catch (error) {
@@ -3256,6 +3326,7 @@ export class ReportEditor {
             : 'Bozza PSG salvata e assegnata al refertatore. Invio email non disponibile.',
         'success',
       );
+      this.goToInitialTypeSelection();
     } catch (error) {
       console.error('Errore invio referto al refertatore:', error);
       this.draftError =
@@ -3497,15 +3568,44 @@ export class ReportEditor {
     message: string,
     type: 'success' | 'error' | 'warning' | 'info',
   ): void {
+    if (this.draftMessageTimeoutId) {
+      window.clearTimeout(this.draftMessageTimeoutId);
+      this.draftMessageTimeoutId = null;
+    }
+
     this.draftMessage = message;
     this.draftMessageType = type;
+
+    const dismissAfterMs =
+      type === 'success'
+        ? 3800
+        : type === 'warning'
+          ? 5600
+          : type === 'info'
+            ? 4200
+            : 0;
+
+    if (dismissAfterMs > 0) {
+      this.draftMessageTimeoutId = window.setTimeout(() => {
+        this.dismissDraftMessage();
+      }, dismissAfterMs);
+    }
+  }
+
+  dismissDraftMessage(): void {
+    if (this.draftMessageTimeoutId) {
+      window.clearTimeout(this.draftMessageTimeoutId);
+      this.draftMessageTimeoutId = null;
+    }
+
+    this.draftMessage = '';
+    this.draftMessageType = 'info';
   }
 
   private resetTransientUiState(): void {
     this.attachmentsReloadNotice = '';
     this.draftError = '';
-    this.draftMessage = '';
-    this.draftMessageType = 'info';
+    this.dismissDraftMessage();
     this.currentDraftAttachments = [];
     this.completedReadonlyMode = false;
     this.draftSentToRefertatore = false;
@@ -4139,6 +4239,7 @@ export class ReportEditor {
 
   openReservedArea(): void {
     this.refertatoreLoginError = '';
+    this.showReservedUserMenu = false;
     if (this.reservedUser) {
       void this.routeReservedUserDashboard();
       return;
@@ -4150,6 +4251,7 @@ export class ReportEditor {
     this.refertatoreLoginError = '';
     this.forgotPasswordMessage = '';
     this.resetPasswordMessage = '';
+    this.showReservedUserMenu = false;
     this.uiState = 'reservedLogin';
   }
 
@@ -4178,22 +4280,22 @@ export class ReportEditor {
 
     try {
       await firstValueFrom(this.api.getCsrf());
-      const [usersResponse, professionalsResponse, draftsResponse, archiveResponse, auditResponse] =
+      const [usersResponse, professionalsResponse, draftsResponse, archiveResponse] =
         await Promise.all([
           firstValueFrom(this.api.listAdminUsers()),
           firstValueFrom(this.api.listAdminProfessionals()),
           firstValueFrom(this.api.listAdminDrafts()),
           firstValueFrom(this.api.listAdminArchive()),
-          firstValueFrom(this.api.listAuditLogs()),
         ]);
 
       this.adminUsers = usersResponse.items;
       this.adminProfessionals = professionalsResponse.items;
       this.adminDrafts = draftsResponse.items;
       this.adminArchiveDrafts = archiveResponse.items;
-      this.auditLogs = auditResponse.items;
+      await this.loadAuditLogs(1);
       this.professionalsPage = 1;
       this.refertatoriPage = 1;
+      this.showReservedUserMenu = false;
       this.entryContext = 'admin';
       this.uiState = 'adminDashboard';
     } catch (error) {
@@ -4204,6 +4306,15 @@ export class ReportEditor {
     } finally {
       this.adminDashboardLoading = false;
     }
+  }
+
+  async loadAuditLogs(page = this.auditPage): Promise<void> {
+    const response = await firstValueFrom(
+      this.api.listAuditLogs(page, this.auditPageSize),
+    );
+    this.auditLogs = response.items;
+    this.auditTotal = response.total;
+    this.auditPage = response.page;
   }
 
   async submitForgotPassword(): Promise<void> {
@@ -4596,8 +4707,16 @@ export class ReportEditor {
     this.openDeleteResourceModal('refertatore', user.id, user.display_name);
   }
 
+  requestDeleteArchiveDraft(draft: ReportDraftSummary): void {
+    this.openDeleteResourceModal(
+      'archiveDraft',
+      draft.id,
+      draft.paziente_nome_completo || 'Referto archiviato',
+    );
+  }
+
   openDeleteResourceModal(
-    kind: 'professional' | 'refertatore',
+    kind: 'professional' | 'refertatore' | 'archiveDraft',
     id: string,
     name: string,
   ): void {
@@ -4641,7 +4760,7 @@ export class ReportEditor {
         );
         await this.loadOperationalOptions();
         this.setDraftMessage('Professionista eliminato (disattivato).', 'success');
-      } else {
+      } else if (this.deleteResourceTarget.kind === 'refertatore') {
         await firstValueFrom(this.api.deleteAdminUser(this.deleteResourceTarget.id));
         this.adminUsers = this.adminUsers.filter(
           (item) => item.id !== this.deleteResourceTarget?.id,
@@ -4654,9 +4773,22 @@ export class ReportEditor {
           'Refertatore disattivato. I referti storici restano conservati.',
           'success',
         );
+      } else {
+        await firstValueFrom(
+          this.api.deleteAdminArchiveDraft(this.deleteResourceTarget.id),
+        );
+        this.adminArchiveDrafts = this.adminArchiveDrafts.filter(
+          (item) => item.id !== this.deleteResourceTarget?.id,
+        );
+        this.setDraftMessage(
+          'Referto archiviato rimosso dalla lista admin.',
+          'success',
+        );
       }
-
-      this.closeDeleteResourceModal();
+      this.deleteResourceLoading = false;
+      this.showDeleteResourceModal = false;
+      this.deleteResourceError = '';
+      this.deleteResourceTarget = null;
     } catch (error: any) {
       console.error('Errore eliminazione risorsa admin:', error);
       this.deleteResourceError =
@@ -4736,6 +4868,18 @@ export class ReportEditor {
   prevRefertatoriPage(): void {
     if (this.refertatoriPage > 1) {
       this.refertatoriPage -= 1;
+    }
+  }
+
+  async nextAuditPage(): Promise<void> {
+    if (this.auditPage < this.auditTotalPages) {
+      await this.loadAuditLogs(this.auditPage + 1);
+    }
+  }
+
+  async prevAuditPage(): Promise<void> {
+    if (this.auditPage > 1) {
+      await this.loadAuditLogs(this.auditPage - 1);
     }
   }
 

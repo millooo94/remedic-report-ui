@@ -274,6 +274,9 @@ export interface AuditLogItem {
 
 export interface AuditLogsResponse {
   items: AuditLogItem[];
+  total: number;
+  page: number;
+  pageSize: number;
   limit: number;
   offset: number;
 }

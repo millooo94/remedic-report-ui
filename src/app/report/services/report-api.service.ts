@@ -78,11 +78,15 @@ export class ReportApiService {
     });
   }
 
-  login(email: string, password: string): Observable<AuthLoginResponse> {
+  login(
+    email: string,
+    password: string,
+    rememberMe = false,
+  ): Observable<AuthLoginResponse> {
     return this.http
       .post<AuthLoginResponse>(
         `${environment.API.BASE_URL}/auth/login`,
-        { email, password },
+        { email, password, rememberMe },
         {
           headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
           withCredentials: true,
@@ -447,10 +451,22 @@ export class ReportApiService {
     });
   }
 
-  listAuditLogs(): Observable<AuditLogsResponse> {
+  deleteAdminArchiveDraft(id: string): Observable<any> {
+    return this.http.delete(`${environment.API.BASE_URL}/admin/archive/${id}`, {
+      headers: this.buildAuthHeaders(),
+      withCredentials: true,
+    });
+  }
+
+  listAuditLogs(page = 1, pageSize = 20): Observable<AuditLogsResponse> {
     return this.http.get<AuditLogsResponse>(
       `${environment.API.BASE_URL}/admin/audit-logs`,
-      { withCredentials: true },
+      {
+        params: new HttpParams()
+          .set('page', String(page))
+          .set('pageSize', String(pageSize)),
+        withCredentials: true,
+      },
     );
   }
 

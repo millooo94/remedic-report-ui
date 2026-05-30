@@ -137,7 +137,7 @@
 .emgContentPair {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 18px;
   align-items: stretch;
 }
 
@@ -153,14 +153,18 @@
   flex-direction: column;
   width: 100%;
   min-width: 0;
-  min-height: 392px;
+  min-height: 360px;
 }
 
 .emgContentTextarea {
   flex: 1 1 auto;
   width: 100%;
-  min-height: 392px !important;
+  min-height: 360px !important;
   resize: none;
+}
+
+.emgContentField:last-child .emgContentFieldSurface {
+  min-height: 420px;
 }
 
 .emgRichFieldStretch {
