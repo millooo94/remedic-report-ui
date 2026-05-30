@@ -458,7 +458,7 @@
         }
       </section>
     </main>
-  } @else if (uiState === 'refertatoreDashboard') {
+    } @else if (uiState === 'refertatoreDashboard') {
     <main class="entryMain">
       <section class="entryCard dashboardCard">
         <header class="entryHeader">
@@ -475,7 +475,7 @@
             </div>
           </div>
           <h1>Dashboard refertatore</h1>
-          <p>Visualizza solo i referti assegnati a te, completa le aree abilitate e archivia il PDF firmato definitivo.</p>
+          <p>Completa i referti assegnati, esporta il PDF temporaneo da firmare e carica il firmato definitivo dalla dashboard.</p>
         </header>
 
         @if (refertatoreDraftsError) {
@@ -491,153 +491,284 @@
         @if (refertatoreDraftsLoading) {
           <div class="emptyStateCard">Sto caricando i referti assegnati...</div>
         } @else {
-          @if (hasEmgAssignment) {
-            <section class="dashboardPanel">
-              <h3>EMG assegnate da completare</h3>
-              @if (!activeRefertatoreDrafts('emg').length) {
-                <div class="emptyStateCard">Nessun referto EMG assegnato in lavorazione.</div>
-              } @else {
-                <div class="draftTableWrap">
-                  <div class="draftTable draftTableHead refertatoreTable">
-                    <div>Paziente</div>
-                    <div>Data esame</div>
-                    <div>Refertatore</div>
-                    <div>Stato</div>
-                    <div>Ultima modifica</div>
-                    <div>Azioni</div>
-                  </div>
-                  @for (draft of activeRefertatoreDrafts('emg'); track draft.id) {
-                    <div class="draftTable draftTableRow refertatoreTable">
-                      <div>
-                        <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                        <small>{{ draft.data_nascita || '-' }}</small>
-                      </div>
-                      <div>{{ draft.data_esame || '-' }}</div>
-                      <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '-' }}</div>
-                      <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                      <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
-                      <div class="draftRowActions">
-                        <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
-                          {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
-                        </button>
-                      </div>
-                    </div>
-                  }
-                </div>
-              }
-            </section>
+          @if (showRefertatoreTabs) {
+            <div class="dashboardSegmentTabs">
+              <button type="button" class="segmentTabBtn" [class.isActive]="activeRefertatoreTab === 'emg'" (click)="setRefertatoreTab('emg')">
+                EMG
+              </button>
+              <button type="button" class="segmentTabBtn" [class.isActive]="activeRefertatoreTab === 'psg'" (click)="setRefertatoreTab('psg')">
+                PSG
+              </button>
+            </div>
+          }
 
+          @if (activeRefertatoreTab === 'emg') {
             <section class="dashboardPanel">
-              <h3>Archivio personale EMG</h3>
-              @if (!archiveRefertatoreDrafts('emg').length) {
-                <div class="emptyStateCard">Nessun referto EMG completato nel tuo archivio.</div>
-              } @else {
-                <div class="draftTableWrap">
-                  <div class="draftTable draftTableHead refertatoreTable">
-                    <div>Paziente</div>
-                    <div>Data esame</div>
-                    <div>Stato</div>
-                    <div>Completato</div>
-                    <div>Azioni</div>
+              <div class="adminSectionHead">
+                <div>
+                  <h3>EMG</h3>
+                  <p>Gestisci solo i referti EMG assegnati a te.</p>
+                </div>
+              </div>
+
+              <div class="reviewerSectionStack">
+                <section class="reviewerStageCard">
+                  <div class="reviewerStageHead">
+                    <div>
+                      <h4>Da completare</h4>
+                      <p>Referti EMG in attesa di completamento clinico.</p>
+                    </div>
                   </div>
-                  @for (draft of archiveRefertatoreDrafts('emg'); track draft.id) {
-                    <div class="draftTable draftTableRow refertatoreTable">
-                      <div>
-                        <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                        <small>{{ draft.data_nascita || '-' }}</small>
+                  @if (!draftsToCompleteByType('emg').length) {
+                    <div class="emptyStateCard">Nessun referto EMG da completare.</div>
+                  } @else {
+                    <div class="draftTableWrap">
+                      <div class="draftTable draftTableHead refertatoreTable">
+                        <div>Paziente</div>
+                        <div>Data esame</div>
+                        <div>Stato</div>
+                        <div>Ultima modifica</div>
+                        <div>Azioni</div>
                       </div>
-                      <div>{{ draft.data_esame || '-' }}</div>
-                      <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                      <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
-                      <div class="draftRowActions">
-                        <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
-                          {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
-                        </button>
-                        @if (canOpenSignedPdf(draft)) {
-                          <button type="button" class="btn tiny ghost" (click)="openSignedPdfForDraft(draft)">
-                            Apri PDF firmato
-                          </button>
-                        }
-                      </div>
+                      @for (draft of draftsToCompleteByType('emg'); track draft.id) {
+                        <div class="draftTable draftTableRow refertatoreTable">
+                          <div>
+                            <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
+                            <small>{{ draft.data_nascita || '-' }}</small>
+                          </div>
+                          <div>{{ draft.data_esame || '-' }}</div>
+                          <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
+                          <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+                          <div class="draftRowActions adminRowActions">
+                            <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
+                              {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri e completa' }}
+                            </button>
+                          </div>
+                        </div>
+                      }
                     </div>
                   }
-                </div>
-              }
+                </section>
+
+                <section class="reviewerStageCard">
+                  <div class="reviewerStageHead">
+                    <div>
+                      <h4>Pronti per firma</h4>
+                      <p>Esporta il PDF temporaneo da firmare e carica qui il firmato definitivo.</p>
+                    </div>
+                  </div>
+                  @if (!readyForSignatureDraftsByType('emg').length) {
+                    <div class="emptyStateCard">Nessun referto EMG pronto per firma.</div>
+                  } @else {
+                    <div class="draftTableWrap">
+                      <div class="draftTable draftTableHead refertatoreTableReady">
+                        <div>Paziente</div>
+                        <div>Data esame</div>
+                        <div>Stato</div>
+                        <div>Ultima modifica</div>
+                        <div>Azioni</div>
+                      </div>
+                      @for (draft of readyForSignatureDraftsByType('emg'); track draft.id) {
+                        <div class="draftTable draftTableRow refertatoreTableReady">
+                          <div>
+                            <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
+                            <small>{{ draft.data_nascita || '-' }}</small>
+                          </div>
+                          <div>{{ draft.data_esame || '-' }}</div>
+                          <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
+                          <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+                          <div class="draftRowActions adminRowActions">
+                            <button type="button" class="btn tiny ghost" [disabled]="draftActionLoadingId === draft.id" (click)="exportReadyRefertatoreDraft(draft)">
+                              {{ draftActionLoadingId === draft.id ? 'Esporto...' : 'Esporta PDF da firmare' }}
+                            </button>
+                            <button type="button" class="btn tiny primary" (click)="openDashboardSignedPdfModal(draft)">
+                              Carica PDF firmato
+                            </button>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </section>
+
+                <section class="reviewerStageCard">
+                  <div class="reviewerStageHead">
+                    <div>
+                      <h4>Archivio</h4>
+                      <p>Referti EMG completati e archiviati.</p>
+                    </div>
+                  </div>
+                  @if (!archiveRefertatoreDrafts('emg').length) {
+                    <div class="emptyStateCard">Nessun referto EMG completato nel tuo archivio.</div>
+                  } @else {
+                    <div class="draftTableWrap">
+                      <div class="draftTable draftTableHead refertatoreTableArchive">
+                        <div>Paziente</div>
+                        <div>Data esame</div>
+                        <div>Stato</div>
+                        <div>Completato</div>
+                        <div>Azioni</div>
+                      </div>
+                      @for (draft of archiveRefertatoreDrafts('emg'); track draft.id) {
+                        <div class="draftTable draftTableRow refertatoreTableArchive">
+                          <div>
+                            <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
+                            <small>{{ draft.data_nascita || '-' }}</small>
+                          </div>
+                          <div>{{ draft.data_esame || '-' }}</div>
+                          <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
+                          <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
+                          <div class="draftRowActions adminRowActions">
+                            <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
+                              {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
+                            </button>
+                            @if (canOpenSignedPdf(draft)) {
+                              <button type="button" class="btn tiny ghost" (click)="openSignedPdfForDraft(draft)">
+                                Apri PDF firmato
+                              </button>
+                            }
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </section>
+              </div>
             </section>
           }
 
-          @if (hasPsgAssignment) {
+          @if (activeRefertatoreTab === 'psg') {
             <section class="dashboardPanel">
-              <h3>PSG assegnate da completare</h3>
-              @if (!activeRefertatoreDrafts('psg').length) {
-                <div class="emptyStateCard">Nessun referto PSG assegnato in lavorazione.</div>
-              } @else {
-                <div class="draftTableWrap">
-                  <div class="draftTable draftTableHead refertatoreTable">
-                    <div>Paziente</div>
-                    <div>Data esame</div>
-                    <div>Refertatore</div>
-                    <div>Stato</div>
-                    <div>Ultima modifica</div>
-                    <div>Azioni</div>
-                  </div>
-                  @for (draft of activeRefertatoreDrafts('psg'); track draft.id) {
-                    <div class="draftTable draftTableRow refertatoreTable">
-                      <div>
-                        <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                        <small>{{ draft.data_nascita || '-' }}</small>
-                      </div>
-                      <div>{{ draft.data_esame || '-' }}</div>
-                      <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '-' }}</div>
-                      <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                      <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
-                      <div class="draftRowActions">
-                        <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
-                          {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
-                        </button>
-                      </div>
-                    </div>
-                  }
+              <div class="adminSectionHead">
+                <div>
+                  <h3>PSG</h3>
+                  <p>Gestisci solo i referti PSG assegnati a te.</p>
                 </div>
-              }
-            </section>
+              </div>
 
-            <section class="dashboardPanel">
-              <h3>Archivio personale PSG</h3>
-              @if (!archiveRefertatoreDrafts('psg').length) {
-                <div class="emptyStateCard">Nessun referto PSG completato nel tuo archivio.</div>
-              } @else {
-                <div class="draftTableWrap">
-                  <div class="draftTable draftTableHead refertatoreTable">
-                    <div>Paziente</div>
-                    <div>Data esame</div>
-                    <div>Stato</div>
-                    <div>Completato</div>
-                    <div>Azioni</div>
+              <div class="reviewerSectionStack">
+                <section class="reviewerStageCard">
+                  <div class="reviewerStageHead">
+                    <div>
+                      <h4>Da completare</h4>
+                      <p>Referti PSG in attesa di completamento clinico.</p>
+                    </div>
                   </div>
-                  @for (draft of archiveRefertatoreDrafts('psg'); track draft.id) {
-                    <div class="draftTable draftTableRow refertatoreTable">
-                      <div>
-                        <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                        <small>{{ draft.data_nascita || '-' }}</small>
+                  @if (!draftsToCompleteByType('psg').length) {
+                    <div class="emptyStateCard">Nessun referto PSG da completare.</div>
+                  } @else {
+                    <div class="draftTableWrap">
+                      <div class="draftTable draftTableHead refertatoreTable">
+                        <div>Paziente</div>
+                        <div>Data esame</div>
+                        <div>Stato</div>
+                        <div>Ultima modifica</div>
+                        <div>Azioni</div>
                       </div>
-                      <div>{{ draft.data_esame || '-' }}</div>
-                      <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                      <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
-                      <div class="draftRowActions">
-                        <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
-                          {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
-                        </button>
-                        @if (canOpenSignedPdf(draft)) {
-                          <button type="button" class="btn tiny ghost" (click)="openSignedPdfForDraft(draft)">
-                            Apri PDF firmato
-                          </button>
-                        }
-                      </div>
+                      @for (draft of draftsToCompleteByType('psg'); track draft.id) {
+                        <div class="draftTable draftTableRow refertatoreTable">
+                          <div>
+                            <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
+                            <small>{{ draft.data_nascita || '-' }}</small>
+                          </div>
+                          <div>{{ draft.data_esame || '-' }}</div>
+                          <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
+                          <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+                          <div class="draftRowActions adminRowActions">
+                            <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
+                              {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri e completa' }}
+                            </button>
+                          </div>
+                        </div>
+                      }
                     </div>
                   }
-                </div>
-              }
+                </section>
+
+                <section class="reviewerStageCard">
+                  <div class="reviewerStageHead">
+                    <div>
+                      <h4>Pronti per firma</h4>
+                      <p>Esporta il PDF temporaneo da firmare e carica qui il firmato definitivo.</p>
+                    </div>
+                  </div>
+                  @if (!readyForSignatureDraftsByType('psg').length) {
+                    <div class="emptyStateCard">Nessun referto PSG pronto per firma.</div>
+                  } @else {
+                    <div class="draftTableWrap">
+                      <div class="draftTable draftTableHead refertatoreTableReady">
+                        <div>Paziente</div>
+                        <div>Data esame</div>
+                        <div>Stato</div>
+                        <div>Ultima modifica</div>
+                        <div>Azioni</div>
+                      </div>
+                      @for (draft of readyForSignatureDraftsByType('psg'); track draft.id) {
+                        <div class="draftTable draftTableRow refertatoreTableReady">
+                          <div>
+                            <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
+                            <small>{{ draft.data_nascita || '-' }}</small>
+                          </div>
+                          <div>{{ draft.data_esame || '-' }}</div>
+                          <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
+                          <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+                          <div class="draftRowActions adminRowActions">
+                            <button type="button" class="btn tiny ghost" [disabled]="draftActionLoadingId === draft.id" (click)="exportReadyRefertatoreDraft(draft)">
+                              {{ draftActionLoadingId === draft.id ? 'Esporto...' : 'Esporta PDF da firmare' }}
+                            </button>
+                            <button type="button" class="btn tiny primary" (click)="openDashboardSignedPdfModal(draft)">
+                              Carica PDF firmato
+                            </button>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </section>
+
+                <section class="reviewerStageCard">
+                  <div class="reviewerStageHead">
+                    <div>
+                      <h4>Archivio</h4>
+                      <p>Referti PSG completati e archiviati.</p>
+                    </div>
+                  </div>
+                  @if (!archiveRefertatoreDrafts('psg').length) {
+                    <div class="emptyStateCard">Nessun referto PSG completato nel tuo archivio.</div>
+                  } @else {
+                    <div class="draftTableWrap">
+                      <div class="draftTable draftTableHead refertatoreTableArchive">
+                        <div>Paziente</div>
+                        <div>Data esame</div>
+                        <div>Stato</div>
+                        <div>Completato</div>
+                        <div>Azioni</div>
+                      </div>
+                      @for (draft of archiveRefertatoreDrafts('psg'); track draft.id) {
+                        <div class="draftTable draftTableRow refertatoreTableArchive">
+                          <div>
+                            <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
+                            <small>{{ draft.data_nascita || '-' }}</small>
+                          </div>
+                          <div>{{ draft.data_esame || '-' }}</div>
+                          <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
+                          <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
+                          <div class="draftRowActions adminRowActions">
+                            <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
+                              {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
+                            </button>
+                            @if (canOpenSignedPdf(draft)) {
+                              <button type="button" class="btn tiny ghost" (click)="openSignedPdfForDraft(draft)">
+                                Apri PDF firmato
+                              </button>
+                            }
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </section>
+              </div>
             </section>
           }
         }
@@ -863,6 +994,71 @@
   @if (showResetModal) {
     <reset-modal (cancel)="closeResetModal()" (confirm)="confirmReset()">
     </reset-modal>
+  }
+
+  @if (showDashboardSignedPdfModal && dashboardSignedPdfDraft) {
+    <div class="modalBackdrop">
+      <div class="modalSheet modalSheetNarrow">
+        <div class="modalHead">
+          <div>
+            <div class="modalEyebrow">Area refertatore</div>
+            <h3>Carica PDF firmato</h3>
+            <p>Dopo aver firmato digitalmente il PDF esportato, caricalo qui per archiviarlo come referto definitivo.</p>
+          </div>
+          <button type="button" class="iconCloseBtn" (click)="closeDashboardSignedPdfModal()">Chiudi</button>
+        </div>
+
+        <div class="modalBody">
+          <div class="uploadCard">
+            <div class="uploadCardHead">
+              <div>
+                <h3>{{ dashboardSignedPdfDraft.paziente_nome_completo || 'Paziente senza nome' }}</h3>
+                <p>{{ reportTypeLabelFor(dashboardSignedPdfDraft.tipo_referto) }} · {{ dashboardSignedPdfDraft.data_esame || 'Data non indicata' }}</p>
+              </div>
+            </div>
+
+            <div class="emptyUploadState">
+              Accetta solo PDF firmati. Il caricamento salva il documento su Drive e chiude il referto come definitivo.
+            </div>
+
+            <div class="uploadActionsRow" style="margin-top: 16px;">
+              <input
+                #dashboardSignedPdfInput
+                type="file"
+                accept="application/pdf,.pdf"
+                class="srOnly"
+                (change)="onDashboardSignedPdfSelected($event)"
+              />
+              <button type="button" class="uploadBtn" (click)="dashboardSignedPdfInput.click()">
+                Seleziona PDF firmato
+              </button>
+            </div>
+
+            @if (dashboardSignedPdfAsset) {
+              <div class="uploadList" style="margin-top: 16px;">
+                <div class="uploadItem">
+                  <div>
+                    <strong>{{ dashboardSignedPdfAsset.name }}</strong>
+                    <small>{{ (dashboardSignedPdfAsset.size / 1024 / 1024) | number: '1.1-2' }} MB</small>
+                  </div>
+                </div>
+              </div>
+            }
+
+            @if (dashboardSignedPdfError) {
+              <div class="draftAlert error" style="margin-top: 16px;">{{ dashboardSignedPdfError }}</div>
+            }
+          </div>
+        </div>
+
+        <div class="modalFooter">
+          <button type="button" class="btn ghost" (click)="closeDashboardSignedPdfModal()">Annulla</button>
+          <button type="button" class="btn primary" [disabled]="dashboardSignedPdfSaving" (click)="saveDashboardSignedPdf()">
+            {{ dashboardSignedPdfSaving ? 'Salvataggio...' : 'Salva referto firmato' }}
+          </button>
+        </div>
+      </div>
+    </div>
   }
 
   @if (showPsgAnamnesisModal) {
@@ -1405,6 +1601,8 @@
     </div>
   }
 </div>
+
+
 
 
 

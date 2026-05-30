@@ -519,6 +519,17 @@ export class ReportApiService {
     );
   }
 
+  completeRefertatoreDraft(id: string, payload: ReportDraftPayload): Observable<ReportDraftDetail> {
+    return this.http.post<ReportDraftDetail>(
+      `${environment.API.BASE_URL}/refertatore/drafts/${id}/complete`,
+      payload,
+      {
+        headers: this.buildAuthHeaders(),
+        withCredentials: true,
+      },
+    );
+  }
+
   exportRefertatoreDraftPreview(id: string): Observable<void> {
     return this.http.post<void>(
       `${environment.API.BASE_URL}/refertatore/drafts/${id}/export-preview`,

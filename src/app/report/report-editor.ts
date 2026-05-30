@@ -254,7 +254,13 @@ export class ReportEditor {
   refertatoreToken = '';
   refertatoreDraftsLoading = false;
   refertatoreDraftsError = '';
+  refertatoreTab: 'emg' | 'psg' = 'emg';
   refertatoreOpeningDraftId: string | null = null;
+  showDashboardSignedPdfModal = false;
+  dashboardSignedPdfDraft: ReportDraftSummary | null = null;
+  dashboardSignedPdfAsset: EmgUploadedAsset | null = null;
+  dashboardSignedPdfSaving = false;
+  dashboardSignedPdfError = '';
   emgRefertatoreMode = false;
   reviewerMode = false;
   signedPdfSaving = false;
@@ -456,6 +462,14 @@ export class ReportEditor {
   }
 
   get showPrimaryAction(): boolean {
+    if (
+      this.entryContext === 'refertatore' &&
+      this.step === this.steps.length - 1 &&
+      this.currentDraftStatus === 'pronto_per_firma'
+    ) {
+      return false;
+    }
+
     return !this.completedReadonlyMode;
   }
 
@@ -566,6 +580,18 @@ export class ReportEditor {
 
   get hasPsgAssignment(): boolean {
     return this.refertatoreAssignedTypes.includes('psg');
+  }
+
+  get showRefertatoreTabs(): boolean {
+    return this.hasEmgAssignment && this.hasPsgAssignment;
+  }
+
+  get activeRefertatoreTab(): 'emg' | 'psg' {
+    if (this.showRefertatoreTabs) {
+      return this.refertatoreTab;
+    }
+
+    return this.hasPsgAssignment ? 'psg' : 'emg';
   }
 
   get pagedAdminProfessionals(): ProfessionalItem[] {
@@ -718,7 +744,7 @@ export class ReportEditor {
             : 'Compila il quesito clinico e prepara i dati che verranno inviati al refertatore.';
         case 3:
           return this.reviewerMode
-            ? "Esporta il PDF PSG da firmare senza salvarlo su Drive, poi ricarica il PDF firmato per l'archiviazione definitiva."
+            ? "Completa i campi clinici PSG e conferma la refertazione. L'export PDF da firmare e il caricamento del firmato avvengono dalla dashboard refertatore."
             : "Verifica report strumentale e dati raccolti, poi invia la PSG al refertatore assegnato.";
         default:
           return "Compila l'anagrafica una sola volta: verra riutilizzata sia nel referto PSG sia nella scheda anamnestica.";
@@ -736,7 +762,7 @@ export class ReportEditor {
         return "Raccogli il quesito clinico. La checklist anamnestica EMG e disponibile nella card dedicata in Anagrafica.";
       case 3:
         return this.emgRefertatoreMode
-          ? "Completa Reperti e Conclusioni, esporta il PDF temporaneo da firmare e poi carica il PDF firmato per il salvataggio definitivo su Drive."
+          ? "Completa Reperti e Conclusioni e conferma la refertazione. L'export PDF da firmare e il caricamento del firmato avvengono dalla dashboard refertatore."
           : "Completa il contenuto tecnico EMG e invia l'acquisizione al refertatore. La copia di controllo resta temporanea e non viene salvata su Drive.";
       default:
         return 'Compila l\'anagrafica del paziente una sola volta per tutto il documento.';
@@ -1724,7 +1750,7 @@ export class ReportEditor {
     }
 
     if (this.reviewerMode) {
-      return 'Esporta PDF da firmare';
+      return 'Completa referto';
     }
 
     return 'Genera Referto';
@@ -1844,7 +1870,7 @@ export class ReportEditor {
           return;
         }
       }
-      await this.openRefertatoreDashboard();
+      await this.openRefertatoreDashboard(this.reportType as 'emg' | 'psg');
       return;
     }
 
@@ -1866,7 +1892,7 @@ export class ReportEditor {
       }
 
       if (this.reviewerMode) {
-        void this.exportPdfForSignature();
+        void this.completeRefertoAsRefertatore();
         return;
       }
 
@@ -1901,7 +1927,7 @@ export class ReportEditor {
     }
   }
 
-  private async exportPdfForSignature(): Promise<void> {
+  private async completeRefertoAsRefertatore(): Promise<void> {
     if (!this.reviewerMode) {
       return;
     }
@@ -1910,44 +1936,39 @@ export class ReportEditor {
       return;
     }
 
-    const savedDraft = await this.saveRefertatoreDraftProgress(false);
-    if (!savedDraft) {
+    if (!this.currentDraftId) {
+      this.setDraftMessage(
+        'Salva o riprendi prima una bozza valida prima di completare il referto.',
+        'warning',
+      );
       return;
     }
 
-    const payload = this.payloadBuilder.build(
-      this.form.getRawValue(),
-      this.sections.getRawValue(),
-    );
+    this.draftSaving = true;
+    this.draftError = '';
 
-    const ok = await this.openPreviewPdfBlob(payload);
+    try {
+      const payload = this.buildDraftPayload('pronto_per_firma');
+      const completedDraft = await firstValueFrom(
+        this.api.completeRefertatoreDraft(this.currentDraftId, payload),
+      );
 
-    if (!ok) {
-      return;
+      this.currentDraftStatus = completedDraft.stato;
+      this.draftLoaded = true;
+      this.setDraftMessage(
+        "Referto completato. Lo trovi ora nella sezione 'Pronti per firma' della dashboard refertatore.",
+        'success',
+      );
+      await this.openRefertatoreDashboard(this.reportType as 'emg' | 'psg');
+    } catch (error: any) {
+      console.error('Errore completamento referto refertatore:', error);
+      this.draftError =
+        error?.error?.error ||
+        'Impossibile completare il referto in questo momento.';
+      this.setDraftMessage(this.draftError, 'error');
+    } finally {
+      this.draftSaving = false;
     }
-
-    if (this.currentDraftId) {
-      try {
-        const updatedDraft = await firstValueFrom(
-          this.api.updateDraftStatus(this.currentDraftId, 'pronto_per_firma'),
-        );
-        this.currentDraftStatus = updatedDraft.stato;
-      } catch (error) {
-        console.error('Errore aggiornamento stato pronto per firma:', error);
-        this.setDraftMessage(
-          'PDF esportato correttamente, ma non sono riuscito ad aggiornare lo stato della bozza a pronto per firma.',
-          'warning',
-        );
-        return;
-      }
-    }
-
-    this.setDraftMessage(
-      this.reportType === 'psg'
-        ? "PDF PSG esportato senza salvataggio su Drive. Firma il file esternamente e poi caricalo nella sezione 'Carica PDF firmato'."
-        : "PDF EMG esportato senza salvataggio su Drive. Firma il file esternamente e poi caricalo nella sezione 'Carica PDF firmato'.",
-      'success',
-    );
   }
 
   private isPreviewExportValid(requireSignatureReady = false): boolean {
@@ -2030,12 +2051,16 @@ export class ReportEditor {
     return true;
   }
 
-  private async openPreviewPdfBlob(payload: ReportPdfRequest): Promise<boolean> {
+  private async openPreviewPdfBlob(
+    payload: ReportPdfRequest,
+    previewDraftId?: string | null,
+  ): Promise<boolean> {
     try {
-      const blob = await firstValueFrom(this.api.previewPdf(payload));
-      if (this.reviewerMode && this.currentDraftId) {
-        void firstValueFrom(this.api.exportRefertatoreDraftPreview(this.currentDraftId));
+      const targetPreviewDraftId = previewDraftId ?? this.currentDraftId;
+      if (targetPreviewDraftId && this.entryContext === 'refertatore') {
+        await firstValueFrom(this.api.exportRefertatoreDraftPreview(targetPreviewDraftId));
       }
+      const blob = await firstValueFrom(this.api.previewPdf(payload));
       const opened = this.openBlobInNewTab(
         blob,
         `${payload.titolo_visita || 'referto-temporaneo'}.pdf`,
@@ -2155,7 +2180,7 @@ export class ReportEditor {
       this.completedReadonlyMode = true;
       await this.refreshDraftList(false);
       if (this.reviewerMode) {
-        await this.openRefertatoreDashboard();
+        await this.openRefertatoreDashboard(this.reportType as 'emg' | 'psg');
       }
 
       this.setDraftMessage(
@@ -2174,7 +2199,7 @@ export class ReportEditor {
   }
 
   async saveDraft(status?: ReportDraftStatus): Promise<void> {
-    if (this.emgRefertatoreMode && this.currentDraftId) {
+    if (this.reviewerMode && this.currentDraftId) {
       await this.saveRefertatoreDraftProgress();
       return;
     }
@@ -2350,7 +2375,7 @@ export class ReportEditor {
     }
   }
 
-  async openRefertatoreDashboard(): Promise<void> {
+  async openRefertatoreDashboard(preferredTab?: 'emg' | 'psg'): Promise<void> {
     if (!this.reservedUser || this.reservedUser.role !== 'refertatore') {
       this.uiState = 'reservedLogin';
       return;
@@ -2377,6 +2402,12 @@ export class ReportEditor {
 
       this.refertatoreDrafts = pairs.flatMap((item) => item.active);
       this.refertatoreArchiveDrafts = pairs.flatMap((item) => item.archive);
+      this.refertatoreTab =
+        preferredTab && assignedTypes.includes(preferredTab)
+          ? preferredTab
+          : this.hasEmgAssignment
+            ? 'emg'
+            : 'psg';
       this.entryContext = 'refertatore';
       this.uiState = 'refertatoreDashboard';
     } catch (error) {
@@ -2514,6 +2545,142 @@ export class ReportEditor {
         'Impossibile aprire il referto assegnato selezionato.';
     } finally {
       this.refertatoreOpeningDraftId = null;
+    }
+  }
+
+  setRefertatoreTab(tab: 'emg' | 'psg'): void {
+    this.refertatoreTab = tab;
+    this.draftMessage = '';
+  }
+
+  async exportReadyRefertatoreDraft(draft: ReportDraftSummary): Promise<void> {
+    if (draft.stato !== 'pronto_per_firma') {
+      this.setDraftMessage(
+        'Completa prima il referto prima di esportare il PDF da firmare.',
+        'warning',
+      );
+      return;
+    }
+
+    this.draftActionLoadingId = draft.id;
+    this.refertatoreDraftsError = '';
+
+    try {
+      const payload = await this.buildDashboardPreviewPayload(draft.id);
+      const ok = await this.openPreviewPdfBlob(payload, draft.id);
+
+      if (ok) {
+        this.setDraftMessage(
+          'PDF temporaneo esportato senza salvataggio su Drive.',
+          'success',
+        );
+      }
+    } catch (error) {
+      console.error('Errore export dashboard refertatore:', error);
+      this.refertatoreDraftsError =
+        'Impossibile esportare il PDF da firmare in questo momento.';
+    } finally {
+      this.draftActionLoadingId = null;
+    }
+  }
+
+  openDashboardSignedPdfModal(draft: ReportDraftSummary): void {
+    this.dashboardSignedPdfDraft = draft;
+    this.dashboardSignedPdfAsset = null;
+    this.dashboardSignedPdfError = '';
+    this.showDashboardSignedPdfModal = true;
+  }
+
+  closeDashboardSignedPdfModal(): void {
+    this.showDashboardSignedPdfModal = false;
+    this.dashboardSignedPdfDraft = null;
+    this.dashboardSignedPdfAsset = null;
+    this.dashboardSignedPdfSaving = false;
+    this.dashboardSignedPdfError = '';
+  }
+
+  async onDashboardSignedPdfSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    this.dashboardSignedPdfError = '';
+
+    if (!file) {
+      input.value = '';
+      return;
+    }
+
+    if (file.type !== 'application/pdf') {
+      this.dashboardSignedPdfError = 'Puoi caricare solo file PDF firmati.';
+      input.value = '';
+      return;
+    }
+
+    try {
+      this.dashboardSignedPdfAsset = await this.buildPdfAssetFromFile(file);
+    } catch (error) {
+      console.error('Errore lettura PDF firmato:', error);
+      this.dashboardSignedPdfError =
+        'Impossibile leggere il PDF firmato selezionato.';
+    } finally {
+      input.value = '';
+    }
+  }
+
+  async saveDashboardSignedPdf(): Promise<void> {
+    const draft = this.dashboardSignedPdfDraft;
+    const asset = this.dashboardSignedPdfAsset;
+
+    if (!draft) {
+      return;
+    }
+
+    if (draft.stato !== 'pronto_per_firma') {
+      this.dashboardSignedPdfError =
+        'Il PDF firmato puo essere caricato solo per referti pronti per firma.';
+      return;
+    }
+
+    if (!asset?.base64) {
+      this.dashboardSignedPdfError = 'Seleziona prima un PDF firmato da caricare.';
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Confermi di voler caricare questo PDF firmato come referto definitivo?',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.dashboardSignedPdfSaving = true;
+    this.dashboardSignedPdfError = '';
+
+    try {
+      await firstValueFrom(
+        this.api.uploadSignedDraftPdf(
+          draft.id,
+          {
+            tipo_referto: draft.tipo_referto as 'emg' | 'psg',
+            fileName: asset.name,
+            mimeType: 'application/pdf',
+            base64: asset.base64,
+          },
+          this.refertatoreToken,
+        ),
+      );
+      this.closeDashboardSignedPdfModal();
+      await this.openRefertatoreDashboard(this.reportType as 'emg' | 'psg');
+      this.setDraftMessage(
+        'PDF firmato caricato e archiviato su Drive come referto definitivo.',
+        'success',
+      );
+    } catch (error) {
+      console.error('Errore upload PDF firmato da dashboard:', error);
+      this.dashboardSignedPdfError =
+        'Impossibile salvare il PDF firmato in questo momento.';
+    } finally {
+      this.dashboardSignedPdfSaving = false;
     }
   }
 
@@ -3116,11 +3283,7 @@ export class ReportEditor {
     this.draftError = '';
 
     try {
-      const payload = this.buildDraftPayload(
-        this.reportType === 'emg'
-          ? 'in_refertazione_refertatore'
-          : 'in_refertazione',
-      );
+      const payload = this.buildDraftPayload('in_refertazione_refertatore');
       const savedDraft = await firstValueFrom(
         this.api.updateRefertatoreDraft(this.currentDraftId, payload),
       );
@@ -3232,7 +3395,7 @@ export class ReportEditor {
   }
 
   private resolveDraftStatusForSave(): ReportDraftStatus {
-    if (this.emgRefertatoreMode) {
+    if (this.reviewerMode) {
       if (this.currentDraftStatus === 'pronto_per_firma') {
         return 'pronto_per_firma';
       }
@@ -4112,8 +4275,19 @@ export class ReportEditor {
     }
   }
 
-  activeRefertatoreDrafts(tipo: 'emg' | 'psg'): ReportDraftSummary[] {
-    return this.refertatoreDrafts.filter((draft) => draft.tipo_referto === tipo);
+  draftsToCompleteByType(tipo: 'emg' | 'psg'): ReportDraftSummary[] {
+    return this.refertatoreDrafts.filter(
+      (draft) =>
+        draft.tipo_referto === tipo &&
+        (draft.stato === 'in_attesa_refertatore' ||
+          draft.stato === 'in_refertazione_refertatore'),
+    );
+  }
+
+  readyForSignatureDraftsByType(tipo: 'emg' | 'psg'): ReportDraftSummary[] {
+    return this.refertatoreDrafts.filter(
+      (draft) => draft.tipo_referto === tipo && draft.stato === 'pronto_per_firma',
+    );
   }
 
   archiveRefertatoreDrafts(tipo: 'emg' | 'psg'): ReportDraftSummary[] {
@@ -4826,6 +5000,62 @@ export class ReportEditor {
     };
   }
 
+  private async buildDashboardPreviewPayload(
+    draftId: string,
+  ): Promise<ReportPdfRequest> {
+    const draft = await firstValueFrom(this.api.getRefertatoreDraft(draftId));
+    const formSnapshot = JSON.parse(
+      JSON.stringify(draft.form_data?.form ?? this.getFreshFormState()),
+    );
+    const sectionsSnapshot = JSON.parse(
+      JSON.stringify(draft.form_data?.sections ?? this.getFreshSectionsState()),
+    );
+    const attachments = draft.attachments ?? [];
+
+    if (draft.tipo_referto === 'emg') {
+      const traceAssets = await Promise.all(
+        attachments
+          .filter((item) => item.kind === 'emg_tracciato')
+          .map((item) =>
+            this.mapDraftAttachmentToAsset(draftId, item, this.refertatoreToken),
+          ),
+      );
+      const signatureMetadata =
+        attachments.find((item) => item.kind === 'emg_firma_tnfp') || null;
+      const signatureAsset = signatureMetadata
+        ? await this.mapDraftAttachmentToAsset(
+            draftId,
+            signatureMetadata,
+            this.refertatoreToken,
+          )
+        : null;
+
+      formSnapshot.emg = {
+        ...(formSnapshot.emg ?? {}),
+        tracciati: traceAssets,
+        firmaTecnico: signatureAsset,
+      };
+    }
+
+    if (draft.tipo_referto === 'psg') {
+      const reportMetadata =
+        attachments.find((item) => item.kind === 'psg_report_strumentale') || null;
+      const reportAsset = reportMetadata
+        ? await this.mapDraftAttachmentToAsset(
+            draftId,
+            reportMetadata,
+            this.refertatoreToken,
+          )
+        : null;
+      formSnapshot.psg = {
+        ...(formSnapshot.psg ?? {}),
+        reportStrumentalePdf: reportAsset,
+      };
+    }
+
+    return this.payloadBuilder.build(formSnapshot, sectionsSnapshot);
+  }
+
   private async syncEmgDraftAttachments(draftId: string): Promise<void> {
     const existingAttachments = await firstValueFrom(
       this.api.listDraftAttachments(draftId),
@@ -4927,6 +5157,27 @@ export class ReportEditor {
 
     const [, base64 = ''] = String(dataUrl).split(',');
     return base64;
+  }
+
+  private async buildPdfAssetFromFile(file: File): Promise<EmgUploadedAsset> {
+    const dataUrl = await this.readFileAsDataUrl(file);
+    return {
+      id: `signed-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: file.name,
+      size: file.size,
+      mimeType: file.type || 'application/pdf',
+      kind: 'pdf',
+      base64: this.extractBase64FromDataUrl(dataUrl),
+    };
+  }
+
+  private readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('File read error'));
+      reader.readAsDataURL(file);
+    });
   }
 
   private isDraftDeletable(draft: ReportDraftSummary): boolean {
@@ -5107,5 +5358,8 @@ export class ReportEditor {
       : EMG_DEFAULTS.specializzazione;
   }
 }
+
+
+
 
 

@@ -68,7 +68,7 @@ export class StepContenuti {
   }
 
   get showSignedPdfSection(): boolean {
-    return this.reviewerMode && !this.readonlyMode;
+    return false;
   }
 
   get emgTraceFiles(): EmgUploadedAsset[] {
