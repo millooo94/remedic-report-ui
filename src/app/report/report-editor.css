@@ -17,6 +17,10 @@
   overflow: visible;
 }
 
+.entryMainCentered {
+  align-items: center;
+}
+
 .entryCard {
   width: min(1240px, 100%);
   background: #fff;
@@ -644,25 +648,44 @@
 .dashboardTabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
   margin: 24px 0 18px;
+}
+
+.adminSectionHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.adminSectionHead h3 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+.tablePagination {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: #475569;
+  font-size: 13px;
+}
+
+.tablePaginationActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .ghostLinkBtn.isActive {
   border-color: #1c9ebd;
   background: #f0f9fc;
   color: #0f5f74;
-}
-
-.dashboardSplit {
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  gap: 20px;
-  align-items: start;
-}
-
-.dashboardSplit > * {
-  min-width: 0;
 }
 
 .dashboardPanel {
@@ -826,6 +849,10 @@
 }
 
 @media (max-width: 1024px) {
+  .entryMainCentered {
+    align-items: flex-start;
+  }
+
   .entryTypeGrid {
     grid-template-columns: 1fr;
   }
@@ -852,10 +879,6 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .dashboardSplit {
-    grid-template-columns: 1fr;
-  }
-
   .dashboardFormGrid {
     grid-template-columns: 1fr;
   }
@@ -872,11 +895,14 @@
   .deliveryHistoryTable {
     grid-template-columns: 1fr;
   }
-}
 
-@media (max-width: 1200px) {
-  .dashboardSplit {
-    grid-template-columns: 1fr;
+  .adminSectionHead {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .adminSectionHead .btn {
+    width: 100%;
   }
 }
 

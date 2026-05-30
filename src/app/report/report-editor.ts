@@ -140,6 +140,12 @@ export class ReportEditor {
   adminDashboardLoading = false;
   adminDashboardError = '';
   adminTab: 'professionals' | 'users' | 'drafts' | 'archive' | 'audit' = 'professionals';
+  showAdminProfessionalModal = false;
+  showAdminUserModal = false;
+  professionalsPage = 1;
+  professionalsPageSize = 10;
+  refertatoriPage = 1;
+  refertatoriPageSize = 10;
   draftActionLoadingId: string | null = null;
   adminUserForm = {
     id: '',
@@ -519,6 +525,33 @@ export class ReportEditor {
 
   get hasPsgAssignment(): boolean {
     return this.refertatoreAssignedTypes.includes('psg');
+  }
+
+  get pagedAdminProfessionals(): ProfessionalItem[] {
+    const start = (this.professionalsPage - 1) * this.professionalsPageSize;
+    return this.adminProfessionals.slice(start, start + this.professionalsPageSize);
+  }
+
+  get professionalsTotalPages(): number {
+    return Math.max(1, Math.ceil(this.adminProfessionals.length / this.professionalsPageSize));
+  }
+
+  get pagedAdminRefertatori(): AdminUserItem[] {
+    const onlyRefertatori = this.adminUsers.filter((user) => user.role === 'refertatore');
+    const start = (this.refertatoriPage - 1) * this.refertatoriPageSize;
+    return onlyRefertatori.slice(start, start + this.refertatoriPageSize);
+  }
+
+  get refertatoriTotal(): number {
+    return this.adminUsers.filter((user) => user.role === 'refertatore').length;
+  }
+
+  get refertatoriTotalPages(): number {
+    return Math.max(1, Math.ceil(this.refertatoriTotal / this.refertatoriPageSize));
+  }
+
+  professionalTypeLabel(value: 'medico' | 'tecnico'): string {
+    return value === 'tecnico' ? 'Professionista sanitario' : 'Medico';
   }
 
   stepHint(): string {
@@ -3734,6 +3767,8 @@ export class ReportEditor {
       this.adminDrafts = draftsResponse.items;
       this.adminArchiveDrafts = archiveResponse.items;
       this.auditLogs = auditResponse.items;
+      this.professionalsPage = 1;
+      this.refertatoriPage = 1;
       this.uiState = 'adminDashboard';
     } catch (error) {
       console.error('Errore caricamento dashboard admin:', error);
@@ -3879,6 +3914,7 @@ export class ReportEditor {
         await firstValueFrom(this.api.createAdminUser(this.adminUserForm));
       }
       this.resetAdminUserForm();
+      this.showAdminUserModal = false;
       await this.openAdminDashboard();
     } catch (error) {
       console.error('Errore salvataggio utente admin:', error);
@@ -3902,6 +3938,7 @@ export class ReportEditor {
         );
       }
       this.resetAdminProfessionalForm();
+      this.showAdminProfessionalModal = false;
       await this.openAdminDashboard();
       await this.loadOperationalOptions();
     } catch (error) {
@@ -3921,6 +3958,7 @@ export class ReportEditor {
       specializzazione: user.specializzazione || '',
       assignedTypes: [...user.assignedTypes],
     };
+    this.showAdminUserModal = true;
   }
 
   editAdminProfessional(professional: ProfessionalItem): void {
@@ -3941,6 +3979,7 @@ export class ReportEditor {
       active: professional.active,
       sort_order: professional.sort_order,
     };
+    this.showAdminProfessionalModal = true;
   }
 
   toggleAdminAssignedType(
@@ -3987,6 +4026,92 @@ export class ReportEditor {
       active: true,
       sort_order: 0,
     };
+  }
+
+  openNewProfessionalModal(): void {
+    this.resetAdminProfessionalForm();
+    this.showAdminProfessionalModal = true;
+  }
+
+  closeProfessionalModal(): void {
+    this.showAdminProfessionalModal = false;
+  }
+
+  openNewRefertatoreModal(): void {
+    this.resetAdminUserForm();
+    this.adminUserForm.role = 'refertatore';
+    this.showAdminUserModal = true;
+  }
+
+  closeRefertatoreModal(): void {
+    this.showAdminUserModal = false;
+  }
+
+  async deleteProfessional(professional: ProfessionalItem): Promise<void> {
+    const confirmed = window.confirm(
+      "Vuoi eliminare questo professionista? L'azione non puo essere annullata.",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await firstValueFrom(this.api.getCsrf());
+      await firstValueFrom(this.api.updateAdminProfessionalStatus(professional.id, false));
+      this.setDraftMessage('Professionista eliminato (disattivato).', 'success');
+      await this.openAdminDashboard();
+      await this.loadOperationalOptions();
+    } catch (error) {
+      console.error('Errore eliminazione professionista:', error);
+      this.adminDashboardError = 'Impossibile eliminare il professionista.';
+    }
+  }
+
+  async deleteRefertatore(user: AdminUserItem): Promise<void> {
+    const confirmed = window.confirm(
+      'Vuoi eliminare questo refertatore? Se ha referti collegati verra disattivato.',
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await firstValueFrom(this.api.getCsrf());
+      await firstValueFrom(this.api.updateAdminUserStatus(user.id, false));
+      this.setDraftMessage(
+        'Refertatore disattivato. Se ha referti collegati non viene rimosso definitivamente.',
+        'success',
+      );
+      await this.openAdminDashboard();
+    } catch (error) {
+      console.error('Errore eliminazione refertatore:', error);
+      this.adminDashboardError =
+        'Questo refertatore ha referti collegati. Puoi disattivarlo ma non eliminarlo definitivamente.';
+    }
+  }
+
+  nextProfessionalsPage(): void {
+    if (this.professionalsPage < this.professionalsTotalPages) {
+      this.professionalsPage += 1;
+    }
+  }
+
+  prevProfessionalsPage(): void {
+    if (this.professionalsPage > 1) {
+      this.professionalsPage -= 1;
+    }
+  }
+
+  nextRefertatoriPage(): void {
+    if (this.refertatoriPage < this.refertatoriTotalPages) {
+      this.refertatoriPage += 1;
+    }
+  }
+
+  prevRefertatoriPage(): void {
+    if (this.refertatoriPage > 1) {
+      this.refertatoriPage -= 1;
+    }
   }
 
   private mapProfessionalToDoctor(item: ProfessionalItem): DoctorInfo {

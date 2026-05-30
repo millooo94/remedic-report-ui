@@ -1,6 +1,6 @@
-<div class="page">
+﻿<div class="page">
   @if (uiState === 'initialTypeSelection') {
-    <main class="entryMain">
+    <main class="entryMain entryMainCentered">
       <section class="entryCard">
         <header class="entryHeader">
           <div class="entryHeaderTop">
@@ -41,7 +41,7 @@
       </section>
     </main>
   } @else if (uiState === 'typeActionSelection') {
-    <main class="entryMain">
+    <main class="entryMain entryMainCentered">
       <section class="entryCard">
         <header class="entryHeader">
           <div class="entryHeaderTop">
@@ -68,7 +68,7 @@
       </section>
     </main>
   } @else if (uiState === 'reservedLogin' || uiState === 'neurologistLogin') {
-    <main class="entryMain">
+    <main class="entryMain entryMainCentered">
       <section class="entryCard entryCardNarrow">
         <header class="entryHeader">
           <div class="entryHeaderTop">
@@ -81,15 +81,15 @@
           <p>Admin e refertatori accedono da qui. Il backend decide automaticamente ruolo e permessi disponibili.</p>
         </header>
 
-        <div class="loginForm">
+        <form class="loginForm" (ngSubmit)="submitNeurologistLogin()">
           <div class="field">
             <label>Email</label>
-            <input type="email" [(ngModel)]="neurologistEmail" placeholder="nome@remedic.it" />
+            <input type="email" [(ngModel)]="neurologistEmail" placeholder="nome@remedic.it" name="reservedEmail" />
           </div>
 
           <div class="field">
             <label>Password</label>
-            <input type="password" [(ngModel)]="neurologistPassword" placeholder="Inserisci la password" />
+            <input type="password" [(ngModel)]="neurologistPassword" placeholder="Inserisci la password" name="reservedPassword" />
           </div>
 
           @if (neurologistLoginError) {
@@ -100,16 +100,11 @@
             <button type="button" class="btn ghost" (click)="goToForgotPassword()">
               Password dimenticata?
             </button>
-            <button
-              type="button"
-              class="btn primary"
-              [disabled]="neurologistLoginLoading"
-              (click)="submitNeurologistLogin()"
-            >
+            <button type="submit" class="btn primary" [disabled]="neurologistLoginLoading">
               {{ neurologistLoginLoading ? 'Accesso...' : 'Accedi' }}
             </button>
           </div>
-        </div>
+        </form>
       </section>
     </main>
   } @else if (uiState === 'forgotPassword') {
@@ -187,7 +182,6 @@
         </div>
       </section>
     </main>
-  } @else if (uiState === 'adminDashboard') {
     <main class="entryMain">
       <section class="entryCard dashboardCard">
         <header class="entryHeader">
@@ -229,209 +223,123 @@
         @if (adminDashboardLoading) {
           <div class="emptyStateCard">Sto caricando la dashboard admin...</div>
         } @else if (adminTab === 'professionals') {
-          <div class="dashboardSplit">
-            <section class="dashboardPanel">
-              <h3>Gestione medici e professionisti</h3>
-              <div class="dashboardFormGrid">
-                <div class="field">
-                  <label>Nome</label>
-                  <input type="text" [(ngModel)]="adminProfessionalForm.first_name" />
-                </div>
-                <div class="field">
-                  <label>Cognome</label>
-                  <input type="text" [(ngModel)]="adminProfessionalForm.last_name" />
-                </div>
-                <div class="field full">
-                  <label>Nome visualizzato *</label>
-                  <input type="text" [(ngModel)]="adminProfessionalForm.display_name" />
-                </div>
-                <div class="field">
-                  <label>Titolo</label>
-                  <input type="text" [(ngModel)]="adminProfessionalForm.title" />
-                </div>
-                <div class="field">
-                  <label>Email</label>
-                  <input type="email" [(ngModel)]="adminProfessionalForm.email" />
-                </div>
-                <div class="field">
-                  <label>Telefono</label>
-                  <input type="text" [(ngModel)]="adminProfessionalForm.phone" />
-                </div>
-                <div class="field">
-                  <label>Specializzazione</label>
-                  <input type="text" [(ngModel)]="adminProfessionalForm.specializzazione" />
-                </div>
-                <div class="field">
-                  <label>Ruolo / label</label>
-                  <input type="text" [(ngModel)]="adminProfessionalForm.role_label" />
-                </div>
-                <div class="field">
-                  <label>Tipo</label>
-                  <select [(ngModel)]="adminProfessionalForm.professional_type">
-                    <option value="medico">Medico</option>
-                    <option value="tecnico">Tecnico</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label>Ordinamento</label>
-                  <input type="number" [(ngModel)]="adminProfessionalForm.sort_order" />
-                </div>
-                <label class="checkline full">
-                  <input type="checkbox" [(ngModel)]="adminProfessionalForm.visible_in_standard" />
-                  <span>Visibile nei referti standard</span>
-                </label>
-                <label class="checkline full">
-                  <input type="checkbox" [(ngModel)]="adminProfessionalForm.is_refertatore" />
-                  <span>Disponibile anche come professionista refertatore</span>
-                </label>
+          <section class="dashboardPanel">
+            <div class="adminSectionHead">
+              <div>
+                <h3>Professionisti</h3>
+                <p>Gestisci medici e professionisti disponibili nei referti.</p>
               </div>
-
-              <div class="loginActions">
-                <button type="button" class="btn ghost" (click)="resetAdminProfessionalForm()">
-                  Nuovo
-                </button>
-                <button type="button" class="btn primary" (click)="saveAdminProfessional()">
-                  Salva professionista
-                </button>
-              </div>
-            </section>
-
-            <section class="dashboardPanel">
-              <h3>Elenco professionisti</h3>
-              @if (!adminProfessionals.length) {
-                <div class="emptyStateCard">Nessun professionista disponibile.</div>
-              } @else {
-                <div class="draftTableWrap">
-                  <div class="draftTable draftTableHead draftTableAdminProfessionals">
-                    <div>Professionista</div>
-                    <div>Specializzazione</div>
-                    <div>Tipo</div>
-                    <div>Stato</div>
-                    <div>Azioni</div>
-                  </div>
-                  @for (professional of adminProfessionals; track professional.id) {
-                    <div class="draftTable draftTableRow draftTableAdminProfessionals">
-                      <div>
-                        <strong>{{ professional.display_name }}</strong>
-                        <small>{{ professional.role_label || '—' }}</small>
-                      </div>
-                      <div>{{ professional.specializzazione || '—' }}</div>
-                      <div>{{ professional.professional_type }}</div>
-                      <div><span class="draftRowStatus">{{ professional.active ? 'Attivo' : 'Disattivato' }}</span></div>
-                      <div class="draftRowActions">
-                        <button type="button" class="btn tiny ghost" (click)="editAdminProfessional(professional)">
-                          Modifica
-                        </button>
-                        <button type="button" class="btn tiny ghost" (click)="toggleAdminProfessionalStatus(professional)">
-                          {{ professional.active ? 'Disattiva' : 'Riattiva' }}
-                        </button>
-                      </div>
+              <button type="button" class="btn primary" (click)="openNewProfessionalModal()">
+                Nuovo professionista
+              </button>
+            </div>
+            @if (!adminProfessionals.length) {
+              <div class="emptyStateCard">Nessun professionista disponibile.</div>
+            } @else {
+              <div class="draftTableWrap">
+                <div class="draftTable draftTableHead draftTableAdminProfessionals">
+                  <div>Professionista</div>
+                  <div>Specializzazione</div>
+                  <div>Tipo</div>
+                  <div>Stato</div>
+                  <div>Azioni</div>
+                </div>
+                @for (professional of pagedAdminProfessionals; track professional.id) {
+                  <div class="draftTable draftTableRow draftTableAdminProfessionals">
+                    <div>
+                      <strong>{{ professional.display_name }}</strong>
+                      <small>{{ professional.role_label || '—' }}</small>
                     </div>
-                  }
-                </div>
-              }
-            </section>
-          </div>
-        } @else if (adminTab === 'users') {
-          <div class="dashboardSplit">
-            <section class="dashboardPanel">
-              <h3>Gestione admin e refertatori</h3>
-              <div class="dashboardFormGrid">
-                <div class="field">
-                  <label>Ruolo</label>
-                  <select [(ngModel)]="adminUserForm.role">
-                    <option value="refertatore">Refertatore</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label>Email *</label>
-                  <input type="email" [(ngModel)]="adminUserForm.email" />
-                </div>
-                <div class="field full">
-                  <label>Nome visualizzato *</label>
-                  <input type="text" [(ngModel)]="adminUserForm.display_name" />
-                </div>
-                <div class="field">
-                  <label>Specializzazione</label>
-                  <input type="text" [(ngModel)]="adminUserForm.specializzazione" />
-                </div>
-                <div class="field">
-                  <label>Password {{ adminUserForm.id ? '(lascia vuoto per non cambiarla)' : '*' }}</label>
-                  <input type="password" [(ngModel)]="adminUserForm.password" />
-                </div>
-
-                @if (adminUserForm.role === 'refertatore') {
-                  <div class="field full">
-                    <label>Assegnazioni</label>
-                    <div class="inlineChecks">
-                      <label class="checkline">
-                        <input
-                          type="checkbox"
-                          [checked]="adminUserForm.assignedTypes.includes('emg')"
-                          (change)="toggleAdminAssignedType('emg', $any($event.target).checked)"
-                        />
-                        <span>EMG</span>
-                      </label>
-                      <label class="checkline">
-                        <input
-                          type="checkbox"
-                          [checked]="adminUserForm.assignedTypes.includes('psg')"
-                          (change)="toggleAdminAssignedType('psg', $any($event.target).checked)"
-                        />
-                        <span>PSG</span>
-                      </label>
+                    <div>{{ professional.specializzazione || '—' }}</div>
+                    <div>{{ professionalTypeLabel(professional.professional_type) }}</div>
+                    <div><span class="draftRowStatus">{{ professional.active ? 'Attivo' : 'Disattivato' }}</span></div>
+                    <div class="draftRowActions">
+                      <button type="button" class="btn tiny ghost" (click)="editAdminProfessional(professional)">
+                        Modifica
+                      </button>
+                      <button type="button" class="btn tiny ghost" (click)="deleteProfessional(professional)">
+                        Elimina
+                      </button>
+                      <button type="button" class="btn tiny ghost" (click)="toggleAdminProfessionalStatus(professional)">
+                        {{ professional.active ? 'Disattiva' : 'Riattiva' }}
+                      </button>
                     </div>
                   </div>
                 }
               </div>
-
-              <div class="loginActions">
-                <button type="button" class="btn ghost" (click)="resetAdminUserForm()">
-                  Nuovo
-                </button>
-                <button type="button" class="btn primary" (click)="saveAdminUser()">
-                  Salva utente
-                </button>
-              </div>
-            </section>
-
-            <section class="dashboardPanel">
-              <h3>Utenti area riservata</h3>
-              @if (!adminUsers.length) {
-                <div class="emptyStateCard">Nessun utente configurato.</div>
-              } @else {
-                <div class="draftTableWrap">
-                  <div class="draftTable draftTableHead draftTableAdminUsers">
-                    <div>Utente</div>
-                    <div>Ruolo</div>
-                    <div>Assegnazioni</div>
-                    <div>Stato</div>
-                    <div>Azioni</div>
-                  </div>
-                  @for (user of adminUsers; track user.id) {
-                    <div class="draftTable draftTableRow draftTableAdminUsers">
-                      <div>
-                        <strong>{{ user.display_name }}</strong>
-                        <small>{{ user.email }}</small>
-                      </div>
-                      <div>{{ user.role }}</div>
-                      <div>{{ user.assignedTypes.length ? user.assignedTypes.join(', ').toUpperCase() : '—' }}</div>
-                      <div><span class="draftRowStatus">{{ user.active ? 'Attivo' : 'Disattivato' }}</span></div>
-                      <div class="draftRowActions">
-                        <button type="button" class="btn tiny ghost" (click)="editAdminUser(user)">
-                          Modifica
-                        </button>
-                        <button type="button" class="btn tiny ghost" (click)="toggleAdminUserStatus(user)">
-                          {{ user.active ? 'Disattiva' : 'Riattiva' }}
-                        </button>
-                      </div>
-                    </div>
-                  }
+              <div class="tablePagination">
+                <span>Totale: {{ adminProfessionals.length }}</span>
+                <div class="tablePaginationActions">
+                  <button type="button" class="btn tiny ghost" [disabled]="professionalsPage <= 1" (click)="prevProfessionalsPage()">
+                    Precedente
+                  </button>
+                  <span>Pagina {{ professionalsPage }} / {{ professionalsTotalPages }}</span>
+                  <button type="button" class="btn tiny ghost" [disabled]="professionalsPage >= professionalsTotalPages" (click)="nextProfessionalsPage()">
+                    Successiva
+                  </button>
                 </div>
-              }
-            </section>
-          </div>
+              </div>
+            }
+          </section>
+        } @else if (adminTab === 'users') {
+          <section class="dashboardPanel">
+            <div class="adminSectionHead">
+              <div>
+                <h3>Refertatori</h3>
+                <p>Gestisci utenti refertatori, assegnazioni EMG/PSG e stato di accesso.</p>
+              </div>
+              <button type="button" class="btn primary" (click)="openNewRefertatoreModal()">
+                Nuovo refertatore
+              </button>
+            </div>
+            @if (!refertatoriTotal) {
+              <div class="emptyStateCard">Nessun refertatore configurato.</div>
+            } @else {
+              <div class="draftTableWrap">
+                <div class="draftTable draftTableHead draftTableAdminUsers">
+                  <div>Utente</div>
+                  <div>Ruolo</div>
+                  <div>Assegnazioni</div>
+                  <div>Stato</div>
+                  <div>Azioni</div>
+                </div>
+                @for (user of pagedAdminRefertatori; track user.id) {
+                  <div class="draftTable draftTableRow draftTableAdminUsers">
+                    <div>
+                      <strong>{{ user.display_name }}</strong>
+                      <small>{{ user.email }}</small>
+                    </div>
+                    <div>{{ user.role }}</div>
+                    <div>{{ user.assignedTypes.length ? user.assignedTypes.join(', ').toUpperCase() : '—' }}</div>
+                    <div><span class="draftRowStatus">{{ user.active ? 'Attivo' : 'Disattivato' }}</span></div>
+                    <div class="draftRowActions">
+                      <button type="button" class="btn tiny ghost" (click)="editAdminUser(user)">
+                        Modifica
+                      </button>
+                      <button type="button" class="btn tiny ghost" (click)="deleteRefertatore(user)">
+                        Elimina
+                      </button>
+                      <button type="button" class="btn tiny ghost" (click)="toggleAdminUserStatus(user)">
+                        {{ user.active ? 'Disattiva' : 'Riattiva' }}
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+              <div class="tablePagination">
+                <span>Totale: {{ refertatoriTotal }}</span>
+                <div class="tablePaginationActions">
+                  <button type="button" class="btn tiny ghost" [disabled]="refertatoriPage <= 1" (click)="prevRefertatoriPage()">
+                    Precedente
+                  </button>
+                  <span>Pagina {{ refertatoriPage }} / {{ refertatoriTotalPages }}</span>
+                  <button type="button" class="btn tiny ghost" [disabled]="refertatoriPage >= refertatoriTotalPages" (click)="nextRefertatoriPage()">
+                    Successiva
+                  </button>
+                </div>
+              </div>
+            }
+          </section>
         } @else if (adminTab === 'drafts' || adminTab === 'archive') {
           <section class="dashboardPanel">
             <h3>{{ adminTab === 'drafts' ? 'Referti in lavorazione' : 'Archivio referti completati' }}</h3>
@@ -451,10 +359,10 @@
                   <div class="draftTable draftTableRow draftTableAdminDrafts">
                     <div>
                       <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                      <small>{{ draft.data_nascita || '—' }}</small>
+                      <small>{{ draft.data_nascita || 'â€”' }}</small>
                     </div>
                     <div>{{ reportTypeLabelFor(draft.tipo_referto) }}</div>
-                    <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '—' }}</div>
+                    <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || 'â€”' }}</div>
                     <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
                     <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
                     <div class="draftRowActions">
@@ -492,8 +400,8 @@
                   <div class="draftTable draftTableRow draftTableAudit">
                     <div>{{ log.created_at | date: 'dd/MM/yyyy HH:mm' }}</div>
                     <div>{{ log.action }}</div>
-                    <div>{{ log.role || '—' }}</div>
-                    <div>{{ log.entity_type || '—' }}</div>
+                    <div>{{ log.role || 'â€”' }}</div>
+                    <div>{{ log.entity_type || 'â€”' }}</div>
                   </div>
                 }
               </div>
@@ -545,10 +453,10 @@
                     <div class="draftTable draftTableRow neurologistTable">
                       <div>
                         <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                        <small>{{ draft.data_nascita || '—' }}</small>
+                        <small>{{ draft.data_nascita || 'â€”' }}</small>
                       </div>
-                      <div>{{ draft.data_esame || '—' }}</div>
-                      <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '—' }}</div>
+                      <div>{{ draft.data_esame || 'â€”' }}</div>
+                      <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || 'â€”' }}</div>
                       <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
                       <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
                       <div class="draftRowActions">
@@ -579,9 +487,9 @@
                     <div class="draftTable draftTableRow neurologistTable">
                       <div>
                         <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                        <small>{{ draft.data_nascita || '—' }}</small>
+                        <small>{{ draft.data_nascita || 'â€”' }}</small>
                       </div>
-                      <div>{{ draft.data_esame || '—' }}</div>
+                      <div>{{ draft.data_esame || 'â€”' }}</div>
                       <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
                       <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
                       <div class="draftRowActions">
@@ -620,10 +528,10 @@
                     <div class="draftTable draftTableRow neurologistTable">
                       <div>
                         <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                        <small>{{ draft.data_nascita || '—' }}</small>
+                        <small>{{ draft.data_nascita || 'â€”' }}</small>
                       </div>
-                      <div>{{ draft.data_esame || '—' }}</div>
-                      <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '—' }}</div>
+                      <div>{{ draft.data_esame || 'â€”' }}</div>
+                      <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || 'â€”' }}</div>
                       <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
                       <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
                       <div class="draftRowActions">
@@ -654,9 +562,9 @@
                     <div class="draftTable draftTableRow neurologistTable">
                       <div>
                         <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                        <small>{{ draft.data_nascita || '—' }}</small>
+                        <small>{{ draft.data_nascita || 'â€”' }}</small>
                       </div>
-                      <div>{{ draft.data_esame || '—' }}</div>
+                      <div>{{ draft.data_esame || 'â€”' }}</div>
                       <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
                       <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
                       <div class="draftRowActions">
@@ -964,6 +872,138 @@
     </div>
   }
 
+  @if (showAdminProfessionalModal) {
+    <div class="modalBackdrop">
+      <div class="modalSheet">
+        <div class="modalHead">
+          <div>
+            <div class="modalEyebrow">Area Admin</div>
+            <h3>{{ adminProfessionalForm.id ? 'Modifica professionista' : 'Nuovo professionista' }}</h3>
+          </div>
+          <button type="button" class="iconCloseBtn" (click)="closeProfessionalModal()">Chiudi</button>
+        </div>
+        <div class="modalBody">
+          <div class="dashboardFormGrid">
+            <div class="field">
+              <label>Nome</label>
+              <input type="text" [(ngModel)]="adminProfessionalForm.first_name" />
+            </div>
+            <div class="field">
+              <label>Cognome</label>
+              <input type="text" [(ngModel)]="adminProfessionalForm.last_name" />
+            </div>
+            <div class="field full">
+              <label>Nome visualizzato *</label>
+              <input type="text" [(ngModel)]="adminProfessionalForm.display_name" />
+            </div>
+            <div class="field">
+              <label>Titolo</label>
+              <input type="text" [(ngModel)]="adminProfessionalForm.title" />
+            </div>
+            <div class="field">
+              <label>Email</label>
+              <input type="email" [(ngModel)]="adminProfessionalForm.email" />
+            </div>
+            <div class="field">
+              <label>Telefono</label>
+              <input type="text" [(ngModel)]="adminProfessionalForm.phone" />
+            </div>
+            <div class="field">
+              <label>Specializzazione</label>
+              <input type="text" [(ngModel)]="adminProfessionalForm.specializzazione" />
+            </div>
+            <div class="field">
+              <label>Ruolo / label</label>
+              <input type="text" [(ngModel)]="adminProfessionalForm.role_label" />
+            </div>
+            <div class="field">
+              <label>Tipo</label>
+              <select [(ngModel)]="adminProfessionalForm.professional_type">
+                <option value="medico">Medico</option>
+                <option value="tecnico">Professionista sanitario</option>
+              </select>
+            </div>
+            <label class="checkline full">
+              <input type="checkbox" [(ngModel)]="adminProfessionalForm.visible_in_standard" />
+              <span>Visibile nei referti standard</span>
+            </label>
+            <label class="checkline full">
+              <input type="checkbox" [(ngModel)]="adminProfessionalForm.is_refertatore" />
+              <span>Disponibile anche come professionista refertatore</span>
+            </label>
+          </div>
+        </div>
+        <div class="modalFooter">
+          <button type="button" class="btn ghost" (click)="closeProfessionalModal()">Annulla</button>
+          <button type="button" class="btn primary" (click)="saveAdminProfessional()">
+            {{ adminProfessionalForm.id ? 'Salva modifiche' : 'Salva professionista' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showAdminUserModal) {
+    <div class="modalBackdrop">
+      <div class="modalSheet">
+        <div class="modalHead">
+          <div>
+            <div class="modalEyebrow">Area Admin</div>
+            <h3>{{ adminUserForm.id ? 'Modifica refertatore' : 'Nuovo refertatore' }}</h3>
+          </div>
+          <button type="button" class="iconCloseBtn" (click)="closeRefertatoreModal()">Chiudi</button>
+        </div>
+        <div class="modalBody">
+          <div class="dashboardFormGrid">
+            <div class="field full">
+              <label>Email *</label>
+              <input type="email" [(ngModel)]="adminUserForm.email" />
+            </div>
+            <div class="field full">
+              <label>Nome visualizzato *</label>
+              <input type="text" [(ngModel)]="adminUserForm.display_name" />
+            </div>
+            <div class="field">
+              <label>Specializzazione</label>
+              <input type="text" [(ngModel)]="adminUserForm.specializzazione" />
+            </div>
+            <div class="field">
+              <label>Password {{ adminUserForm.id ? '(lascia vuoto per non cambiarla)' : '*' }}</label>
+              <input type="password" [(ngModel)]="adminUserForm.password" />
+            </div>
+            <div class="field full">
+              <label>Assegnazioni</label>
+              <div class="inlineChecks">
+                <label class="checkline">
+                  <input
+                    type="checkbox"
+                    [checked]="adminUserForm.assignedTypes.includes('emg')"
+                    (change)="toggleAdminAssignedType('emg', $any($event.target).checked)"
+                  />
+                  <span>EMG</span>
+                </label>
+                <label class="checkline">
+                  <input
+                    type="checkbox"
+                    [checked]="adminUserForm.assignedTypes.includes('psg')"
+                    (change)="toggleAdminAssignedType('psg', $any($event.target).checked)"
+                  />
+                  <span>PSG</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modalFooter">
+          <button type="button" class="btn ghost" (click)="closeRefertatoreModal()">Annulla</button>
+          <button type="button" class="btn primary" (click)="saveAdminUser()">
+            {{ adminUserForm.id ? 'Salva modifiche' : 'Salva refertatore' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
   @if (showSendToPatientModal) {
     <div class="modalBackdrop">
       <div class="modalSheet modalSheetWide">
@@ -982,8 +1022,8 @@
         <div class="modalBody">
           <div class="sendPatientSummary">
             <div><strong>Paziente</strong><span>{{ sendToPatientDraft?.paziente_nome_completo || 'Paziente senza nome' }}</span></div>
-            <div><strong>Tipo referto</strong><span>{{ sendToPatientDraft ? reportTypeLabelFor(sendToPatientDraft.tipo_referto) : '—' }}</span></div>
-            <div><strong>Refertatore</strong><span>{{ sendToPatientDraft?.assigned_refertatore_name || sendToPatientDraft?.medico_refertatore || '—' }}</span></div>
+            <div><strong>Tipo referto</strong><span>{{ sendToPatientDraft ? reportTypeLabelFor(sendToPatientDraft.tipo_referto) : 'â€”' }}</span></div>
+            <div><strong>Refertatore</strong><span>{{ sendToPatientDraft?.assigned_refertatore_name || sendToPatientDraft?.medico_refertatore || 'â€”' }}</span></div>
           </div>
 
           <div class="dashboardFormGrid">
@@ -1123,7 +1163,7 @@
                     }
                   </div>
                   <div><span class="draftRowStatus">{{ draft.stato }}</span></div>
-                  <div>{{ draft.data_nascita || '—' }}</div>
+                  <div>{{ draft.data_nascita || 'â€”' }}</div>
                   <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
                   <div class="draftRowActions">
                     <button
@@ -1152,3 +1192,4 @@
     </div>
   }
 </div>
+
