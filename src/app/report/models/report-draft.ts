@@ -274,3 +274,30 @@ export interface AuditLogsResponse {
   limit: number;
   offset: number;
 }
+
+export interface DraftEmailDeliveryItem {
+  id: string;
+  draft_id: string;
+  sent_by_user_id: string;
+  recipient_email_masked: string;
+  recipient_email_hash: string;
+  subject: string;
+  status: 'sent' | 'failed';
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface DraftEmailDeliveriesResponse {
+  items: DraftEmailDeliveryItem[];
+}
+
+export interface SendDraftToPatientPayload {
+  to: string;
+  subject: string;
+  body: string;
+}
+
+export interface SendDraftToPatientResponse {
+  ok: boolean;
+  message: string;
+}

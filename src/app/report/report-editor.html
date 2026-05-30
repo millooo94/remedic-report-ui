@@ -465,6 +465,9 @@
                         <button type="button" class="btn tiny ghost" (click)="openSignedPdfForDraft(draft)">
                           Apri PDF firmato
                         </button>
+                        <button type="button" class="btn tiny primary" (click)="openSendToPatientModal(draft)">
+                          Invia al paziente
+                        </button>
                       }
                     </div>
                   </div>
@@ -736,6 +739,11 @@
                   <button type="button" class="btn ghost" (click)="downloadSignedPdfForCurrentDraft()">
                     Scarica PDF firmato
                   </button>
+                  @if (canSendSignedReportForCurrentDraft) {
+                    <button type="button" class="btn primary" (click)="openSendToPatientModal()">
+                      Invia al paziente
+                    </button>
+                  }
                   @if (currentSignedStoredAttachment.drive_web_view_link) {
                     <button type="button" class="btn primary" (click)="openSignedPdfOnDrive()">
                       Apri su Drive
@@ -951,6 +959,94 @@
               {{ draftSaving ? 'Salvataggio...' : 'Salva e chiudi' }}
             </button>
           }
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showSendToPatientModal) {
+    <div class="modalBackdrop">
+      <div class="modalSheet modalSheetWide">
+        <div class="modalHead">
+          <div>
+            <div class="modalEyebrow">Area Admin</div>
+            <h3>Invia al paziente</h3>
+            <p>
+              Stai per inviare un referto medico firmato all'indirizzo indicato.
+              Verifica attentamente l'email del destinatario prima di procedere.
+            </p>
+          </div>
+          <button type="button" class="iconCloseBtn" (click)="closeSendToPatientModal()">Chiudi</button>
+        </div>
+
+        <div class="modalBody">
+          <div class="sendPatientSummary">
+            <div><strong>Paziente</strong><span>{{ sendToPatientDraft?.paziente_nome_completo || 'Paziente senza nome' }}</span></div>
+            <div><strong>Tipo referto</strong><span>{{ sendToPatientDraft ? reportTypeLabelFor(sendToPatientDraft.tipo_referto) : '—' }}</span></div>
+            <div><strong>Refertatore</strong><span>{{ sendToPatientDraft?.assigned_refertatore_name || sendToPatientDraft?.medico_refertatore || '—' }}</span></div>
+          </div>
+
+          <div class="dashboardFormGrid">
+            <div class="field full">
+              <label>Email destinatario paziente</label>
+              <input type="email" [(ngModel)]="sendToPatientForm.to" placeholder="paziente@example.com" />
+            </div>
+            <div class="field full">
+              <label>Oggetto email</label>
+              <input type="text" [(ngModel)]="sendToPatientForm.subject" />
+            </div>
+            <div class="field full">
+              <label>Corpo email</label>
+              <textarea class="adminMailTextarea" [(ngModel)]="sendToPatientForm.body"></textarea>
+            </div>
+          </div>
+
+          <label class="checkline sendPatientConfirm">
+            <input type="checkbox" [(ngModel)]="sendToPatientForm.confirmed" />
+            <span>Confermo di voler inviare al paziente il referto firmato allegato.</span>
+          </label>
+
+          @if (sendToPatientError) {
+            <div class="draftAlert error">{{ sendToPatientError }}</div>
+          }
+
+          <section class="deliveryHistoryCard">
+            <h4>Ultimi invii al paziente</h4>
+            @if (!draftEmailDeliveries.length) {
+              <div class="emptyStateCard">Nessun invio registrato per questo referto.</div>
+            } @else {
+              <div class="draftTableWrap">
+                <div class="draftTable draftTableHead deliveryHistoryTable">
+                  <div>Quando</div>
+                  <div>Destinatario</div>
+                  <div>Stato</div>
+                  <div>Oggetto</div>
+                </div>
+                @for (delivery of draftEmailDeliveries; track delivery.id) {
+                  <div class="draftTable draftTableRow deliveryHistoryTable">
+                    <div>{{ delivery.created_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+                    <div>{{ delivery.recipient_email_masked }}</div>
+                    <div><span class="draftRowStatus">{{ delivery.status === 'sent' ? 'Inviato' : 'Errore' }}</span></div>
+                    <div>{{ delivery.subject }}</div>
+                  </div>
+                }
+              </div>
+            }
+          </section>
+        </div>
+
+        <div class="modalFooter">
+          <button type="button" class="btn ghost" (click)="closeSendToPatientModal()">
+            Annulla
+          </button>
+          <button
+            type="button"
+            class="btn primary"
+            [disabled]="sendToPatientLoading"
+            (click)="submitSendToPatient()"
+          >
+            {{ sendToPatientLoading ? 'Invio...' : 'Invia al paziente' }}
+          </button>
         </div>
       </div>
     </div>

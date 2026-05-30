@@ -8,6 +8,7 @@ import {
   AuthLoginResponse,
   AuthMeResponse,
   CsrfResponse,
+  DraftEmailDeliveriesResponse,
   DraftAttachmentListResponse,
   DraftAttachmentMetadata,
   DraftAttachmentUploadPayload,
@@ -20,6 +21,8 @@ import {
   ReportDraftPayload,
   ReportDraftStatus,
   ResetPasswordResponse,
+  SendDraftToPatientPayload,
+  SendDraftToPatientResponse,
   SignedDraftPdfUploadPayload,
   SignedDraftPdfUploadResponse,
 } from '../models/report-draft';
@@ -412,6 +415,27 @@ export class ReportApiService {
     return this.http.get<AuditLogsResponse>(
       `${environment.API.BASE_URL}/admin/audit-logs`,
       { withCredentials: true },
+    );
+  }
+
+  listAdminDraftEmailDeliveries(draftId: string): Observable<DraftEmailDeliveriesResponse> {
+    return this.http.get<DraftEmailDeliveriesResponse>(
+      `${environment.API.BASE_URL}/admin/drafts/${draftId}/email-deliveries`,
+      { withCredentials: true },
+    );
+  }
+
+  sendAdminDraftToPatient(
+    draftId: string,
+    payload: SendDraftToPatientPayload,
+  ): Observable<SendDraftToPatientResponse> {
+    return this.http.post<SendDraftToPatientResponse>(
+      `${environment.API.BASE_URL}/admin/drafts/${draftId}/send-to-patient`,
+      payload,
+      {
+        headers: this.buildAuthHeaders(),
+        withCredentials: true,
+      },
     );
   }
 

@@ -24,6 +24,7 @@ import {
   AdminUserItem,
   AuditLogItem,
   AuthUser,
+  DraftEmailDeliveryItem,
   DraftAttachmentMetadata,
   DraftAttachmentUploadPayload,
   ProfessionalItem,
@@ -135,6 +136,7 @@ export class ReportEditor {
   adminDrafts: ReportDraftSummary[] = [];
   adminArchiveDrafts: ReportDraftSummary[] = [];
   auditLogs: AuditLogItem[] = [];
+  draftEmailDeliveries: DraftEmailDeliveryItem[] = [];
   adminDashboardLoading = false;
   adminDashboardError = '';
   adminTab: 'professionals' | 'users' | 'drafts' | 'archive' | 'audit' = 'professionals';
@@ -225,6 +227,16 @@ export class ReportEditor {
   emgNeurologistMode = false;
   reviewerMode = false;
   signedPdfSaving = false;
+  showSendToPatientModal = false;
+  sendToPatientLoading = false;
+  sendToPatientError = '';
+  sendToPatientDraft: ReportDraftSummary | null = null;
+  sendToPatientForm = {
+    to: '',
+    subject: '',
+    body: '',
+    confirmed: false,
+  };
   emgSignedPdfAsset: EmgUploadedAsset | null = null;
   psgSignedPdfAsset: EmgUploadedAsset | null = null;
   constructor(
@@ -445,6 +457,16 @@ export class ReportEditor {
     return (
       this.completedReadonlyMode &&
       (this.reportType === 'emg' || this.reportType === 'psg')
+    );
+  }
+
+  get canSendSignedReportForCurrentDraft(): boolean {
+    return (
+      !!this.reservedUser &&
+      this.reservedUser.role === 'admin' &&
+      this.completedReadonlyMode &&
+      (this.reportType === 'emg' || this.reportType === 'psg') &&
+      !!this.currentSignedStoredAttachment
     );
   }
 
@@ -3095,6 +3117,143 @@ export class ReportEditor {
     }
 
     return draft.stato === 'completato' || draft.stato === 'firmato_caricato';
+  }
+
+  canSendSignedReportToPatient(draft?: ReportDraftSummary | null): boolean {
+    if (!this.reservedUser || this.reservedUser.role !== 'admin') {
+      return false;
+    }
+
+    if (!draft) {
+      return this.canSendSignedReportForCurrentDraft;
+    }
+
+    return (
+      (draft.stato === 'completato' || draft.stato === 'firmato_caricato') &&
+      (draft.tipo_referto === 'emg' || draft.tipo_referto === 'psg')
+    );
+  }
+
+  async openSendToPatientModal(draft?: ReportDraftSummary | null): Promise<void> {
+    const targetDraft =
+      draft ||
+      (this.currentDraftId
+        ? ({
+            id: this.currentDraftId,
+            tipo_referto: this.reportType,
+            stato: this.currentDraftStatus || 'completato',
+            paziente_nome: this.form.get('anagrafica.nome')?.value || null,
+            paziente_cognome: this.form.get('anagrafica.cognome')?.value || null,
+            paziente_nome_completo:
+              `${this.form.get('anagrafica.nome')?.value || ''} ${this.form.get('anagrafica.cognome')?.value || ''}`.trim() ||
+              null,
+            data_nascita: this.form.get('anagrafica.dataNascita')?.value || null,
+            codice_fiscale: this.form.get('anagrafica.codiceFiscale')?.value || null,
+            telefono: this.form.get('anagrafica.telefono')?.value || null,
+            email: this.form.get('anagrafica.email')?.value || null,
+            medico_refertatore:
+              `${this.control('medico.nome').value || ''} ${this.control('medico.cognome').value || ''}`.trim() ||
+              null,
+            medico_refertatore_id: this.control('medico.id').value || null,
+            assigned_refertatore_id: this.control('medico.id').value || null,
+            assigned_refertatore_email: this.findDoctorEmailById(this.control('medico.id').value || ''),
+            assigned_refertatore_name:
+              `${this.control('medico.nome').value || ''} ${this.control('medico.cognome').value || ''}`.trim() ||
+              null,
+            assigned_refertatore_specializzazione:
+              this.control('medico.specialita').value || null,
+            specializzazione: this.control('medico.specialita').value || null,
+            prestazione: this.control('prestazione').value || null,
+            data_esame: this.control('dataVisita').value || null,
+            created_at: '',
+            updated_at: '',
+            completed_at: '',
+          } as ReportDraftSummary)
+        : null);
+
+    if (!targetDraft || !this.canSendSignedReportToPatient(targetDraft)) {
+      this.setDraftMessage(
+        'Invio al paziente disponibile solo per referti completati con PDF firmato.',
+        'warning',
+      );
+      return;
+    }
+
+    this.sendToPatientDraft = targetDraft;
+    this.sendToPatientError = '';
+    this.sendToPatientForm = {
+      to: (targetDraft.email || '').trim(),
+      subject: `Referto ${this.reportTypeLabelFor(targetDraft.tipo_referto)} - Remedic`,
+      body:
+        'Gentile paziente,\n\nin allegato trova il referto firmato relativo alla prestazione eseguita presso Remedic.\n\nCordiali saluti,\nRemedic - Centro Medico Polispecialistico',
+      confirmed: false,
+    };
+
+    try {
+      this.draftEmailDeliveries = [];
+      const response = await firstValueFrom(
+        this.api.listAdminDraftEmailDeliveries(targetDraft.id),
+      );
+      this.draftEmailDeliveries = response.items;
+    } catch (error) {
+      console.error('Errore caricamento storico invii al paziente:', error);
+    }
+
+    this.showSendToPatientModal = true;
+  }
+
+  closeSendToPatientModal(): void {
+    this.showSendToPatientModal = false;
+    this.sendToPatientLoading = false;
+    this.sendToPatientError = '';
+    this.sendToPatientDraft = null;
+    this.sendToPatientForm = {
+      to: '',
+      subject: '',
+      body: '',
+      confirmed: false,
+    };
+  }
+
+  async submitSendToPatient(): Promise<void> {
+    if (!this.sendToPatientDraft) {
+      return;
+    }
+
+    if (!this.sendToPatientForm.confirmed) {
+      this.sendToPatientError =
+        "Conferma esplicitamente l'invio del referto firmato al paziente prima di procedere.";
+      return;
+    }
+
+    this.sendToPatientLoading = true;
+    this.sendToPatientError = '';
+
+    try {
+      await firstValueFrom(this.api.getCsrf());
+      const response = await firstValueFrom(
+        this.api.sendAdminDraftToPatient(this.sendToPatientDraft.id, {
+          to: this.sendToPatientForm.to.trim(),
+          subject: this.sendToPatientForm.subject.trim(),
+          body: this.sendToPatientForm.body.trim(),
+        }),
+      );
+
+      this.setDraftMessage(response.message, 'success');
+      const deliveries = await firstValueFrom(
+        this.api.listAdminDraftEmailDeliveries(this.sendToPatientDraft.id),
+      );
+      this.draftEmailDeliveries = deliveries.items;
+      this.closeSendToPatientModal();
+    } catch (error: any) {
+      console.error('Errore invio referto al paziente:', error);
+      this.sendToPatientError =
+        error?.error?.message ||
+        error?.error?.error ||
+        'Impossibile inviare il referto. Verifica configurazione email o disponibilita del PDF firmato.';
+    } finally {
+      this.sendToPatientLoading = false;
+    }
   }
 
   async openSignedPdfForCurrentDraft(): Promise<void> {
