@@ -1,17 +1,20 @@
 .page {
-  height: 100vh;
+  min-height: 100vh;
+  height: auto;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .entryMain {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 30px;
   background: linear-gradient(160deg, #f5fbfd 0%, #ecf5fa 100%);
+  overflow: visible;
 }
 
 .entryCard {
@@ -530,12 +533,16 @@
 .draftTableWrap {
   border: 1px solid #e5e7eb;
   border-radius: 16px;
-  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
 }
 
 .draftTable {
   display: grid;
   grid-template-columns: minmax(220px, 2fr) 120px 150px 140px 180px 180px;
+  min-width: 980px;
   gap: 12px;
   align-items: center;
   padding: 12px 16px;
@@ -649,8 +656,13 @@
 
 .dashboardSplit {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   gap: 20px;
+  align-items: start;
+}
+
+.dashboardSplit > * {
+  min-width: 0;
 }
 
 .dashboardPanel {
@@ -659,6 +671,8 @@
   background: #fff;
   padding: 20px;
   margin-top: 18px;
+  min-width: 0;
+  overflow: visible;
 }
 
 .dashboardPanel h3 {
@@ -694,18 +708,22 @@
 
 .draftTableAdminProfessionals {
   grid-template-columns: minmax(220px, 2fr) 160px 120px 130px 160px;
+  min-width: 860px;
 }
 
 .draftTableAdminUsers {
   grid-template-columns: minmax(240px, 2fr) 120px 160px 130px 160px;
+  min-width: 840px;
 }
 
 .draftTableAdminDrafts {
   grid-template-columns: minmax(220px, 2fr) 90px 180px 140px 170px 180px;
+  min-width: 980px;
 }
 
 .draftTableAudit {
   grid-template-columns: 180px 1.5fr 120px 120px;
+  min-width: 760px;
 }
 
 .deliveryHistoryTable {
@@ -852,6 +870,12 @@
 
   .sendPatientSummary,
   .deliveryHistoryTable {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1200px) {
+  .dashboardSplit {
     grid-template-columns: 1fr;
   }
 }

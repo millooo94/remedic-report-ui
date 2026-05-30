@@ -14,7 +14,8 @@ body {
   background: #f4f7fb;
   color: #1f2933;
 
-  overflow-y: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Forza il font su tutti gli input, inclusi quelli date */
