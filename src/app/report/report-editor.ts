@@ -118,7 +118,7 @@ export class ReportEditor {
   readonly sectionKeys = REPORT_SECTION_KEYS;
   readonly mandatorySections = REPORT_MANDATORY_SECTIONS;
   readonly fallbackDoctors: DoctorInfo[] = REPORT_DOCTORS;
-  doctors: DoctorInfo[] = REPORT_DOCTORS;
+  doctors: DoctorInfo[] = [];
   professionals: ProfessionalItem[] = [];
   refertatoriEmg: DoctorInfo[] = [];
   refertatoriPsg: DoctorInfo[] = [];
@@ -155,6 +155,7 @@ export class ReportEditor {
   showAdminProfessionalModal = false;
   showAdminUserModal = false;
   showChangePasswordModal = false;
+  showProfileSettingsModal = false;
   showDeleteResourceModal = false;
   professionalsPage = 1;
   professionalsPageSize = 10;
@@ -182,9 +183,13 @@ export class ReportEditor {
   specializations = [...PROFESSIONAL_SPECIALIZATIONS];
   draftActionLoadingId: string | null = null;
   adminArchiveDriveLoadingId: string | null = null;
+  adminArchiveActionsDraftId: string | null = null;
+  showArchiveActionsModal = false;
+  archiveActionsTarget: ReportDraftSummary | null = null;
   standardPdfGenerating = false;
   viewportWidth =
     typeof window !== 'undefined' ? window.innerWidth : 1440;
+  refertatoreSection: 'dashboard' | 'toReview' | 'documents' | 'archive' = 'dashboard';
   adminUserForm = {
     id: '',
     role: 'refertatore' as 'admin' | 'refertatore',
@@ -295,10 +300,26 @@ export class ReportEditor {
   showCurrentPassword = false;
   showNewPassword = false;
   showConfirmPassword = false;
+  showProfileCurrentPassword = false;
+  showProfileNewPassword = false;
+  showProfileConfirmPassword = false;
   changePasswordForm = {
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
+  };
+  profileSettingsLoading = false;
+  profileAvatarUploading = false;
+  profileSettingsError = '';
+  profileSettingsSuccess = '';
+  profileFieldErrors: Record<string, string> = {};
+  profileAvatarError = '';
+  profileAvatarPreview = '';
+  profileForm = {
+    first_name: '',
+    last_name: '',
+    display_name: '',
+    email: '',
   };
   private draftMessageTimeoutId: ReturnType<typeof window.setTimeout> | null = null;
   constructor(
@@ -320,6 +341,7 @@ export class ReportEditor {
       this.searchTechnician(term);
       this.form.get('emg.tecnicoEsecutoreId')?.setValue('', { emitEvent: false });
       this.form.get('emg.tecnicoEsecutore')?.setValue('', { emitEvent: false });
+      this.form.get('emg.tecnicoEsecutoreSpecialita')?.setValue('', { emitEvent: false });
       this.form.get('emg.tecnicoRuolo')?.setValue('', { emitEvent: false });
     });
 
@@ -585,21 +607,46 @@ export class ReportEditor {
   }
 
   get reservedUserInitials(): string {
+    const parts = [
+      this.reservedUser?.firstName?.trim(),
+      this.reservedUser?.lastName?.trim(),
+    ].filter(Boolean) as string[];
+
+    if (parts.length >= 2) {
+      return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
+    }
+
     const source = this.reservedUser?.displayName || this.refertatoreDisplayName || 'RR';
-    const parts = source
+    const fallbackParts = source
       .split(/\s+/)
       .map((part) => part.trim())
       .filter(Boolean);
 
-    if (!parts.length) {
+    if (!fallbackParts.length) {
       return 'RR';
     }
 
-    if (parts.length === 1) {
-      return parts[0].slice(0, 2).toUpperCase();
+    if (fallbackParts.length === 1) {
+      return fallbackParts[0].slice(0, 2).toUpperCase();
     }
 
-    return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
+    return `${fallbackParts[0][0] || ''}${fallbackParts[1][0] || ''}`.toUpperCase();
+  }
+
+  get reservedUserFullName(): string {
+    const fullName = [
+      this.reservedUser?.firstName?.trim(),
+      this.reservedUser?.lastName?.trim(),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    return fullName || this.refertatoreDisplayName;
+  }
+
+  get reservedUserAvatarSrc(): string | null {
+    return this.reservedUser?.avatarDataUrl || this.profileAvatarPreview || null;
   }
 
   get reservedUserRoleLabel(): string {
@@ -625,6 +672,28 @@ export class ReportEditor {
       { key: 'drafts', label: 'Referti in lavorazione' },
       { key: 'archive', label: 'Archivio', badge: this.adminPendingPatientSendCount || undefined },
       { key: 'audit', label: 'Audit log' },
+    ];
+  }
+
+  get refertatoreSidebarItems(): Array<{
+    key: 'dashboard' | 'toReview' | 'documents' | 'archive';
+    label: string;
+    badge?: number;
+  }> {
+    return [
+      { key: 'dashboard', label: 'Dashboard' },
+      {
+        key: 'toReview',
+        label: 'Da refertare',
+        badge:
+          this.draftsToCompleteByType(this.activeRefertatoreTab).length || undefined,
+      },
+      {
+        key: 'documents',
+        label: 'Documenti da firmare',
+        badge: this.refertatorePendingBadge(this.activeRefertatoreTab) || undefined,
+      },
+      { key: 'archive', label: 'Archivio referti' },
     ];
   }
 
@@ -797,6 +866,18 @@ export class ReportEditor {
 
   get technicianAvailableCount(): number {
     return this.filteredTechnicians().length;
+  }
+
+  get doctorAvailableCount(): number {
+    return this.filteredDoctors().length;
+  }
+
+  get isDashboardShellMode(): boolean {
+    return (
+      this.uiState === 'adminDashboard' ||
+      this.uiState === 'refertatoreDashboard' ||
+      (this.uiState === 'wizard' && this.entryContext !== 'public')
+    );
   }
 
   get selectedAdminUserProfessional(): ProfessionalItem | null {
@@ -1843,6 +1924,7 @@ export class ReportEditor {
       emg: {
         tecnicoEsecutoreId: d.id,
         tecnicoEsecutore: technicianName,
+        tecnicoEsecutoreSpecialita: d.specialita ?? '',
         tecnicoRuolo: d.ruolo ?? '',
       },
     });
@@ -1875,6 +1957,7 @@ export class ReportEditor {
       emg: {
         tecnicoEsecutoreId: '',
         tecnicoEsecutore: '',
+        tecnicoEsecutoreSpecialita: '',
         tecnicoRuolo: '',
       },
     });
@@ -2294,7 +2377,7 @@ export class ReportEditor {
 
     if (!asset || asset.kind !== 'pdf' || !asset.base64) {
       this.setDraftMessage(
-        'Carica prima il PDF firmato da salvare definitivamente su Drive.',
+        'Carica prima il PDF firmato da registrare nel sistema.',
         'warning',
       );
       return;
@@ -2309,7 +2392,7 @@ export class ReportEditor {
     }
 
     const confirmed = window.confirm(
-      'Confermi di voler salvare questo PDF firmato come referto definitivo su Drive?',
+      'Confermi di voler registrare questo PDF firmato come referto definitivo?',
     );
 
     if (!confirmed) {
@@ -2354,13 +2437,13 @@ export class ReportEditor {
       }
 
       this.setDraftMessage(
-        'PDF firmato caricato e salvato su Drive come referto definitivo.',
+        'PDF firmato registrato correttamente. Sara disponibile nell’archivio admin.',
         'success',
       );
     } catch (error) {
-      console.error('Errore salvataggio PDF firmato su Drive:', error);
+      console.error('Errore registrazione PDF firmato:', error);
       this.setDraftMessage(
-        'Impossibile salvare il PDF firmato su Drive. Riprova tra qualche istante.',
+        'Impossibile registrare il PDF firmato. Verifica che il file sia un PDF valido e riprova.',
         'error',
       );
     } finally {
@@ -2491,7 +2574,134 @@ export class ReportEditor {
 
   openChangePasswordFromMenu(): void {
     this.showReservedUserMenu = false;
-    this.openChangePasswordModal();
+    this.openProfileSettingsModal();
+  }
+
+  openProfileSettingsModal(): void {
+    this.profileSettingsError = '';
+    this.profileSettingsSuccess = '';
+    this.profileFieldErrors = {};
+    this.profileAvatarError = '';
+    this.changePasswordError = '';
+    this.changePasswordMessage = '';
+    this.changePasswordForm = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    };
+    this.showProfileCurrentPassword = false;
+    this.showProfileNewPassword = false;
+    this.showProfileConfirmPassword = false;
+    this.profileForm = {
+      first_name: this.reservedUser?.firstName || '',
+      last_name: this.reservedUser?.lastName || '',
+      display_name: this.reservedUser?.displayName || '',
+      email: this.reservedUser?.email || '',
+    };
+    this.profileAvatarPreview = this.reservedUser?.avatarDataUrl || '';
+    this.showProfileSettingsModal = true;
+  }
+
+  closeProfileSettingsModal(): void {
+    if (this.profileSettingsLoading || this.profileAvatarUploading || this.changePasswordLoading) {
+      return;
+    }
+
+    this.showProfileSettingsModal = false;
+  }
+
+  async onProfileAvatarSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    this.profileAvatarError = '';
+
+    if (!file) {
+      input.value = '';
+      return;
+    }
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      this.profileAvatarError = 'Seleziona un file JPG, PNG o WEBP.';
+      input.value = '';
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      this.profileAvatarError = "L'immagine profilo non puo superare 2 MB.";
+      input.value = '';
+      return;
+    }
+
+    try {
+      const base64 = await this.readFileAsBase64(file);
+      this.profileAvatarUploading = true;
+      await firstValueFrom(this.api.getCsrf());
+      const response = await firstValueFrom(
+        this.api.uploadProfileAvatar({
+          fileName: file.name,
+          mimeType: file.type,
+          base64,
+        }),
+      );
+      this.reservedUser = response.user;
+      this.refertatoreUser = response.user;
+      this.profileAvatarPreview = response.user.avatarDataUrl || '';
+      this.setDraftMessage('Immagine profilo aggiornata.', 'success');
+    } catch (error: any) {
+      this.profileAvatarError =
+        error?.error?.fieldErrors?.avatar ||
+        error?.error?.message ||
+        "Impossibile aggiornare l'immagine profilo in questo momento.";
+    } finally {
+      this.profileAvatarUploading = false;
+      input.value = '';
+    }
+  }
+
+  async saveProfileSettings(): Promise<void> {
+    this.profileSettingsError = '';
+    this.profileSettingsSuccess = '';
+    this.profileFieldErrors = {};
+
+    if (!this.profileForm.display_name.trim()) {
+      this.profileFieldErrors['display_name'] = 'Il nome visualizzato e obbligatorio.';
+      return;
+    }
+
+    if (!this.profileForm.email.trim()) {
+      this.profileFieldErrors['email'] = "L'email e obbligatoria.";
+      return;
+    }
+
+    this.profileSettingsLoading = true;
+
+    try {
+      await firstValueFrom(this.api.getCsrf());
+      const response = await firstValueFrom(
+        this.api.updateProfile({
+          first_name: this.profileForm.first_name.trim() || null,
+          last_name: this.profileForm.last_name.trim() || null,
+          display_name: this.profileForm.display_name.trim(),
+          email: this.profileForm.email.trim(),
+        }),
+      );
+      this.reservedUser = response.user;
+      this.refertatoreUser = response.user;
+      this.profileSettingsSuccess = response.message;
+      this.setDraftMessage('Profilo aggiornato correttamente.', 'success');
+    } catch (error: any) {
+      const fieldErrors = error?.error?.fieldErrors;
+      if (fieldErrors && typeof fieldErrors === 'object') {
+        Object.entries(fieldErrors).forEach(([key, value]) => {
+          this.profileFieldErrors[key] = String(value);
+        });
+      }
+      this.profileSettingsError =
+        error?.error?.message ||
+        'Impossibile aggiornare il profilo in questo momento.';
+    } finally {
+      this.profileSettingsLoading = false;
+    }
   }
 
   openChangePasswordModal(): void {
@@ -2548,8 +2758,8 @@ export class ReportEditor {
         newPassword: '',
         confirmPassword: '',
       };
+      this.profileSettingsSuccess = response.message;
       this.setDraftMessage('Password aggiornata correttamente.', 'success');
-      this.showChangePasswordModal = false;
     } catch (error: any) {
       console.error('Errore cambio password:', error);
       this.changePasswordError =
@@ -2592,6 +2802,7 @@ export class ReportEditor {
           : this.hasEmgAssignment
             ? 'emg'
             : 'psg';
+      this.refertatoreSection = 'dashboard';
       this.showReservedUserMenu = false;
       this.entryContext = 'refertatore';
       this.uiState = 'refertatoreDashboard';
@@ -2738,6 +2949,24 @@ export class ReportEditor {
     this.draftMessage = '';
   }
 
+  setRefertatoreSection(
+    section: 'dashboard' | 'toReview' | 'documents' | 'archive',
+  ): void {
+    this.refertatoreSection = section;
+    this.draftMessage = '';
+  }
+
+  openArchiveActionsModal(draft: ReportDraftSummary): void {
+    this.archiveActionsTarget = draft;
+    this.showArchiveActionsModal = true;
+  }
+
+  closeArchiveActionsModal(): void {
+    this.showArchiveActionsModal = false;
+    this.archiveActionsTarget = null;
+    this.adminArchiveDriveLoadingId = null;
+  }
+
   async exportReadyRefertatoreDraft(draft: ReportDraftSummary): Promise<void> {
     if (draft.stato !== 'pronto_per_firma') {
       this.setDraftMessage(
@@ -2800,6 +3029,13 @@ export class ReportEditor {
       return;
     }
 
+    if (file.size > 30 * 1024 * 1024) {
+      this.dashboardSignedPdfError =
+        'Il PDF firmato supera la dimensione massima consentita di 30 MB.';
+      input.value = '';
+      return;
+    }
+
     try {
       this.dashboardSignedPdfAsset = await this.buildPdfAssetFromFile(file);
     } catch (error) {
@@ -2855,15 +3091,17 @@ export class ReportEditor {
         ),
       );
       this.closeDashboardSignedPdfModal();
-      await this.openRefertatoreDashboard(this.reportType as 'emg' | 'psg');
+      await this.openRefertatoreDashboard(draft.tipo_referto as 'emg' | 'psg');
       this.setDraftMessage(
-        'PDF firmato caricato e archiviato su Drive come referto definitivo.',
+        'PDF firmato acquisito correttamente. Ora e disponibile nell’archivio admin.',
         'success',
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('Errore upload PDF firmato da dashboard:', error);
       this.dashboardSignedPdfError =
-        'Impossibile salvare il PDF firmato in questo momento.';
+        error?.error?.fieldErrors?.pdf ||
+        error?.error?.message ||
+        'Impossibile caricare il PDF firmato. Verifica che il file sia un PDF valido e riprova.';
     } finally {
       this.dashboardSignedPdfSaving = false;
     }
@@ -3964,6 +4202,7 @@ export class ReportEditor {
         this.api.listAdminDraftEmailDeliveries(this.sendToPatientDraft.id),
       );
       this.draftEmailDeliveries = deliveries.items;
+      this.closeArchiveActionsModal();
       this.closeSendToPatientModal();
     } catch (error: any) {
       console.error('Errore invio referto al paziente:', error);
@@ -3985,7 +4224,7 @@ export class ReportEditor {
       const attachment = await this.resolveSignedAttachmentForDraft(this.currentDraftId);
       if (!attachment) {
         this.setDraftMessage(
-          'Referto completato, ma il PDF firmato non e disponibile nella UI. Verifica archivio Drive.',
+          "Il PDF firmato non e disponibile in questa schermata. Verifica l'archivio del sistema.",
           'warning',
         );
         return;
@@ -4010,7 +4249,7 @@ export class ReportEditor {
       const attachment = await this.resolveSignedAttachmentForDraft(this.currentDraftId);
       if (!attachment) {
         this.setDraftMessage(
-          'Referto completato, ma il PDF firmato non e disponibile nella UI. Verifica archivio Drive.',
+          "Il PDF firmato non e disponibile in questa schermata. Verifica l'archivio del sistema.",
           'warning',
         );
         return;
@@ -4929,6 +5168,7 @@ export class ReportEditor {
   }
 
   requestDeleteWorkingDraft(draft: ReportDraftSummary): void {
+    this.closeArchiveActionsModal();
     this.openDeleteResourceModal(
       'workingDraft',
       draft.id,
@@ -4937,6 +5177,7 @@ export class ReportEditor {
   }
 
   requestDeleteArchiveDraft(draft: ReportDraftSummary): void {
+    this.closeArchiveActionsModal();
     this.openDeleteResourceModal(
       'archiveDraft',
       draft.id,
@@ -4988,7 +5229,7 @@ export class ReportEditor {
           this.professionalsTotalPages,
         );
         await this.loadOperationalOptions();
-        this.setDraftMessage('Professionista eliminato (disattivato).', 'success');
+        this.setDraftMessage('Professionista eliminato.', 'success');
       } else if (this.deleteResourceTarget.kind === 'refertatore') {
         await firstValueFrom(this.api.deleteAdminUser(this.deleteResourceTarget.id));
         this.adminUsers = this.adminUsers.filter(
@@ -4998,10 +5239,7 @@ export class ReportEditor {
           this.refertatoriPage,
           this.refertatoriTotalPages,
         );
-        this.setDraftMessage(
-          'Refertatore disattivato. I referti storici restano conservati.',
-          'success',
-        );
+        this.setDraftMessage('Refertatore eliminato.', 'success');
       } else if (this.deleteResourceTarget.kind === 'workingDraft') {
         await firstValueFrom(this.api.deleteAdminDraft(this.deleteResourceTarget.id));
         this.adminDrafts = this.adminDrafts.filter(
@@ -5068,7 +5306,7 @@ export class ReportEditor {
   canArchiveDraftBeSavedToDrive(draft: ReportDraftSummary): boolean {
     return (
       (draft.tipo_referto === 'emg' || draft.tipo_referto === 'psg') &&
-      draft.stato === 'completato' &&
+      (draft.stato === 'firmato_caricato' || draft.stato === 'completato') &&
       !!draft.has_signed_pdf &&
       !draft.drive_file_id
     );
@@ -5091,6 +5329,7 @@ export class ReportEditor {
         item.id === draft.id
           ? {
               ...item,
+              stato: response?.draft?.stato || item.stato,
               drive_file_id:
                 response?.attachment?.drive_file_id ||
                 response?.drive?.driveFileId ||
@@ -5108,6 +5347,7 @@ export class ReportEditor {
         response?.message || 'Referto archiviato su Drive correttamente.',
         'success',
       );
+      this.closeArchiveActionsModal();
     } catch (error: any) {
       console.error('Errore archiviazione su Drive da area admin:', error);
       this.adminDashboardError =
@@ -5243,7 +5483,7 @@ export class ReportEditor {
   ): boolean {
     return (
       normalizeSpecialization(specializzazione) ===
-      'Tecnico di Neurofisiopatologia'
+      'Tecniche di Neurofisiopatologia'
     );
   }
 
@@ -5631,6 +5871,11 @@ export class ReportEditor {
       kind: 'pdf',
       base64: this.extractBase64FromDataUrl(dataUrl),
     };
+  }
+
+  private async readFileAsBase64(file: File): Promise<string> {
+    const dataUrl = await this.readFileAsDataUrl(file);
+    return this.extractBase64FromDataUrl(dataUrl);
   }
 
   private readFileAsDataUrl(file: File): Promise<string> {

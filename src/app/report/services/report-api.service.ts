@@ -26,6 +26,7 @@ import {
   SendDraftToPatientResponse,
   SignedDraftPdfUploadPayload,
   SignedDraftPdfUploadResponse,
+  UpdateProfileResponse,
 } from '../models/report-draft';
 import { ReportPdfRequest } from '../models/report-pdf-request';
 
@@ -145,6 +146,37 @@ export class ReportApiService {
     return this.http.post<ChangePasswordResponse>(
       `${environment.API.BASE_URL}/auth/change-password`,
       { currentPassword, newPassword },
+      {
+        headers: this.buildAuthHeaders(),
+        withCredentials: true,
+      },
+    );
+  }
+
+  updateProfile(payload: {
+    first_name?: string | null;
+    last_name?: string | null;
+    display_name: string;
+    email: string;
+  }): Observable<UpdateProfileResponse> {
+    return this.http.put<UpdateProfileResponse>(
+      `${environment.API.BASE_URL}/auth/profile`,
+      payload,
+      {
+        headers: this.buildAuthHeaders(),
+        withCredentials: true,
+      },
+    );
+  }
+
+  uploadProfileAvatar(payload: {
+    fileName: string;
+    mimeType: string;
+    base64: string;
+  }): Observable<UpdateProfileResponse> {
+    return this.http.post<UpdateProfileResponse>(
+      `${environment.API.BASE_URL}/auth/profile/avatar`,
+      payload,
       {
         headers: this.buildAuthHeaders(),
         withCredentials: true,

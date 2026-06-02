@@ -171,15 +171,15 @@
           [doctorSearch]="technicalSearch"
           [doctorResults]="technicalResults"
           [selectedDoctorInvalid]="selectedTechnicianInvalid"
-          label="Cerca Tecnico di Neurofisiopatologia *"
+          label="Cerca Tecniche di Neurofisiopatologia *"
           placeholder="Digita nome, cognome o ruolo"
-          invalidMessage="Seleziona un Tecnico di Neurofisiopatologia dalla lista"
+          invalidMessage="Seleziona un professionista con specializzazione Tecniche di Neurofisiopatologia"
           (selectDoctor)="selectTechnicianEvent.emit($event)"
         >
         </doctor-autocomplete>
         @if (technicianAvailableCount === 0) {
           <p class="fieldHint" style="margin: -4px 0 0;">
-            Nessun Tecnico di Neurofisiopatologia attivo configurato. Aggiungi o modifica un professionista dall'Area Admin con specializzazione Tecnico di Neurofisiopatologia.
+            Nessun professionista attivo con specializzazione Tecniche di Neurofisiopatologia configurato. Aggiungi o modifica un professionista dall'Area Admin.
           </p>
         }
       } @else {
@@ -202,7 +202,7 @@
           <label>Specialita / Ruolo</label>
           <input
             type="text"
-            [formControl]="control('emg.tecnicoRuolo')"
+            [value]="control('emg.tecnicoEsecutoreSpecialita').value || control('emg.tecnicoRuolo').value"
             readonly
           />
         </div>
@@ -257,6 +257,11 @@
       (selectDoctor)="selectDoctorEvent.emit($event)"
     >
     </doctor-autocomplete>
+    @if (!isEmg && !isPsg && doctorAvailableCount === 0) {
+      <p class="fieldHint" style="margin: -4px 0 0;">
+        Nessun professionista configurato. Aggiungine uno dall'Area Admin.
+      </p>
+    }
   } @else {
     <p class="fieldHint">
       {{ isEmg ? 'Compilato dal TNFP.' : 'Campo disponibile in sola lettura nell’area refertatore.' }}

@@ -147,14 +147,21 @@ export interface SignedDraftPdfUploadResponse {
     driveFileId?: string | null;
     driveWebViewLink?: string | null;
   } | null;
+  notification?: {
+    sent: boolean;
+    reason?: string | null;
+  };
 }
 
 export interface AuthUser {
   id: string;
   role: 'admin' | 'refertatore';
   email: string;
+  firstName: string | null;
+  lastName: string | null;
   displayName: string;
   specializzazione: string | null;
+  avatarDataUrl: string | null;
   active: boolean;
   mustChangePassword: boolean;
   assignedTypes: Array<'emg' | 'psg'>;
@@ -183,6 +190,11 @@ export interface ResetPasswordResponse {
 }
 
 export interface ChangePasswordResponse {
+  message: string;
+}
+
+export interface UpdateProfileResponse {
+  user: AuthUser;
   message: string;
 }
 

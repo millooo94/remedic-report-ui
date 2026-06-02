@@ -24,6 +24,7 @@ export class StepVisita {
   ) => boolean;
   @Input({ required: true }) reportType!: ReportType;
   @Input() readonlyMode = false;
+  @Input() doctorAvailableCount = 0;
   @Input() technicianAvailableCount = 0;
 
   @Output() selectDoctorEvent = new EventEmitter<DoctorInfo>();

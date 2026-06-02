@@ -29,6 +29,7 @@ type ReportBuildInput = {
   };
   emg?: {
     tecnicoEsecutore?: string;
+    tecnicoEsecutoreSpecialita?: string;
     tecnicoRuolo?: string;
     medicoInviante?: string;
     quesitoDiagnostico?: string;
@@ -433,8 +434,10 @@ ${this.sharedStyles()}
             this.withFallback(emg.tecnicoEsecutore),
           )}
           ${this.renderMetaItem(
-            'Ruolo tecnico',
-            this.withFallback(emg.tecnicoRuolo),
+            'Specialita tecnico',
+            this.withFallback(
+              emg.tecnicoEsecutoreSpecialita || emg.tecnicoRuolo,
+            ),
           )}
           ${this.renderMetaItem('Specialita', specialty)}
           ${this.renderMetaItem(
@@ -526,8 +529,10 @@ ${this.sharedStyles()}
             <div class="emg-inline-item"><strong>Tecnico esecutore:</strong> ${this.escape(
               this.withFallback(emg.tecnicoEsecutore),
             )}</div>
-            <div class="emg-inline-item"><strong>Ruolo tecnico:</strong> ${this.escape(
-              this.withFallback(emg.tecnicoRuolo),
+            <div class="emg-inline-item"><strong>Specialita tecnico:</strong> ${this.escape(
+              this.withFallback(
+                emg.tecnicoEsecutoreSpecialita || emg.tecnicoRuolo,
+              ),
             )}</div>
             <div class="emg-inline-item"><strong>Tipo di indagine:</strong> ${this.escape(
               prestazione,

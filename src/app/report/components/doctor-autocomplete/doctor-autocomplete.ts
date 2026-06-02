@@ -20,7 +20,10 @@ export class DoctorAutocomplete {
   @Output() selectDoctor = new EventEmitter<DoctorInfo>();
 
   optionTitle(item: DoctorInfo): string {
-    if (item.specialita === 'Tecnico di Neurofisiopatologia') {
+    if (
+      item.specialita === 'Tecniche di Neurofisiopatologia' ||
+      item.specialita === 'Tecnico di Neurofisiopatologia'
+    ) {
       return item.displayName || `${item.nome} ${item.cognome}`.trim();
     }
 

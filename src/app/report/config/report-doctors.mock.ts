@@ -149,7 +149,7 @@ export const REPORT_DOCTORS: DoctorInfo[] = [
     id: '25',
     nome: 'Giorgia',
     cognome: 'Patane',
-    specialita: 'Tecnico di Neurofisiopatologia',
+    specialita: 'Tecniche di Neurofisiopatologia',
     ruolo: 'TNFP',
     displayName: 'Dott.ssa Giorgia Patane',
   },

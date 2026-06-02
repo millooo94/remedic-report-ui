@@ -111,6 +111,7 @@ export function createReportForm(fb: FormBuilder) {
     emg: fb.group({
       tecnicoEsecutoreId: fb.nonNullable.control(''),
       tecnicoEsecutore: fb.nonNullable.control(''),
+      tecnicoEsecutoreSpecialita: fb.nonNullable.control(''),
       tecnicoRuolo: fb.nonNullable.control(''),
       medicoInviante: fb.nonNullable.control(''),
       quesitoDiagnostico: fb.nonNullable.control(''),

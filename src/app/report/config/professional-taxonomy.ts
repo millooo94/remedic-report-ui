@@ -15,7 +15,7 @@ export const PROFESSIONAL_SPECIALIZATIONS = [
   'Medicina Estetica',
   'Psicoterapia',
   'Ostetricia',
-  'Tecnico di Neurofisiopatologia',
+  'Tecniche di Neurofisiopatologia',
   'Medicina Generale',
   'Senologia',
   'Biologia nutrizionale',
@@ -59,6 +59,10 @@ export function normalizeSpecialization(
   const value = String(specializzazione || '').trim().toLowerCase();
   if (!value) {
     return null;
+  }
+
+  if (value === 'tecnico di neurofisiopatologia') {
+    return 'Tecniche di Neurofisiopatologia';
   }
 
   return (
