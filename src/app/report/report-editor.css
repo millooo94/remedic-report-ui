@@ -786,6 +786,49 @@
   font-weight: 600;
 }
 
+.twoFactorQrWrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(28, 158, 189, 0.18);
+  border-radius: 20px;
+  background: #f8fcfd;
+  margin-bottom: 16px;
+}
+
+.twoFactorQrWrap img {
+  width: 220px;
+  height: 220px;
+  object-fit: contain;
+}
+
+.recoveryCodesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.recoveryCodesGrid span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(28, 158, 189, 0.08);
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.inlineLinkBtn {
+  align-self: flex-start;
+  padding: 0;
+}
+
 .mobileBlockCard {
   text-align: center;
 }

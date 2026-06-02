@@ -155,7 +155,8 @@ export interface SignedDraftPdfUploadResponse {
 
 export interface AuthUser {
   id: string;
-  role: 'admin' | 'refertatore';
+  role: 'admin' | 'refertatore' | 'professionista';
+  professionalId?: string | null;
   email: string;
   firstName: string | null;
   lastName: string | null;
@@ -164,13 +165,36 @@ export interface AuthUser {
   avatarDataUrl: string | null;
   active: boolean;
   mustChangePassword: boolean;
+  twoFactorEnabled?: boolean;
   assignedTypes: Array<'emg' | 'psg'>;
 }
 
 export interface AuthLoginResponse {
   user: AuthUser;
+  nextStep: 'two_factor_setup' | 'two_factor_challenge';
+  challengeToken: string;
+  expiresAt: string;
+  csrfToken?: string;
+}
+
+export interface TwoFactorSetupResponse {
+  challengeToken: string;
+  manualEntryKey: string;
+  otpauthUrl: string;
+  qrCodeDataUrl: string;
+}
+
+export interface TwoFactorLoginSuccessResponse {
+  user: AuthUser;
   csrfToken: string;
   expiresAt: string;
+  recoveryCodes?: string[];
+}
+
+export interface CreationAccessResponse {
+  allowed: boolean;
+  reason: 'ip_allowed' | 'admin_allowed' | 'refertatore_allowed' | 'denied';
+  allowedTypes: Array<'standard' | 'emg' | 'psg'>;
 }
 
 export interface AuthMeResponse {
@@ -216,6 +240,11 @@ export interface ProfessionalItem {
   is_refertatore: boolean;
   active: boolean;
   sort_order: number;
+  reserved_user_id?: string | null;
+  reserved_user_email?: string | null;
+  reserved_user_role?: string | null;
+  reserved_user_active?: boolean | null;
+  reserved_user_two_factor_enabled?: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -257,7 +286,7 @@ export interface RefertatoreEmgDraftListResponse {
 
 export interface AdminUserItem {
   id: string;
-  role: 'admin' | 'refertatore';
+  role: 'admin' | 'refertatore' | 'professionista';
   professional_id?: string | null;
   professional_display_name?: string | null;
   email: string;

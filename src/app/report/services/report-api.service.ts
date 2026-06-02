@@ -9,6 +9,7 @@ import {
   AuthMeResponse,
   CsrfResponse,
   ChangePasswordResponse,
+  CreationAccessResponse,
   DraftEmailDeliveriesResponse,
   DraftAttachmentListResponse,
   DraftAttachmentMetadata,
@@ -26,6 +27,8 @@ import {
   SendDraftToPatientResponse,
   SignedDraftPdfUploadPayload,
   SignedDraftPdfUploadResponse,
+  TwoFactorLoginSuccessResponse,
+  TwoFactorSetupResponse,
   UpdateProfileResponse,
 } from '../models/report-draft';
 import { ReportPdfRequest } from '../models/report-pdf-request';
@@ -90,7 +93,101 @@ export class ReportApiService {
           withCredentials: true,
         },
       )
+      .pipe(
+        tap((response) => {
+          if (response.csrfToken) {
+            this.setCsrfToken(response.csrfToken);
+          }
+        }),
+      );
+  }
+
+  getCreationAccess(
+    reportType?: 'standard' | 'emg' | 'psg',
+  ): Observable<CreationAccessResponse> {
+    let params = new HttpParams();
+    if (reportType) {
+      params = params.set('reportType', reportType);
+    }
+
+    return this.http.get<CreationAccessResponse>(
+      `${environment.API.BASE_URL}/creation-access`,
+      {
+        headers: this.buildPublicHeaders(),
+        withCredentials: true,
+        params,
+      },
+    );
+  }
+
+  getTwoFactorSetup(challengeToken: string): Observable<TwoFactorSetupResponse> {
+    return this.http.post<TwoFactorSetupResponse>(
+      `${environment.API.BASE_URL}/auth/2fa/setup`,
+      { challengeToken },
+      {
+        headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
+        withCredentials: true,
+      },
+    );
+  }
+
+  verifyTwoFactorSetup(
+    challengeToken: string,
+    code: string,
+  ): Observable<TwoFactorLoginSuccessResponse> {
+    return this.http
+      .post<TwoFactorLoginSuccessResponse>(
+        `${environment.API.BASE_URL}/auth/2fa/verify-setup`,
+        { challengeToken, code },
+        {
+          headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
+          withCredentials: true,
+        },
+      )
       .pipe(tap((response) => this.setCsrfToken(response.csrfToken)));
+  }
+
+  verifyTwoFactorChallenge(
+    challengeToken: string,
+    code: string,
+  ): Observable<TwoFactorLoginSuccessResponse> {
+    return this.http
+      .post<TwoFactorLoginSuccessResponse>(
+        `${environment.API.BASE_URL}/auth/2fa/challenge`,
+        { challengeToken, code },
+        {
+          headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
+          withCredentials: true,
+        },
+      )
+      .pipe(tap((response) => this.setCsrfToken(response.csrfToken)));
+  }
+
+  verifyTwoFactorRecoveryCode(
+    challengeToken: string,
+    recoveryCode: string,
+  ): Observable<TwoFactorLoginSuccessResponse> {
+    return this.http
+      .post<TwoFactorLoginSuccessResponse>(
+        `${environment.API.BASE_URL}/auth/2fa/recovery-code`,
+        { challengeToken, recoveryCode },
+        {
+          headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
+          withCredentials: true,
+        },
+      )
+      .pipe(tap((response) => this.setCsrfToken(response.csrfToken)));
+  }
+
+  regenerateRecoveryCodes(): Observable<{ recoveryCodes: string[] }> {
+    return this.http.post<{ recoveryCodes: string[] }>(
+      `${environment.API.BASE_URL}/auth/2fa/recovery-codes/regenerate`,
+      {},
+      {
+        headers: this.buildAuthHeaders(),
+        withCredentials: true,
+      },
+    );
   }
 
   logout(): Observable<void> {
@@ -217,7 +314,7 @@ export class ReportApiService {
     return this.http.post<ReportDraftDetail>(
       `${environment.API.BASE_URL}/drafts`,
       payload,
-      { headers: this.buildPublicHeaders() },
+      { headers: this.buildPublicHeaders(), withCredentials: true },
     );
   }
 
@@ -235,6 +332,7 @@ export class ReportApiService {
       `${environment.API.BASE_URL}/drafts`,
       {
         headers: this.buildPublicHeaders(),
+        withCredentials: true,
         params,
       },
     );
@@ -243,7 +341,7 @@ export class ReportApiService {
   getDraft(id: string): Observable<ReportDraftDetail> {
     return this.http.get<ReportDraftDetail>(
       `${environment.API.BASE_URL}/drafts/${id}`,
-      { headers: this.buildPublicHeaders() },
+      { headers: this.buildPublicHeaders(), withCredentials: true },
     );
   }
 
@@ -251,7 +349,7 @@ export class ReportApiService {
     return this.http.put<ReportDraftDetail>(
       `${environment.API.BASE_URL}/drafts/${id}`,
       payload,
-      { headers: this.buildPublicHeaders() },
+      { headers: this.buildPublicHeaders(), withCredentials: true },
     );
   }
 
@@ -259,7 +357,7 @@ export class ReportApiService {
     return this.http.patch<ReportDraftDetail>(
       `${environment.API.BASE_URL}/drafts/${id}/status`,
       { stato },
-      { headers: this.buildPublicHeaders() },
+      { headers: this.buildPublicHeaders(), withCredentials: true },
     );
   }
 
@@ -269,13 +367,14 @@ export class ReportApiService {
     return this.http.post<{ draft: ReportDraftDetail; emailSent: boolean }>(
       `${environment.API.BASE_URL}/drafts/${draftId}/send-to-refertatore`,
       {},
-      { headers: this.buildPublicHeaders() },
+      { headers: this.buildPublicHeaders(), withCredentials: true },
     );
   }
 
   deleteDraft(id: string): Observable<void> {
     return this.http.delete<void>(`${environment.API.BASE_URL}/drafts/${id}`, {
       headers: this.buildPublicHeaders(),
+      withCredentials: true,
     });
   }
 
@@ -288,6 +387,7 @@ export class ReportApiService {
       payload,
       {
         headers: this.buildPublicHeaders(),
+        withCredentials: true,
       },
     );
   }
@@ -359,6 +459,7 @@ export class ReportApiService {
       `${environment.API.BASE_URL}/drafts/${draftId}/attachments/${attachmentId}`,
       {
         headers: this.buildPublicHeaders(),
+        withCredentials: true,
       },
     );
   }
@@ -376,7 +477,7 @@ export class ReportApiService {
       payload,
       {
         headers: reservedAuth ? this.buildAuthHeaders() : this.buildPublicHeaders(),
-        withCredentials: reservedAuth,
+        withCredentials: true,
       },
     );
   }
@@ -564,9 +665,33 @@ export class ReportApiService {
     );
   }
 
+  listReservedPersonalArchive(
+    tipoReferto?: '' | 'standard' | 'emg' | 'psg',
+  ): Observable<ReportDraftListResponse> {
+    let params = new HttpParams();
+    if (tipoReferto) {
+      params = params.set('tipo_referto', tipoReferto);
+    }
+
+    return this.http.get<ReportDraftListResponse>(
+      `${environment.API.BASE_URL}/refertatore/personal-archive`,
+      {
+        params,
+        withCredentials: true,
+      },
+    );
+  }
+
   getRefertatoreDraft(id: string): Observable<ReportDraftDetail> {
     return this.http.get<ReportDraftDetail>(
       `${environment.API.BASE_URL}/refertatore/drafts/${id}`,
+      { withCredentials: true },
+    );
+  }
+
+  getReservedArchiveDraft(id: string): Observable<ReportDraftDetail> {
+    return this.http.get<ReportDraftDetail>(
+      `${environment.API.BASE_URL}/refertatore/archive/${id}`,
       { withCredentials: true },
     );
   }

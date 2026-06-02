@@ -25,8 +25,22 @@
           <h1>Scegli il percorso di refertazione</h1>
           <p>Avvia un referto standard oppure scegli il percorso asincrono.</p>
         </header>
-
+        @if (creationAccessLoading) {
+          <div class="emptyStateCard">Sto verificando l'accesso alla creazione dei referti...</div>
+        } @else if (!canShowOperationalEntry) {
+          <div class="emptyStateCard">
+            <strong>Accesso non disponibile da questa postazione</strong>
+            <p>
+              La creazione dei referti e consentita solo dalle postazioni autorizzate Remedic.
+              Puoi comunque accedere alla tua Area Riservata.
+            </p>
+            <div class="loginActions" style="justify-content: flex-start; margin-top: 12px;">
+              <button type="button" class="btn primary" (click)="openReservedArea()">Area Riservata</button>
+            </div>
+          </div>
+        } @else {
         <div class="entryTypeGrid">
+          @if (canCreateStandard) {
           <button type="button" class="entryTypeCard" (click)="selectReportType('standard')">
             <div class="entryTypeIcon">
               <svg viewBox="0 0 24 24" aria-hidden="true" class="entryTypeIconSvg">
@@ -36,7 +50,9 @@
             <h3>Referto standard</h3>
             <p>Crea un referto medico con esportazione e archiviazione immediata.</p>
           </button>
+          }
 
+          @if (canEnterAsyncFlow) {
           <button type="button" class="entryTypeCard" (click)="openAsyncTypeSelection()">
             <div class="entryTypeIcon">
               <svg viewBox="0 0 24 24" aria-hidden="true" class="entryTypeIconSvg">
@@ -46,7 +62,9 @@
             <h3>Referto asincrono</h3>
             <p>Gestisci referti che richiedono completamento e firma da parte di un refertatore.</p>
           </button>
+          }
         </div>
+        }
       </section>
     </main>
   } @else if (uiState === 'asyncTypeSelection') {
@@ -64,6 +82,7 @@
         </header>
 
         <div class="entryTypeGrid entryTypeGridTwo">
+          @if (canCreateEmg) {
           <button type="button" class="entryTypeCard" (click)="selectReportType('emg')">
             <div class="entryTypeIcon">
               <svg viewBox="0 0 24 24" aria-hidden="true" class="entryTypeIconSvg">
@@ -73,7 +92,9 @@
             <h3>EMG / ENG</h3>
             <p>Acquisizione tecnica, refertazione clinica e firma digitale del documento finale.</p>
           </button>
+          }
 
+          @if (canCreatePsg) {
           <button type="button" class="entryTypeCard" (click)="selectReportType('psg')">
             <div class="entryTypeIcon">
               <svg viewBox="0 0 24 24" aria-hidden="true" class="entryTypeIconSvg">
@@ -83,6 +104,7 @@
             <h3>PSG</h3>
             <p>Raccolta dati, refertazione clinica e caricamento del PDF firmato definitivo.</p>
           </button>
+          }
         </div>
       </section>
     </main>
@@ -168,6 +190,123 @@
             </button>
           </div>
         </form>
+      </section>
+    </main>
+  } @else if (uiState === 'reservedTwoFactorSetup') {
+    <main class="entryMain entryMainCentered">
+      <section class="entryCard entryCardNarrow">
+        <header class="entryHeader">
+          <div class="entryHeaderTop">
+            <div class="entryEyebrow">Area riservata</div>
+            <button type="button" class="ghostLinkBtn" (click)="goToReservedLogin()">
+              Torna al login
+            </button>
+          </div>
+          <h1>Configura l'autenticazione a due fattori</h1>
+          <p>Scansiona il QR code con la tua app Authenticator e conferma il codice a 6 cifre.</p>
+        </header>
+
+        <div class="loginForm">
+          @if (twoFactorSetupData?.qrCodeDataUrl) {
+            <div class="twoFactorQrWrap">
+              <img [src]="twoFactorSetupData?.qrCodeDataUrl || ''" alt="QR code autenticazione a due fattori" />
+            </div>
+          }
+          <div class="field">
+            <label>Chiave manuale</label>
+            <input type="text" [value]="twoFactorSetupData?.manualEntryKey || ''" readonly />
+          </div>
+          <div class="field">
+            <label>Codice 2FA</label>
+            <input
+              type="text"
+              [(ngModel)]="twoFactorCode"
+              maxlength="6"
+              inputmode="numeric"
+              placeholder="Inserisci il codice a 6 cifre"
+            />
+          </div>
+
+          @if (twoFactorError) {
+            <div class="draftAlert error">{{ twoFactorError }}</div>
+          }
+
+          @if (twoFactorRecoveryCodes.length) {
+            <div class="draftAlert success">
+              <strong>Configurazione completata.</strong>
+              <p>Conserva questi codici di recupero in un luogo sicuro: verranno mostrati una sola volta.</p>
+              <div class="recoveryCodesGrid">
+                @for (code of twoFactorRecoveryCodes; track code) {
+                  <span>{{ code }}</span>
+                }
+              </div>
+            </div>
+          }
+
+          <div class="loginActions">
+            <button type="button" class="btn primary" [disabled]="twoFactorLoading" (click)="submitTwoFactorSetup()">
+              {{ twoFactorLoading ? 'Conferma in corso...' : 'Conferma e attiva 2FA' }}
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  } @else if (uiState === 'reservedTwoFactorChallenge') {
+    <main class="entryMain entryMainCentered">
+      <section class="entryCard entryCardNarrow">
+        <header class="entryHeader">
+          <div class="entryHeaderTop">
+            <div class="entryEyebrow">Area riservata</div>
+            <button type="button" class="ghostLinkBtn" (click)="goToReservedLogin()">
+              Torna al login
+            </button>
+          </div>
+          <h1>Verifica a due fattori</h1>
+          <p>Inserisci il codice a 6 cifre generato dalla tua app Authenticator.</p>
+        </header>
+
+        <div class="loginForm">
+          <div class="field">
+            <label>Codice 2FA</label>
+            <input
+              type="text"
+              [(ngModel)]="twoFactorCode"
+              maxlength="6"
+              inputmode="numeric"
+              placeholder="Inserisci il codice a 6 cifre"
+            />
+          </div>
+
+          <button type="button" class="ghostLinkBtn inlineLinkBtn" (click)="showRecoveryCodeInput = !showRecoveryCodeInput">
+            {{ showRecoveryCodeInput ? 'Nascondi codice di recupero' : 'Usa un codice di recupero' }}
+          </button>
+
+          @if (showRecoveryCodeInput) {
+            <div class="field">
+              <label>Codice di recupero</label>
+              <input
+                type="text"
+                [(ngModel)]="twoFactorRecoveryCode"
+                placeholder="AAAA-BBBB-CCCC"
+              />
+            </div>
+          }
+
+          @if (twoFactorError) {
+            <div class="draftAlert error">{{ twoFactorError }}</div>
+          }
+
+          <div class="loginActions loginActionsSplit">
+            @if (showRecoveryCodeInput) {
+              <button type="button" class="btn ghost" [disabled]="twoFactorLoading" (click)="submitRecoveryCode()">
+                {{ twoFactorLoading ? 'Verifica...' : 'Usa codice recupero' }}
+              </button>
+            }
+            <button type="button" class="btn primary" [disabled]="twoFactorLoading" (click)="submitTwoFactorChallenge()">
+              {{ twoFactorLoading ? 'Verifica...' : 'Conferma accesso' }}
+            </button>
+          </div>
+        </div>
       </section>
     </main>
   } @else if (uiState === 'forgotPassword') {
@@ -630,6 +769,11 @@
           <div class="entryHeaderTop">
             <div class="entryEyebrow">Area refertatore</div>
             <div class="dashboardTopActions">
+              @if (canCreateReservedReports) {
+                <button type="button" class="btn ghost" (click)="startReservedCreationFlow()">
+                  Crea nuovo referto
+                </button>
+              }
               <div class="userMenuWrap">
                 <button type="button" class="userMenuTrigger" (click)="toggleReservedUserMenu()">
                   @if (reservedUserAvatarSrc) {
@@ -669,8 +813,14 @@
               </div>
             </div>
           </div>
-          <h1>Dashboard refertatore</h1>
-          <p>Completa i referti assegnati, esporta il PDF temporaneo da firmare e carica il firmato definitivo dalla dashboard.</p>
+          <h1>{{ hasAsyncAssignments ? 'Dashboard refertatore' : 'Area riservata professionista' }}</h1>
+          <p>
+            {{
+              hasAsyncAssignments
+                ? 'Completa i referti assegnati, esporta il PDF temporaneo da firmare e carica il firmato definitivo dalla dashboard.'
+                : 'Consulta il tuo archivio personale e gestisci le impostazioni del tuo account.'
+            }}
+          </p>
         </header>
 
         @if (refertatoreDraftsError) {
@@ -704,6 +854,68 @@
         @if (refertatoreDraftsLoading) {
           <div class="emptyStateCard">Sto caricando i referti assegnati...</div>
         } @else {
+          @if (!hasAsyncAssignments) {
+            <section class="dashboardPanel">
+              <div class="adminSectionHead">
+                <div>
+                  <h3>Dashboard professionista</h3>
+                  <p>Consulta il tuo archivio personale in sola lettura e aggiorna le impostazioni del profilo.</p>
+                </div>
+              </div>
+              <div class="summaryCardGrid">
+                <article class="summaryMetricCard">
+                  <span>Referti archiviati</span>
+                  <strong>{{ personalArchiveDrafts.length }}</strong>
+                  <small>Documenti completati collegati al tuo profilo professionale.</small>
+                </article>
+              </div>
+            </section>
+
+            @if (refertatoreSection === 'dashboard' || refertatoreSection === 'archive') {
+              <section class="dashboardPanel">
+                <div class="adminSectionHead">
+                  <div>
+                    <h3>Archivio referti</h3>
+                    <p>Referti personali consultabili in sola lettura.</p>
+                  </div>
+                </div>
+                @if (!personalArchiveDrafts.length) {
+                  <div class="emptyStateCard">Nessun referto presente nel tuo archivio personale.</div>
+                } @else {
+                  <div class="draftTableWrap">
+                    <div class="draftTable draftTableHead refertatoreTableArchive">
+                      <div>Paziente</div>
+                      <div>Tipo</div>
+                      <div>Professionista</div>
+                      <div>Completato</div>
+                      <div>Azioni</div>
+                    </div>
+                    @for (draft of personalArchiveDrafts; track draft.id) {
+                      <div class="draftTable draftTableRow refertatoreTableArchive">
+                        <div>
+                          <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
+                          <small>{{ formatDateValue(draft.data_nascita) }}</small>
+                        </div>
+                        <div>{{ reportTypeLabelFor(draft.tipo_referto) }}</div>
+                        <div>{{ draft.medico_refertatore || draft.assigned_refertatore_name || '-' }}</div>
+                        <div>{{ formatDateTime(draft.completed_at || draft.updated_at) }}</div>
+                        <div class="draftRowActions adminRowActions">
+                          <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openPersonalArchiveDraft(draft.id)">
+                            {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
+                          </button>
+                          @if (canOpenSignedPdf(draft)) {
+                            <button type="button" class="btn tiny ghost" (click)="openSignedPdfForDraft(draft)">
+                              Apri PDF firmato
+                            </button>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </section>
+            }
+          } @else {
           @if (showRefertatoreTabs) {
             <div class="dashboardSegmentTabs">
               <button type="button" class="segmentTabBtn" [class.isActive]="activeRefertatoreTab === 'emg'" (click)="setRefertatoreTab('emg')">
@@ -1023,6 +1235,7 @@
                 }
               </div>
             </section>
+          }
           }
         }
           </div>
@@ -1457,6 +1670,22 @@
               <input type="text" [(ngModel)]="adminProfessionalForm.role_label" />
               <div class="fieldErrorSlot">{{ adminProfessionalFieldErrors['role_label'] || '' }}</div>
             </div>
+            <label class="checkline full">
+              <input type="checkbox" [(ngModel)]="adminProfessionalForm.create_reserved_area" />
+              <span>Crea area riservata</span>
+            </label>
+            @if (adminProfessionalForm.create_reserved_area) {
+              <div class="field full">
+                <label>Email area riservata *</label>
+                <input type="email" [(ngModel)]="adminProfessionalForm.reserved_email" placeholder="nome@remedic.it" />
+                <div class="fieldErrorSlot">{{ adminProfessionalFieldErrors['reserved_email'] || '' }}</div>
+              </div>
+              <div class="field full">
+                <label>Password temporanea {{ adminProfessionalForm.id ? '(opzionale in modifica)' : '*' }}</label>
+                <input type="password" [(ngModel)]="adminProfessionalForm.reserved_password" />
+                <div class="fieldErrorSlot">{{ adminProfessionalFieldErrors['reserved_password'] || '' }}</div>
+              </div>
+            }
             @if (professionalSpecializationSearch === 'Tecniche di Neurofisiopatologia') {
               <p class="fieldHint fieldHintFull" style="margin: 0;">
                 Questa specializzazione rende il professionista selezionabile come tecnico esecutore nei referti EMG.
@@ -1802,6 +2031,36 @@
                 </div>
               </div>
               <div class="fieldErrorSlot">{{ profileAvatarError }}</div>
+            </section>
+
+            <section class="profileSettingsCard">
+              <div class="profileSettingsHead">
+                <h4>Sicurezza</h4>
+                <p>L'accesso all'Area Riservata richiede autenticazione a due fattori.</p>
+              </div>
+              <div class="dashboardFormGrid">
+                <div class="field full">
+                  <label>Stato 2FA</label>
+                  <input type="text" [value]="reservedUser?.twoFactorEnabled ? 'Configurata' : 'Da configurare al prossimo accesso'" readonly />
+                  <div class="fieldErrorSlot"></div>
+                </div>
+              </div>
+              <div class="loginActions" style="justify-content: flex-start;">
+                <button type="button" class="btn ghost" [disabled]="twoFactorLoading" (click)="regenerateProfileRecoveryCodes()">
+                  {{ twoFactorLoading ? 'Rigenerazione...' : 'Rigenera codici di recupero' }}
+                </button>
+              </div>
+              @if (twoFactorRecoveryCodes.length) {
+                <div class="draftAlert success" style="margin-top: 16px;">
+                  <strong>Codici di recupero</strong>
+                  <p>Conservali in un luogo sicuro: i codici precedenti non saranno piu validi.</p>
+                  <div class="recoveryCodesGrid">
+                    @for (code of twoFactorRecoveryCodes; track code) {
+                      <span>{{ code }}</span>
+                    }
+                  </div>
+                </div>
+              }
             </section>
 
             <section class="profileSettingsCard full">

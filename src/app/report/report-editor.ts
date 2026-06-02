@@ -24,6 +24,7 @@ import {
   AdminUserItem,
   AuditLogItem,
   AuthUser,
+  CreationAccessResponse,
   DraftEmailDeliveryItem,
   DraftAttachmentMetadata,
   DraftAttachmentUploadPayload,
@@ -33,6 +34,8 @@ import {
   ReportDraftPayload,
   ReportDraftStatus,
   ReportDraftSummary,
+  TwoFactorLoginSuccessResponse,
+  TwoFactorSetupResponse,
 } from './models/report-draft';
 import {
   EMG_REPORT_STEPS,
@@ -82,6 +85,8 @@ type EditorUiState =
   | 'typeActionSelection'
   | 'wizard'
   | 'reservedLogin'
+  | 'reservedTwoFactorSetup'
+  | 'reservedTwoFactorChallenge'
   | 'forgotPassword'
   | 'resetPassword'
   | 'adminDashboard'
@@ -127,6 +132,19 @@ export class ReportEditor {
   reservedLoginPassword = '';
   reservedLoginLoading = false;
   reservedLoginError = '';
+  creationAccess: CreationAccessResponse | null = null;
+  creationAccessLoading = false;
+  creationAccessError = '';
+  reservedChallengeToken = '';
+  reservedChallengeExpiresAt = '';
+  reservedPendingUser: AuthUser | null = null;
+  twoFactorSetupData: TwoFactorSetupResponse | null = null;
+  twoFactorCode = '';
+  twoFactorRecoveryCode = '';
+  twoFactorLoading = false;
+  twoFactorError = '';
+  twoFactorRecoveryCodes: string[] = [];
+  showRecoveryCodeInput = false;
   forgotPasswordEmail = '';
   forgotPasswordLoading = false;
   forgotPasswordMessage = '';
@@ -137,6 +155,7 @@ export class ReportEditor {
   resetPasswordMessage = '';
   refertatoreDrafts: ReportDraftSummary[] = [];
   refertatoreArchiveDrafts: ReportDraftSummary[] = [];
+  personalArchiveDrafts: ReportDraftSummary[] = [];
   refertatoreDashboardLoading = false;
   refertatoreDashboardError = '';
   adminUsers: AdminUserItem[] = [];
@@ -180,6 +199,7 @@ export class ReportEditor {
     name: string;
   } | null = null;
   entryContext: EntryContext = 'public';
+  reportCreationContext: EntryContext = 'public';
   specializations = [...PROFESSIONAL_SPECIALIZATIONS];
   draftActionLoadingId: string | null = null;
   adminArchiveDriveLoadingId: string | null = null;
@@ -192,7 +212,7 @@ export class ReportEditor {
   refertatoreSection: 'dashboard' | 'toReview' | 'documents' | 'archive' = 'dashboard';
   adminUserForm = {
     id: '',
-    role: 'refertatore' as 'admin' | 'refertatore',
+    role: 'refertatore' as 'admin' | 'refertatore' | 'professionista',
     professional_id: '',
     professional_display_name: '',
     email: '',
@@ -213,6 +233,9 @@ export class ReportEditor {
     is_refertatore: false,
     active: true,
     sort_order: 0,
+    create_reserved_area: false,
+    reserved_email: '',
+    reserved_password: '',
   };
 
   doctorResults: DoctorInfo[] = [];
@@ -383,6 +406,7 @@ export class ReportEditor {
     this.updatePsgEssSummary();
     this.updateModeValidators();
     this.restoreReservedSession();
+    this.loadCreationAccess();
     this.loadOperationalOptions();
     this.captureResetPasswordToken();
     this.goToInitialTypeSelection();
@@ -507,6 +531,38 @@ export class ReportEditor {
     return this.viewportWidth < 1024;
   }
 
+  get canShowOperationalEntry(): boolean {
+    return !!this.creationAccess?.allowed;
+  }
+
+  get allowedCreationTypes(): Array<'standard' | 'emg' | 'psg'> {
+    return this.creationAccess?.allowedTypes || [];
+  }
+
+  get canCreateStandard(): boolean {
+    return this.allowedCreationTypes.includes('standard');
+  }
+
+  get canCreateEmg(): boolean {
+    return this.allowedCreationTypes.includes('emg');
+  }
+
+  get canCreatePsg(): boolean {
+    return this.allowedCreationTypes.includes('psg');
+  }
+
+  get canEnterAsyncFlow(): boolean {
+    return this.canCreateEmg || this.canCreatePsg;
+  }
+
+  get isProfessionistaReservedUser(): boolean {
+    return this.reservedUser?.role === 'professionista';
+  }
+
+  get hasAsyncAssignments(): boolean {
+    return this.hasEmgAssignment || this.hasPsgAssignment;
+  }
+
   get showRefertatoreAreaCard(): boolean {
     return false;
   }
@@ -532,11 +588,11 @@ export class ReportEditor {
   }
 
   get showDraftWriteActions(): boolean {
-    return !this.completedReadonlyMode && this.entryContext === 'public';
+    return !this.completedReadonlyMode && !this.reviewerMode;
   }
 
   get showReviewerSaveAction(): boolean {
-    return !this.completedReadonlyMode && this.entryContext === 'refertatore';
+    return !this.completedReadonlyMode && this.entryContext === 'refertatore' && this.reviewerMode;
   }
 
   get draftBrowserTitle(): string {
@@ -650,7 +706,15 @@ export class ReportEditor {
   }
 
   get reservedUserRoleLabel(): string {
-    return this.reservedUser?.role === 'admin' ? 'Admin' : 'Refertatore';
+    if (this.reservedUser?.role === 'admin') {
+      return 'Admin';
+    }
+
+    if (this.reservedUser?.role === 'professionista') {
+      return 'Professionista';
+    }
+
+    return 'Refertatore asincrono';
   }
 
   get reservedUserAssignedAreasLabel(): string {
@@ -680,6 +744,13 @@ export class ReportEditor {
     label: string;
     badge?: number;
   }> {
+    if (!this.hasAsyncAssignments) {
+      return [
+        { key: 'dashboard', label: 'Dashboard' },
+        { key: 'archive', label: 'Archivio referti' },
+      ];
+    }
+
     return [
       { key: 'dashboard', label: 'Dashboard' },
       {
@@ -805,6 +876,10 @@ export class ReportEditor {
     }
 
     return this.hasPsgAssignment ? 'psg' : 'emg';
+  }
+
+  get canCreateReservedReports(): boolean {
+    return !!this.reservedUser && this.canShowOperationalEntry;
   }
 
   get pagedAdminProfessionals(): ProfessionalItem[] {
@@ -1990,6 +2065,14 @@ export class ReportEditor {
   }
 
   selectReportType(type: ReportType): void {
+    if (!this.allowedCreationTypes.includes(type)) {
+      this.setDraftMessage(
+        'Questo tipo di referto non e disponibile per il tuo profilo o da questa postazione.',
+        'warning',
+      );
+      return;
+    }
+
     this.selectedReportType = type;
     this.draftFilters.tipo_referto = type;
     this.draftFilters.stato = '';
@@ -2002,6 +2085,14 @@ export class ReportEditor {
   }
 
   openAsyncTypeSelection(): void {
+    if (!this.canEnterAsyncFlow) {
+      this.setDraftMessage(
+        'I referti asincroni non sono disponibili da questa postazione o per il tuo profilo.',
+        'warning',
+      );
+      return;
+    }
+
     this.selectedReportType = null;
     this.uiState = 'asyncTypeSelection';
     this.draftMessage = '';
@@ -2009,7 +2100,7 @@ export class ReportEditor {
   }
 
   goToInitialTypeSelection(): void {
-    this.entryContext = 'public';
+    this.entryContext = this.reportCreationContext;
     this.uiState = 'initialTypeSelection';
     this.selectedReportType = null;
     this.setEmgRefertatoreMode(false);
@@ -2028,7 +2119,7 @@ export class ReportEditor {
     }
 
     this.uiState = 'typeActionSelection';
-    this.entryContext = 'public';
+    this.entryContext = this.reportCreationContext;
     this.setEmgRefertatoreMode(false);
     this.closeResumeDraftModal();
     this.closePsgAnamnesisModal();
@@ -2042,10 +2133,18 @@ export class ReportEditor {
       return;
     }
 
+    if (!this.allowedCreationTypes.includes(this.selectedReportType)) {
+      this.setDraftMessage(
+        'La creazione di questo referto non e consentita da questa postazione.',
+        'warning',
+      );
+      return;
+    }
+
     this.currentDraftId = null;
     this.currentDraftStatus = null;
     this.draftLoaded = false;
-    this.entryContext = 'public';
+    this.entryContext = this.reportCreationContext;
     this.setEmgRefertatoreMode(false);
     this.step = 0;
     this.doctorSearch.reset('');
@@ -2072,6 +2171,20 @@ export class ReportEditor {
     this.draftFilters.tipo_referto = this.selectedReportType;
     this.draftFilters.offset = 0;
     this.openResumeDraftModal();
+  }
+
+  async startReservedCreationFlow(): Promise<void> {
+    await this.loadCreationAccess();
+    if (!this.canShowOperationalEntry) {
+      this.setDraftMessage(
+        'La creazione dei referti non e disponibile dalla postazione corrente.',
+        'warning',
+      );
+      return;
+    }
+
+    this.reportCreationContext = 'refertatore';
+    this.goToInitialTypeSelection();
   }
 
   startArchiveForSelectedType(): void {
@@ -2534,14 +2647,26 @@ export class ReportEditor {
           this.refertatorePassword,
         ),
       );
-
-      this.refertatoreUser = response.user;
-      this.reservedUser = response.user;
-      this.refertatoreToken = 'session';
+      this.reservedPendingUser = response.user;
+      this.reservedChallengeToken = response.challengeToken;
+      this.reservedChallengeExpiresAt = response.expiresAt;
+      this.twoFactorError = '';
+      this.twoFactorCode = '';
+      this.twoFactorRecoveryCode = '';
+      this.showRecoveryCodeInput = false;
+      this.twoFactorRecoveryCodes = [];
       this.refertatorePassword = '';
       this.showReservedPassword = false;
-      this.persistRefertatoreSession();
-      await this.routeReservedUserDashboard();
+
+      if (response.nextStep === 'two_factor_setup') {
+        this.twoFactorSetupData = await firstValueFrom(
+          this.api.getTwoFactorSetup(response.challengeToken),
+        );
+        this.uiState = 'reservedTwoFactorSetup';
+      } else {
+        this.twoFactorSetupData = null;
+        this.uiState = 'reservedTwoFactorChallenge';
+      }
     } catch (error) {
       console.error('Errore login area riservata:', error);
       this.refertatoreLoginError = 'Credenziali non valide.';
@@ -2563,9 +2688,88 @@ export class ReportEditor {
     this.showReservedUserMenu = false;
     this.refertatoreDrafts = [];
     this.refertatoreArchiveDrafts = [];
+    this.personalArchiveDrafts = [];
     this.clearRefertatoreSession();
     this.entryContext = 'public';
+    this.reportCreationContext = 'public';
     this.uiState = 'initialTypeSelection';
+    await this.loadCreationAccess();
+  }
+
+  async submitTwoFactorSetup(): Promise<void> {
+    if (!this.reservedChallengeToken || !this.twoFactorCode.trim() || this.twoFactorLoading) {
+      return;
+    }
+
+    this.twoFactorLoading = true;
+    this.twoFactorError = '';
+
+    try {
+      const response = await firstValueFrom(
+        this.api.verifyTwoFactorSetup(this.reservedChallengeToken, this.twoFactorCode),
+      );
+      await this.handleReservedLoginSuccess(response);
+      this.twoFactorRecoveryCodes = response.recoveryCodes || [];
+    } catch (error: any) {
+      console.error('Errore attivazione 2FA:', error);
+      this.twoFactorError =
+        error?.error?.fieldErrors?.code ||
+        error?.error?.message ||
+        'Impossibile attivare l’autenticazione a due fattori.';
+    } finally {
+      this.twoFactorLoading = false;
+    }
+  }
+
+  async submitTwoFactorChallenge(): Promise<void> {
+    if (!this.reservedChallengeToken || !this.twoFactorCode.trim() || this.twoFactorLoading) {
+      return;
+    }
+
+    this.twoFactorLoading = true;
+    this.twoFactorError = '';
+
+    try {
+      const response = await firstValueFrom(
+        this.api.verifyTwoFactorChallenge(this.reservedChallengeToken, this.twoFactorCode),
+      );
+      await this.handleReservedLoginSuccess(response);
+    } catch (error: any) {
+      console.error('Errore verifica 2FA:', error);
+      this.twoFactorError =
+        error?.error?.fieldErrors?.code ||
+        error?.error?.message ||
+        'Codice di autenticazione non valido.';
+    } finally {
+      this.twoFactorLoading = false;
+    }
+  }
+
+  async submitRecoveryCode(): Promise<void> {
+    if (!this.reservedChallengeToken || !this.twoFactorRecoveryCode.trim() || this.twoFactorLoading) {
+      return;
+    }
+
+    this.twoFactorLoading = true;
+    this.twoFactorError = '';
+
+    try {
+      const response = await firstValueFrom(
+        this.api.verifyTwoFactorRecoveryCode(
+          this.reservedChallengeToken,
+          this.twoFactorRecoveryCode,
+        ),
+      );
+      await this.handleReservedLoginSuccess(response);
+    } catch (error: any) {
+      console.error('Errore codice recupero 2FA:', error);
+      this.twoFactorError =
+        error?.error?.fieldErrors?.recoveryCode ||
+        error?.error?.message ||
+        'Codice di recupero non valido.';
+    } finally {
+      this.twoFactorLoading = false;
+    }
   }
 
   toggleReservedUserMenu(): void {
@@ -2704,6 +2908,27 @@ export class ReportEditor {
     }
   }
 
+  async regenerateProfileRecoveryCodes(): Promise<void> {
+    this.profileSettingsError = '';
+    this.profileSettingsSuccess = '';
+    this.twoFactorLoading = true;
+
+    try {
+      await firstValueFrom(this.api.getCsrf());
+      const response = await firstValueFrom(this.api.regenerateRecoveryCodes());
+      this.twoFactorRecoveryCodes = response.recoveryCodes || [];
+      this.profileSettingsSuccess =
+        'Nuovi codici di recupero generati. Salvali in un luogo sicuro: verranno mostrati una sola volta.';
+    } catch (error: any) {
+      console.error('Errore rigenerazione codici di recupero:', error);
+      this.profileSettingsError =
+        error?.error?.message ||
+        'Impossibile rigenerare i codici di recupero in questo momento.';
+    } finally {
+      this.twoFactorLoading = false;
+    }
+  }
+
   openChangePasswordModal(): void {
     this.changePasswordError = '';
     this.changePasswordMessage = '';
@@ -2770,7 +2995,11 @@ export class ReportEditor {
   }
 
   async openRefertatoreDashboard(preferredTab?: 'emg' | 'psg'): Promise<void> {
-    if (!this.reservedUser || this.reservedUser.role !== 'refertatore') {
+    if (
+      !this.reservedUser ||
+      (this.reservedUser.role !== 'refertatore' &&
+        this.reservedUser.role !== 'professionista')
+    ) {
       this.uiState = 'reservedLogin';
       return;
     }
@@ -2780,28 +3009,38 @@ export class ReportEditor {
 
     try {
       const assignedTypes = this.reservedUser.assignedTypes || [];
-      const pairs = await Promise.all(
-        assignedTypes.map(async (tipo) => {
-          const [activeResponse, archiveResponse] = await Promise.all([
-            firstValueFrom(this.api.listRefertatoreDrafts(tipo)),
-            firstValueFrom(this.api.listRefertatoreArchive(tipo)),
-          ]);
+      if (assignedTypes.length) {
+        const pairs = await Promise.all(
+          assignedTypes.map(async (tipo) => {
+            const [activeResponse, archiveResponse] = await Promise.all([
+              firstValueFrom(this.api.listRefertatoreDrafts(tipo)),
+              firstValueFrom(this.api.listRefertatoreArchive(tipo)),
+            ]);
 
-          return {
-            active: activeResponse.items,
-            archive: archiveResponse.items,
-          };
-        }),
-      );
+            return {
+              active: activeResponse.items,
+              archive: archiveResponse.items,
+            };
+          }),
+        );
 
-      this.refertatoreDrafts = pairs.flatMap((item) => item.active);
-      this.refertatoreArchiveDrafts = pairs.flatMap((item) => item.archive);
-      this.refertatoreTab =
-        preferredTab && assignedTypes.includes(preferredTab)
-          ? preferredTab
-          : this.hasEmgAssignment
-            ? 'emg'
-            : 'psg';
+        this.refertatoreDrafts = pairs.flatMap((item) => item.active);
+        this.refertatoreArchiveDrafts = pairs.flatMap((item) => item.archive);
+        this.personalArchiveDrafts = [];
+        this.refertatoreTab =
+          preferredTab && assignedTypes.includes(preferredTab)
+            ? preferredTab
+            : this.hasEmgAssignment
+              ? 'emg'
+              : 'psg';
+      } else {
+        const personalArchive = await firstValueFrom(
+          this.api.listReservedPersonalArchive(),
+        );
+        this.refertatoreDrafts = [];
+        this.refertatoreArchiveDrafts = [];
+        this.personalArchiveDrafts = personalArchive.items;
+      }
       this.refertatoreSection = 'dashboard';
       this.showReservedUserMenu = false;
       this.entryContext = 'refertatore';
@@ -2939,6 +3178,32 @@ export class ReportEditor {
       console.error('Errore apertura referto refertatore:', error);
       this.refertatoreDraftsError =
         'Impossibile aprire il referto assegnato selezionato.';
+    } finally {
+      this.refertatoreOpeningDraftId = null;
+    }
+  }
+
+  async openPersonalArchiveDraft(id: string): Promise<void> {
+    if (!this.reservedUser) {
+      this.uiState = 'reservedLogin';
+      return;
+    }
+
+    this.refertatoreOpeningDraftId = id;
+    this.refertatoreDraftsError = '';
+
+    try {
+      const draft = await firstValueFrom(this.api.getReservedArchiveDraft(id));
+      await this.hydrateDraft(draft, {
+        entryContext: 'refertatore',
+        readonlyMode: true,
+      });
+      this.uiState = 'wizard';
+      this.setDraftMessage('Referto archiviato aperto in sola lettura.', 'success');
+    } catch (error) {
+      console.error('Errore apertura archivio personale:', error);
+      this.refertatoreDraftsError =
+        'Impossibile aprire il referto archiviato selezionato.';
     } finally {
       this.refertatoreOpeningDraftId = null;
     }
@@ -3603,6 +3868,27 @@ export class ReportEditor {
     this.refertatoreToken = '';
     this.refertatoreUser = null;
     this.reservedUser = null;
+    this.reservedPendingUser = null;
+    this.reservedChallengeToken = '';
+    this.reservedChallengeExpiresAt = '';
+    this.twoFactorSetupData = null;
+    this.twoFactorCode = '';
+    this.twoFactorRecoveryCode = '';
+    this.twoFactorError = '';
+    this.twoFactorRecoveryCodes = [];
+    this.showRecoveryCodeInput = false;
+  }
+
+  private async handleReservedLoginSuccess(
+    response: TwoFactorLoginSuccessResponse,
+  ): Promise<void> {
+    this.refertatoreUser = response.user;
+    this.reservedUser = response.user;
+    this.reservedPendingUser = null;
+    this.refertatoreToken = 'session';
+    this.persistRefertatoreSession();
+    await this.loadCreationAccess();
+    await this.routeReservedUserDashboard();
   }
 
   private async sendDraftToRefertatore(): Promise<void> {
@@ -4666,6 +4952,30 @@ export class ReportEditor {
     }
   }
 
+  private async loadCreationAccess(
+    reportType?: 'standard' | 'emg' | 'psg',
+  ): Promise<void> {
+    this.creationAccessLoading = true;
+    this.creationAccessError = '';
+
+    try {
+      this.creationAccess = await firstValueFrom(
+        this.api.getCreationAccess(reportType),
+      );
+    } catch (error) {
+      console.error('Errore controllo accesso creazione:', error);
+      this.creationAccess = {
+        allowed: false,
+        reason: 'denied',
+        allowedTypes: [],
+      };
+      this.creationAccessError =
+        'Impossibile verificare l’accesso alla creazione dei referti.';
+    } finally {
+      this.creationAccessLoading = false;
+    }
+  }
+
   private async restoreReservedSession(): Promise<void> {
     try {
       const response = await firstValueFrom(this.api.me());
@@ -4673,8 +4983,10 @@ export class ReportEditor {
       this.refertatoreUser = response.user;
       this.refertatoreToken = 'session';
       await firstValueFrom(this.api.getCsrf());
+      await this.loadCreationAccess();
     } catch {
       this.clearRefertatoreSession();
+      await this.loadCreationAccess();
     }
   }
 
@@ -4696,6 +5008,11 @@ export class ReportEditor {
   openReservedArea(): void {
     this.refertatoreLoginError = '';
     this.showReservedUserMenu = false;
+    this.reservedChallengeToken = '';
+    this.twoFactorError = '';
+    this.twoFactorCode = '';
+    this.twoFactorRecoveryCode = '';
+    this.twoFactorSetupData = null;
     if (this.reservedUser) {
       void this.routeReservedUserDashboard();
       return;
@@ -4708,6 +5025,12 @@ export class ReportEditor {
     this.forgotPasswordMessage = '';
     this.resetPasswordMessage = '';
     this.showReservedUserMenu = false;
+    this.reservedChallengeToken = '';
+    this.twoFactorError = '';
+    this.twoFactorCode = '';
+    this.twoFactorRecoveryCode = '';
+    this.twoFactorSetupData = null;
+    this.showRecoveryCodeInput = false;
     this.uiState = 'reservedLogin';
   }
 
@@ -4987,6 +5310,30 @@ export class ReportEditor {
 
     this.adminProfessionalForm.specializzazione = normalizedSpecialization;
     this.professionalSpecializationSearch = normalizedSpecialization;
+
+    if (this.adminProfessionalForm.create_reserved_area) {
+      const effectiveReservedEmail =
+        this.adminProfessionalForm.reserved_email.trim() ||
+        this.adminProfessionalForm.email.trim();
+
+      if (!effectiveReservedEmail) {
+        this.adminProfessionalFieldErrors['reserved_email'] =
+          "L'email e obbligatoria per creare l'Area Riservata.";
+        return;
+      }
+
+      if (
+        !this.adminProfessionalForm.id &&
+        !this.adminProfessionalForm.reserved_password.trim()
+      ) {
+        this.adminProfessionalFieldErrors['reserved_password'] =
+          "La password temporanea e obbligatoria per creare l'Area Riservata.";
+        return;
+      }
+
+      this.adminProfessionalForm.reserved_email = effectiveReservedEmail;
+    }
+
     try {
       await firstValueFrom(this.api.getCsrf());
       if (this.adminProfessionalForm.id) {
@@ -5048,6 +5395,9 @@ export class ReportEditor {
       is_refertatore: professional.is_refertatore,
       active: professional.active,
       sort_order: professional.sort_order,
+      create_reserved_area: !!professional.reserved_user_id,
+      reserved_email: professional.reserved_user_email || professional.email || '',
+      reserved_password: '',
     };
     this.professionalSpecializationSearch =
       professional.specializzazione || '';
@@ -5109,6 +5459,9 @@ export class ReportEditor {
       is_refertatore: false,
       active: true,
       sort_order: 0,
+      create_reserved_area: false,
+      reserved_email: '',
+      reserved_password: '',
     };
     this.professionalSpecializationSearch = '';
     this.showProfessionalSpecializationSuggestions = false;
