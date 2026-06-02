@@ -92,6 +92,7 @@ export interface ReportDraftFilters {
 }
 
 export type DraftAttachmentKind =
+  | 'standard_allegato'
   | 'emg_tracciato'
   | 'emg_firma_tnfp'
   | 'emg_pdf_firmato'

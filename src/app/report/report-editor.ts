@@ -186,6 +186,7 @@ export class ReportEditor {
   adminUserProfessionalSearch = '';
   showAdminUserProfessionalSuggestions = false;
   adminUserProfessionalError = '';
+  showProfessionalReservedPassword = false;
   adminProfessionalFieldErrors: Record<string, string> = {};
   adminUserFieldErrors: Record<string, string> = {};
   archiveProfessionalFilter = '';
@@ -210,13 +211,12 @@ export class ReportEditor {
   viewportWidth =
     typeof window !== 'undefined' ? window.innerWidth : 1440;
   refertatoreSection: 'dashboard' | 'toReview' | 'documents' | 'archive' = 'dashboard';
+  refertatoreArchiveTab: 'standard' | 'emg' | 'psg' = 'standard';
   adminUserForm = {
     id: '',
     role: 'refertatore' as 'admin' | 'refertatore' | 'professionista',
     professional_id: '',
     professional_display_name: '',
-    email: '',
-    password: '',
     display_name: '',
     specializzazione: '',
     assignedTypes: [] as Array<'emg' | 'psg'>,
@@ -230,11 +230,9 @@ export class ReportEditor {
     specializzazione: '',
     role_label: '',
     visible_in_standard: true,
-    is_refertatore: false,
     active: true,
     sort_order: 0,
     create_reserved_area: false,
-    reserved_email: '',
     reserved_password: '',
   };
 
@@ -344,6 +342,7 @@ export class ReportEditor {
     display_name: '',
     email: '',
   };
+  private requestedEntryView: 'default' | 'reserved-login' | 'creation' = 'default';
   private draftMessageTimeoutId: ReturnType<typeof window.setTimeout> | null = null;
   constructor(
     private fb: FormBuilder,
@@ -406,6 +405,7 @@ export class ReportEditor {
     this.updatePsgEssSummary();
     this.updateModeValidators();
     this.restoreReservedSession();
+    this.captureRequestedEntryView();
     this.loadCreationAccess();
     this.loadOperationalOptions();
     this.captureResetPasswordToken();
@@ -528,7 +528,17 @@ export class ReportEditor {
   }
 
   get isMobileBlocked(): boolean {
-    return this.viewportWidth < 1024;
+    if (typeof navigator === 'undefined') {
+      return this.viewportWidth < 1100;
+    }
+
+    const userAgent = navigator.userAgent || '';
+    const isTouchMobileAgent =
+      /Android|iPhone|iPad|iPod|Mobile|Tablet|Silk|Kindle|Opera Mini|IEMobile/i.test(
+        userAgent,
+      );
+
+    return this.viewportWidth < 1100 || isTouchMobileAgent;
   }
 
   get canShowOperationalEntry(): boolean {
@@ -576,6 +586,10 @@ export class ReportEditor {
   }
 
   get showPrimaryAction(): boolean {
+    if (this.completedReadonlyMode) {
+      return this.step < this.steps.length - 1;
+    }
+
     if (
       this.entryContext === 'refertatore' &&
       this.step === this.steps.length - 1 &&
@@ -584,7 +598,7 @@ export class ReportEditor {
       return false;
     }
 
-    return !this.completedReadonlyMode;
+    return true;
   }
 
   get showDraftWriteActions(): boolean {
@@ -605,6 +619,13 @@ export class ReportEditor {
     return this.isArchiveBrowserMode
       ? 'Consulta i referti completati e apri il PDF firmato archiviato, se disponibile.'
       : 'Visualizza e riprendi solo le bozze operative del tipo referto selezionato.';
+  }
+
+  get isAsyncResumeMode(): boolean {
+    return (
+      !this.isArchiveBrowserMode &&
+      (this.selectedReportType === 'emg' || this.selectedReportType === 'psg')
+    );
   }
 
   get currentSignedStoredAttachment(): DraftAttachmentMetadata | null {
@@ -761,7 +782,7 @@ export class ReportEditor {
       },
       {
         key: 'documents',
-        label: 'Documenti da firmare',
+        label: 'Referti da firmare',
         badge: this.refertatorePendingBadge(this.activeRefertatoreTab) || undefined,
       },
       { key: 'archive', label: 'Archivio referti' },
@@ -921,6 +942,13 @@ export class ReportEditor {
     );
   }
 
+  get isTnfpProfessionalSpecializationSelected(): boolean {
+    return (
+      normalizeSpecialization(this.professionalSpecializationSearch) ===
+      'Tecniche di Neurofisiopatologia'
+    );
+  }
+
   get pagedAdminRefertatori(): AdminUserItem[] {
     const onlyRefertatori = this.adminUsers.filter((user) => user.role === 'refertatore');
     const start = (this.refertatoriPage - 1) * this.refertatoriPageSize;
@@ -948,11 +976,7 @@ export class ReportEditor {
   }
 
   get isDashboardShellMode(): boolean {
-    return (
-      this.uiState === 'adminDashboard' ||
-      this.uiState === 'refertatoreDashboard' ||
-      (this.uiState === 'wizard' && this.entryContext !== 'public')
-    );
+    return this.uiState === 'adminDashboard' || this.uiState === 'refertatoreDashboard';
   }
 
   get selectedAdminUserProfessional(): ProfessionalItem | null {
@@ -978,6 +1002,10 @@ export class ReportEditor {
       if (
         !isRefertatoreCompatibleSpecialization(professional.specializzazione)
       ) {
+        return false;
+      }
+
+      if (!professional.reserved_user_id || professional.reserved_user_active === false) {
         return false;
       }
 
@@ -1261,6 +1289,10 @@ export class ReportEditor {
   }
 
   canGoNext(): boolean {
+    if (this.completedReadonlyMode) {
+      return true;
+    }
+
     switch (this.step) {
       case 0:
         if (this.reportType === 'emg' && this.emgRefertatoreMode) {
@@ -2100,8 +2132,19 @@ export class ReportEditor {
   }
 
   goToInitialTypeSelection(): void {
+    const shouldShowReservedLogin =
+      this.requestedEntryView === 'reserved-login' ||
+      (!!this.creationAccess &&
+        !this.canShowOperationalEntry &&
+        this.requestedEntryView !== 'creation');
+
+    this.requestedEntryView = 'default';
     this.entryContext = this.reportCreationContext;
-    this.uiState = 'initialTypeSelection';
+    if (shouldShowReservedLogin) {
+      this.uiState = 'reservedLogin';
+    } else {
+      this.uiState = 'initialTypeSelection';
+    }
     this.selectedReportType = null;
     this.setEmgRefertatoreMode(false);
     this.closeResumeDraftModal();
@@ -2235,6 +2278,9 @@ export class ReportEditor {
 
   primaryAction(): void {
     if (this.completedReadonlyMode) {
+      if (this.step < this.steps.length - 1) {
+        this.next();
+      }
       return;
     }
 
@@ -3010,29 +3056,33 @@ export class ReportEditor {
     try {
       const assignedTypes = this.reservedUser.assignedTypes || [];
       if (assignedTypes.length) {
-        const pairs = await Promise.all(
-          assignedTypes.map(async (tipo) => {
-            const [activeResponse, archiveResponse] = await Promise.all([
-              firstValueFrom(this.api.listRefertatoreDrafts(tipo)),
-              firstValueFrom(this.api.listRefertatoreArchive(tipo)),
-            ]);
+        const [pairs, personalArchive] = await Promise.all([
+          Promise.all(
+            assignedTypes.map(async (tipo) => {
+              const [activeResponse, archiveResponse] = await Promise.all([
+                firstValueFrom(this.api.listRefertatoreDrafts(tipo)),
+                firstValueFrom(this.api.listRefertatoreArchive(tipo)),
+              ]);
 
-            return {
-              active: activeResponse.items,
-              archive: archiveResponse.items,
-            };
-          }),
-        );
+              return {
+                active: activeResponse.items,
+                archive: archiveResponse.items,
+              };
+            }),
+          ),
+          firstValueFrom(this.api.listReservedPersonalArchive('standard')),
+        ]);
 
         this.refertatoreDrafts = pairs.flatMap((item) => item.active);
         this.refertatoreArchiveDrafts = pairs.flatMap((item) => item.archive);
-        this.personalArchiveDrafts = [];
+        this.personalArchiveDrafts = personalArchive.items;
         this.refertatoreTab =
           preferredTab && assignedTypes.includes(preferredTab)
             ? preferredTab
             : this.hasEmgAssignment
               ? 'emg'
               : 'psg';
+        this.refertatoreArchiveTab = 'standard';
       } else {
         const personalArchive = await firstValueFrom(
           this.api.listReservedPersonalArchive(),
@@ -3040,6 +3090,7 @@ export class ReportEditor {
         this.refertatoreDrafts = [];
         this.refertatoreArchiveDrafts = [];
         this.personalArchiveDrafts = personalArchive.items;
+        this.refertatoreArchiveTab = 'standard';
       }
       this.refertatoreSection = 'dashboard';
       this.showReservedUserMenu = false;
@@ -3059,11 +3110,7 @@ export class ReportEditor {
   openResumeDraftModal(): void {
     this.draftBrowserMode = 'active';
     this.draftFilters.scope = 'active';
-    this.draftFilters.stato =
-      this.draftFilters.stato === 'completato' ||
-      this.draftFilters.stato === 'firmato_caricato'
-        ? ''
-        : this.draftFilters.stato;
+    this.draftFilters.stato = '';
     if (this.selectedReportType) {
       this.draftFilters.tipo_referto = this.selectedReportType;
     }
@@ -3839,6 +3886,8 @@ export class ReportEditor {
         ? await firstValueFrom(this.api.updateDraft(this.currentDraftId, payload))
         : await firstValueFrom(this.api.createDraft(payload));
 
+      await this.syncDraftAttachments(savedDraft.id);
+
       this.currentDraftId = savedDraft.id;
       this.currentDraftStatus = savedDraft.stato;
       this.draftLoaded = true;
@@ -4209,6 +4258,8 @@ export class ReportEditor {
         ? await firstValueFrom(this.api.updateDraft(this.currentDraftId, payload))
         : await firstValueFrom(this.api.createDraft(payload));
 
+      await this.syncDraftAttachments(savedDraft.id);
+
       this.currentDraftId = savedDraft.id;
       this.currentDraftStatus = savedDraft.stato;
       this.draftLoaded = true;
@@ -4304,6 +4355,7 @@ export class ReportEditor {
     this.showEmgAnamnesisModal = false;
     this.emgSignedPdfAsset = null;
     this.psgSignedPdfAsset = null;
+    this.form.get('standardAttachments')?.setValue([], { emitEvent: false });
     this.form.get('emg.tracciati')?.setValue([], { emitEvent: false });
     this.form.get('emg.firmaTecnico')?.setValue(null, { emitEvent: false });
     this.form.get('psg.reportStrumentalePdf')?.setValue(null, { emitEvent: false });
@@ -4973,6 +5025,14 @@ export class ReportEditor {
         'Impossibile verificare l’accesso alla creazione dei referti.';
     } finally {
       this.creationAccessLoading = false;
+      if (
+        !reportType &&
+        this.uiState === 'initialTypeSelection' &&
+        !this.creationAccess?.allowed &&
+        this.requestedEntryView !== 'creation'
+      ) {
+        this.uiState = 'reservedLogin';
+      }
     }
   }
 
@@ -5003,6 +5063,27 @@ export class ReportEditor {
 
     this.resetPasswordToken = token;
     this.uiState = 'resetPassword';
+  }
+
+  private captureRequestedEntryView(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const view = String(params.get('view') || '').trim().toLowerCase();
+
+    if (view === 'creation') {
+      this.requestedEntryView = 'creation';
+      return;
+    }
+
+    if (view === 'reserved-login' || view === 'area-riservata' || view === 'login') {
+      this.requestedEntryView = 'reserved-login';
+      return;
+    }
+
+    this.requestedEntryView = 'default';
   }
 
   openReservedArea(): void {
@@ -5246,15 +5327,12 @@ export class ReportEditor {
       return;
     }
 
-    if (!this.adminUserForm.email.trim() && this.adminUserEmailRequired) {
-      this.adminUserFieldErrors['email'] =
-        "L'email e obbligatoria se il professionista selezionato non ne ha una.";
-      return;
-    }
-
-    if (!this.adminUserForm.id && !this.adminUserForm.password.trim()) {
-      this.adminUserFieldErrors['password'] =
-        'La password temporanea e obbligatoria per creare il refertatore.';
+    if (
+      !this.selectedAdminUserProfessional?.reserved_user_id ||
+      this.selectedAdminUserProfessional?.reserved_user_active === false
+    ) {
+      this.adminUserFieldErrors['professional_id'] =
+        "Seleziona un professionista con Area Riservata gia attiva prima di assegnarlo come refertatore asincrono.";
       return;
     }
 
@@ -5310,14 +5388,16 @@ export class ReportEditor {
 
     this.adminProfessionalForm.specializzazione = normalizedSpecialization;
     this.professionalSpecializationSearch = normalizedSpecialization;
+    if (normalizedSpecialization === 'Tecniche di Neurofisiopatologia') {
+      this.adminProfessionalForm.visible_in_standard = false;
+    }
 
     if (this.adminProfessionalForm.create_reserved_area) {
       const effectiveReservedEmail =
-        this.adminProfessionalForm.reserved_email.trim() ||
         this.adminProfessionalForm.email.trim();
 
       if (!effectiveReservedEmail) {
-        this.adminProfessionalFieldErrors['reserved_email'] =
+        this.adminProfessionalFieldErrors['email'] =
           "L'email e obbligatoria per creare l'Area Riservata.";
         return;
       }
@@ -5331,7 +5411,6 @@ export class ReportEditor {
         return;
       }
 
-      this.adminProfessionalForm.reserved_email = effectiveReservedEmail;
     }
 
     try {
@@ -5368,8 +5447,6 @@ export class ReportEditor {
       professional_id: user.professional_id || '',
       professional_display_name:
         user.professional_display_name || user.display_name,
-      email: user.email,
-      password: '',
       display_name: user.display_name,
       specializzazione: user.specializzazione || '',
       assignedTypes: [...user.assignedTypes],
@@ -5392,11 +5469,9 @@ export class ReportEditor {
       specializzazione: professional.specializzazione || '',
       role_label: professional.role_label || '',
       visible_in_standard: professional.visible_in_standard,
-      is_refertatore: professional.is_refertatore,
       active: professional.active,
       sort_order: professional.sort_order,
       create_reserved_area: !!professional.reserved_user_id,
-      reserved_email: professional.reserved_user_email || professional.email || '',
       reserved_password: '',
     };
     this.professionalSpecializationSearch =
@@ -5434,8 +5509,6 @@ export class ReportEditor {
       role: 'refertatore',
       professional_id: '',
       professional_display_name: '',
-      email: '',
-      password: '',
       display_name: '',
       specializzazione: '',
       assignedTypes: [],
@@ -5456,15 +5529,14 @@ export class ReportEditor {
       specializzazione: '',
       role_label: '',
       visible_in_standard: true,
-      is_refertatore: false,
       active: true,
       sort_order: 0,
       create_reserved_area: false,
-      reserved_email: '',
       reserved_password: '',
     };
     this.professionalSpecializationSearch = '';
     this.showProfessionalSpecializationSuggestions = false;
+    this.showProfessionalReservedPassword = false;
     this.adminProfessionalFieldErrors = {};
   }
 
@@ -5475,6 +5547,7 @@ export class ReportEditor {
 
   closeProfessionalModal(): void {
     this.showAdminProfessionalModal = false;
+    this.showProfessionalReservedPassword = false;
     this.adminProfessionalFieldErrors = {};
   }
 
@@ -5494,11 +5567,9 @@ export class ReportEditor {
     this.adminUserForm.professional_display_name = professional.display_name;
     this.adminUserForm.display_name = professional.display_name;
     this.adminUserForm.specializzazione = professional.specializzazione || '';
-    this.adminUserForm.email = professional.email || '';
     this.adminUserProfessionalSearch = professional.display_name;
     this.adminUserProfessionalError = '';
     this.adminUserFieldErrors['professional_id'] = '';
-    this.adminUserFieldErrors['email'] = '';
     this.showAdminUserProfessionalSuggestions = false;
 
     this.adminUserForm.assignedTypes = this.adminUserForm.assignedTypes.filter(
@@ -5734,6 +5805,9 @@ export class ReportEditor {
   selectProfessionalSpecialization(value: string): void {
     this.professionalSpecializationSearch = value;
     this.adminProfessionalForm.specializzazione = value;
+    if (normalizeSpecialization(value) === 'Tecniche di Neurofisiopatologia') {
+      this.adminProfessionalForm.visible_in_standard = false;
+    }
     this.adminProfessionalFieldErrors['specializzazione'] = '';
     this.showProfessionalSpecializationSuggestions = false;
   }
@@ -5936,6 +6010,20 @@ export class ReportEditor {
       );
       this.currentDraftAttachments = response.items;
 
+      if (this.reportType === 'standard') {
+        const standardAssets = await Promise.all(
+          response.items
+            .filter((item) => item.kind === 'standard_allegato')
+            .map((item) =>
+              this.mapDraftAttachmentToAsset(draftId, item, refertatoreToken),
+            ),
+        );
+        this.form.get('standardAttachments')?.setValue(standardAssets, {
+          emitEvent: false,
+        });
+        return;
+      }
+
       if (this.reportType === 'psg') {
         const reportMetadata = response.items.find(
           (item) => item.kind === 'psg_report_strumentale',
@@ -5985,6 +6073,17 @@ export class ReportEditor {
     } catch (error) {
       console.error('Errore ripristino allegati EMG persistiti:', error);
       this.currentDraftAttachments = [];
+
+      if (this.reportType === 'standard') {
+        this.form.get('standardAttachments')?.setValue([], {
+          emitEvent: false,
+        });
+        this.setDraftMessage(
+          'Bozza caricata, ma non sono riuscito a ripristinare gli allegati del referto standard.',
+          'warning',
+        );
+        return;
+      }
 
       if (this.reportType === 'psg') {
         this.form.get('psg.reportStrumentalePdf')?.setValue(null, {
@@ -6152,6 +6251,28 @@ export class ReportEditor {
     }
   }
 
+  private async syncStandardDraftAttachments(draftId: string): Promise<void> {
+    const existingAttachments = await firstValueFrom(
+      this.api.listDraftAttachments(draftId),
+    );
+
+    for (const attachment of existingAttachments.items.filter(
+      (item) => item.kind === 'standard_allegato',
+    )) {
+      await firstValueFrom(
+        this.api.deleteDraftAttachment(draftId, attachment.id),
+      );
+    }
+
+    for (const asset of this.standardDraftAssets()) {
+      await this.uploadEmgDraftAttachment(
+        draftId,
+        'standard_allegato',
+        asset,
+      );
+    }
+  }
+
   private async syncPsgDraftAttachments(draftId: string): Promise<void> {
     const existingAttachments = await firstValueFrom(
       this.api.listDraftAttachments(draftId),
@@ -6177,6 +6298,20 @@ export class ReportEditor {
       'psg_report_strumentale',
       reportAsset,
     );
+  }
+
+  private async syncDraftAttachments(draftId: string): Promise<void> {
+    if (this.reportType === 'standard') {
+      await this.syncStandardDraftAttachments(draftId);
+      return;
+    }
+
+    if (this.reportType === 'emg') {
+      await this.syncEmgDraftAttachments(draftId);
+      return;
+    }
+
+    await this.syncPsgDraftAttachments(draftId);
   }
 
   private async uploadEmgDraftAttachment(
@@ -6324,6 +6459,12 @@ export class ReportEditor {
   private emgTraceAssets(): EmgUploadedAsset[] {
     return (
       (this.form.get('emg.tracciati')?.value as EmgUploadedAsset[] | null) ?? []
+    );
+  }
+
+  private standardDraftAssets(): EmgUploadedAsset[] {
+    return (
+      (this.form.get('standardAttachments')?.value as EmgUploadedAsset[] | null) ?? []
     );
   }
 

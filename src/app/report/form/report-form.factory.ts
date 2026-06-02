@@ -65,6 +65,7 @@ export function createReportForm(fb: FormBuilder) {
 
     modalitaReferto: fb.nonNullable.control<'sezioni' | 'libero'>('sezioni'),
     testoLibero: fb.nonNullable.control('', [plainTextMaxLength(800)]),
+    standardAttachments: fb.nonNullable.control<EmgUploadedAsset[]>([]),
 
     anagrafica: fb.group({
       nome: fb.nonNullable.control('', Validators.required),

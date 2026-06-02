@@ -585,4 +585,67 @@
       }
     </div>
   }
+
+  @if (reportType === 'standard') {
+    <section class="uploadCard">
+      <div class="uploadCardHead">
+        <div>
+          <h3>Allegati facoltativi</h3>
+          <p>Aggiungi PDF o immagini utili al referto. Gli allegati non sono obbligatori.</p>
+        </div>
+
+        @if (!readonlyMode) {
+          <button type="button" class="uploadBtn" (click)="openFilePicker(standardAttachmentsInput)">
+            Aggiungi allegati
+          </button>
+        }
+      </div>
+
+      <input
+        #standardAttachmentsInput
+        class="srOnly"
+        type="file"
+        accept=".pdf,.png,.jpg,.jpeg,.webp"
+        multiple
+        (change)="onStandardFilesSelected($event)"
+      />
+
+      @if (standardUploadError) {
+        <div class="err">{{ standardUploadError }}</div>
+      }
+
+      @if (!standardAttachments.length) {
+        <div class="emptyUploadState">Nessun allegato aggiunto a questo referto.</div>
+      } @else {
+        <div class="uploadList">
+          @for (asset of standardAttachments; track asset.id) {
+            <article class="uploadItem">
+              <div class="uploadPreview">
+                @if (isImage(asset) && asset.dataUrl) {
+                  <img [src]="asset.dataUrl" [alt]="asset.name" />
+                } @else {
+                  <div class="filePill">PDF</div>
+                }
+              </div>
+
+              <div class="uploadMeta">
+                <strong>{{ asset.name }}</strong>
+                <small>{{ fileSizeLabel(asset.size) }}</small>
+              </div>
+
+              @if (readonlyMode) {
+                <button type="button" class="removeBtn" (click)="openAsset(asset)">
+                  {{ isPdf(asset) ? 'Apri PDF' : 'Visualizza' }}
+                </button>
+              } @else {
+                <button type="button" class="removeBtn" (click)="removeStandardAttachment(asset.id)">
+                  Rimuovi
+                </button>
+              }
+            </article>
+          }
+        </div>
+      }
+    </section>
+  }
 </div>

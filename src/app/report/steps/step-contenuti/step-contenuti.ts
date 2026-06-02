@@ -54,6 +54,11 @@ export class StepContenuti {
   signatureUploadError = '';
   psgReportUploadError = '';
   signedPdfUploadError = '';
+  standardUploadError = '';
+
+  get standardAttachments(): EmgUploadedAsset[] {
+    return (this.control('standardAttachments').value as EmgUploadedAsset[] | null) ?? [];
+  }
 
   get isPsg(): boolean {
     return this.reportType === 'psg';
@@ -146,6 +151,36 @@ export class StepContenuti {
     }
   }
 
+  async onStandardFilesSelected(event: Event): Promise<void> {
+    if (this.readonlyMode || this.reportType !== 'standard') {
+      return;
+    }
+
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    this.standardUploadError = '';
+
+    if (!files.length) {
+      input.value = '';
+      return;
+    }
+
+    try {
+      const nextAssets = await Promise.all(files.map((file) => this.buildAsset(file)));
+      const control = this.control('standardAttachments');
+      control.setValue([...this.standardAttachments, ...nextAssets]);
+      control.markAsDirty();
+      control.markAsTouched();
+    } catch (error) {
+      this.standardUploadError = this.buildUploadErrorMessage(
+        error,
+        'Impossibile aggiungere gli allegati selezionati.',
+      );
+    } finally {
+      input.value = '';
+    }
+  }
+
   async onSignatureSelected(event: Event): Promise<void> {
     if (this.contentReadonlyMode) {
       return;
@@ -217,6 +252,17 @@ export class StepContenuti {
 
     const control = this.control('emg.tracciati');
     control.setValue(this.emgTraceFiles.filter((item) => item.id !== id));
+    control.markAsDirty();
+    control.markAsTouched();
+  }
+
+  removeStandardAttachment(id: string): void {
+    if (this.readonlyMode || this.reportType !== 'standard') {
+      return;
+    }
+
+    const control = this.control('standardAttachments');
+    control.setValue(this.standardAttachments.filter((item) => item.id !== id));
     control.markAsDirty();
     control.markAsTouched();
   }

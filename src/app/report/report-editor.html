@@ -938,7 +938,7 @@
               <div class="adminSectionHead">
                 <div>
                   <h3>{{ activeRefertatoreTab === 'emg' ? 'Dashboard EMG' : 'Dashboard PSG' }}</h3>
-                  <p>Gestisci le attivita assegnate, i documenti da firmare e l'archivio del percorso selezionato.</p>
+                  <p>Gestisci le attivita assegnate, i referti da firmare e l'archivio del percorso selezionato.</p>
                 </div>
               </div>
               <div class="summaryCardGrid">
@@ -948,7 +948,7 @@
                   <small>Referti da completare nel percorso {{ activeRefertatoreTab | uppercase }}</small>
                 </article>
                 <article class="summaryMetricCard">
-                  <span>Documenti da firmare</span>
+                  <span>Referti da firmare</span>
                   <strong>{{ readyForSignatureDraftsByType(activeRefertatoreTab).length }}</strong>
                   <small>PDF firmati da acquisire nel sistema</small>
                 </article>
@@ -958,6 +958,46 @@
                   <small>Referti completati gia presenti nel tuo archivio</small>
                 </article>
               </div>
+            </section>
+          }
+
+          @if (refertatoreSection === 'archive') {
+            <section class="dashboardPanel">
+              <div class="adminSectionHead">
+                <div>
+                  <h3>Archivio referti standard</h3>
+                  <p>Referti standard collegati al tuo profilo professionale, consultabili in sola lettura.</p>
+                </div>
+              </div>
+              @if (!personalArchiveDrafts.length) {
+                <div class="emptyStateCard">Nessun referto standard presente nel tuo archivio.</div>
+              } @else {
+                <div class="draftTableWrap">
+                  <div class="draftTable draftTableHead refertatoreTableArchive">
+                    <div>Paziente</div>
+                    <div>Tipo</div>
+                    <div>Professionista</div>
+                    <div>Completato</div>
+                    <div>Azioni</div>
+                  </div>
+                  @for (draft of personalArchiveDrafts; track draft.id) {
+                    <div class="draftTable draftTableRow refertatoreTableArchive">
+                      <div>
+                        <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
+                        <small>{{ formatDateValue(draft.data_nascita) }}</small>
+                      </div>
+                      <div>{{ reportTypeLabelFor(draft.tipo_referto) }}</div>
+                      <div>{{ draft.medico_refertatore || draft.assigned_refertatore_name || '-' }}</div>
+                      <div>{{ formatDateTime(draft.completed_at || draft.updated_at) }}</div>
+                      <div class="draftRowActions adminRowActions">
+                        <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openPersonalArchiveDraft(draft.id)">
+                          {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
             </section>
           }
 
@@ -1015,7 +1055,7 @@
                 <section class="reviewerStageCard">
                   <div class="reviewerStageHead">
                     <div>
-                      <h4>Documenti da firmare</h4>
+                      <h4>Referti da firmare</h4>
                       <p>Acquisisci il PDF firmato definitivo per chiudere il referto.</p>
                     </div>
                   </div>
@@ -1153,7 +1193,7 @@
                 <section class="reviewerStageCard">
                   <div class="reviewerStageHead">
                     <div>
-                      <h4>Documenti da firmare</h4>
+                      <h4>Referti da firmare</h4>
                       <p>Acquisisci il PDF firmato definitivo per chiudere il referto.</p>
                     </div>
                   </div>
@@ -1492,7 +1532,7 @@
             <div class="uploadCardHead">
               <div>
                 <h3>{{ dashboardSignedPdfDraft.paziente_nome_completo || 'Paziente senza nome' }}</h3>
-                <p>{{ reportTypeLabelFor(dashboardSignedPdfDraft.tipo_referto) }} · {{ dashboardSignedPdfDraft.data_esame || 'Data non indicata' }}</p>
+                <p>{{ reportTypeLabelFor(dashboardSignedPdfDraft.tipo_referto) }} · {{ formatDateValue(dashboardSignedPdfDraft.data_esame) }}</p>
               </div>
             </div>
 
@@ -1614,7 +1654,7 @@
 
   @if (showAdminProfessionalModal) {
     <div class="modalBackdrop">
-      <div class="modalSheet">
+      <div class="modalSheet modalSheetTall">
         <div class="modalHead">
           <div>
             <div class="modalEyebrow">Area Admin</div>
@@ -1676,28 +1716,37 @@
             </label>
             @if (adminProfessionalForm.create_reserved_area) {
               <div class="field full">
-                <label>Email area riservata *</label>
-                <input type="email" [(ngModel)]="adminProfessionalForm.reserved_email" placeholder="nome@remedic.it" />
-                <div class="fieldErrorSlot">{{ adminProfessionalFieldErrors['reserved_email'] || '' }}</div>
-              </div>
-              <div class="field full">
                 <label>Password temporanea {{ adminProfessionalForm.id ? '(opzionale in modifica)' : '*' }}</label>
-                <input type="password" [(ngModel)]="adminProfessionalForm.reserved_password" />
+                <div class="passwordFieldRow">
+                  <input
+                    class="passwordFieldInput"
+                    [type]="showProfessionalReservedPassword ? 'text' : 'password'"
+                    [(ngModel)]="adminProfessionalForm.reserved_password"
+                  />
+                  <button
+                    type="button"
+                    class="passwordToggleBtn"
+                    (click)="showProfessionalReservedPassword = !showProfessionalReservedPassword"
+                    [attr.aria-label]="showProfessionalReservedPassword ? 'Nascondi password temporanea' : 'Mostra password temporanea'"
+                  >
+                    {{ showProfessionalReservedPassword ? 'Nascondi' : 'Mostra' }}
+                  </button>
+                </div>
                 <div class="fieldErrorSlot">{{ adminProfessionalFieldErrors['reserved_password'] || '' }}</div>
               </div>
             }
-            @if (professionalSpecializationSearch === 'Tecniche di Neurofisiopatologia') {
+            @if (isTnfpProfessionalSpecializationSelected) {
               <p class="fieldHint fieldHintFull" style="margin: 0;">
-                Questa specializzazione rende il professionista selezionabile come tecnico esecutore nei referti EMG.
+                Questa figura e disponibile solo nei referti EMG come tecnico esecutore.
               </p>
             }
             <label class="checkline full">
-              <input type="checkbox" [(ngModel)]="adminProfessionalForm.visible_in_standard" />
+              <input
+                type="checkbox"
+                [(ngModel)]="adminProfessionalForm.visible_in_standard"
+                [disabled]="isTnfpProfessionalSpecializationSelected"
+              />
               <span>Visibile nei referti standard</span>
-            </label>
-            <label class="checkline full">
-              <input type="checkbox" [(ngModel)]="adminProfessionalForm.is_refertatore" />
-              <span>Disponibile anche come professionista refertatore</span>
             </label>
           </div>
         </div>
@@ -1713,11 +1762,12 @@
 
   @if (showAdminUserModal) {
     <div class="modalBackdrop">
-      <div class="modalSheet modalSheetTall">
+      <div class="modalSheet modalSheetNarrow">
         <div class="modalHead">
           <div>
             <div class="modalEyebrow">Area Admin</div>
-            <h3>{{ adminUserForm.id ? 'Modifica refertatore' : 'Nuovo refertatore' }}</h3>
+            <h3>{{ adminUserForm.id ? 'Modifica refertatore asincrono' : 'Nuovo refertatore asincrono' }}</h3>
+            <p>Seleziona un professionista con Area Riservata attiva e assegna le tipologie asincrone compatibili.</p>
           </div>
           <button type="button" class="iconCloseBtn" (click)="closeRefertatoreModal()">Chiudi</button>
         </div>
@@ -1760,28 +1810,25 @@
               <div class="fieldErrorSlot">{{ adminUserFieldErrors['professional_id'] || '' }}</div>
             </div>
             <div class="field full">
-              <label>Email {{ adminUserEmailRequired ? '*' : '' }}</label>
-              <input type="email" [(ngModel)]="adminUserForm.email" />
-              <div class="fieldErrorSlot">{{ adminUserFieldErrors['email'] || '' }}</div>
-            </div>
-            <div class="field full">
-              <label>Nome visualizzato</label>
-              <input type="text" [(ngModel)]="adminUserForm.display_name" readonly />
-              <div class="fieldErrorSlot">{{ adminUserFieldErrors['display_name'] || '' }}</div>
-            </div>
-            <div class="field">
-              <label>Specializzazione</label>
-              <input type="text" [(ngModel)]="adminUserForm.specializzazione" readonly />
-              <div class="fieldErrorSlot">{{ adminUserFieldErrors['specializzazione'] || '' }}</div>
-            </div>
-            <div class="field">
-              <label>Password {{ adminUserForm.id ? '(lascia vuoto per non cambiarla)' : '*' }}</label>
-              <input type="password" [(ngModel)]="adminUserForm.password" />
-              <div class="fieldErrorSlot">{{ adminUserFieldErrors['password'] || '' }}</div>
+              <label>Dati area riservata</label>
+              <div class="selectedProfessionalCard">
+                <strong>{{ adminUserForm.professional_display_name || 'Nessun professionista selezionato' }}</strong>
+                <small>{{ adminUserForm.specializzazione || 'Specializzazione non indicata' }}</small>
+                @if (selectedAdminUserProfessional?.email) {
+                  <small>{{ selectedAdminUserProfessional?.email }}</small>
+                } @else {
+                  <small>Il professionista deve avere un'Area Riservata attiva con email valida.</small>
+                }
+              </div>
+              <div class="fieldErrorSlot">{{ adminUserFieldErrors['display_name'] || adminUserFieldErrors['specializzazione'] || '' }}</div>
             </div>
             <div class="field full">
               <label>Assegnazioni</label>
               <div class="inlineChecks">
+                <label class="checkline">
+                  <input type="checkbox" checked disabled />
+                  <span>Referti standard</span>
+                </label>
                 <label class="checkline">
                   <input
                     type="checkbox"
@@ -1801,6 +1848,9 @@
                   <span>PSG</span>
                 </label>
               </div>
+              <p class="fieldHint" style="margin: 0;">
+                EMG: solo Neurologia. PSG: Neurologia, Pneumologia o Allergologia.
+              </p>
               <div class="fieldErrorSlot">{{ adminUserFieldErrors['assignedTypes'] || '' }}</div>
             </div>
             @if (adminUserProfessionalError) {
@@ -1968,8 +2018,23 @@
             <section class="profileSettingsCard">
               <div class="profileSettingsHead">
                 <h4>Dati profilo</h4>
-                <p>Aggiorna le informazioni principali associate al tuo account.</p>
+                <p>Aggiorna le informazioni principali associate al tuo account e la tua immagine profilo.</p>
               </div>
+              <div class="profileAvatarEditor profileAvatarEditorEmbedded">
+                @if (reservedUserAvatarSrc) {
+                  <div class="profileAvatarPreview hasImage"><img [src]="reservedUserAvatarSrc" alt="Anteprima avatar" /></div>
+                } @else {
+                  <div class="profileAvatarPreview">{{ reservedUserInitials }}</div>
+                }
+                <div class="profileAvatarActions">
+                  <input #profileAvatarInput type="file" accept="image/png,image/jpeg,image/webp" class="srOnly" (change)="onProfileAvatarSelected($event)" />
+                  <button type="button" class="btn ghost" (click)="profileAvatarInput.click()">
+                    {{ profileAvatarUploading ? 'Aggiornamento...' : 'Scegli immagine profilo' }}
+                  </button>
+                  <small>Carica un avatar JPG, PNG o WEBP fino a 2 MB. Se non carichi un'immagine, resteranno visibili le iniziali.</small>
+                </div>
+              </div>
+              <div class="fieldErrorSlot">{{ profileAvatarError }}</div>
               <div class="dashboardFormGrid">
                 <div class="field">
                   <label>Nome</label>
@@ -2009,34 +2074,17 @@
               } @else if (profileSettingsSuccess) {
                 <div class="draftAlert success">{{ profileSettingsSuccess }}</div>
               }
+              <div class="modalFooterActions modalFooterActionsInline">
+                <button type="button" class="btn primary" [disabled]="profileSettingsLoading" (click)="saveProfileSettings()">
+                  {{ profileSettingsLoading ? 'Salvataggio...' : 'Salva profilo' }}
+                </button>
+              </div>
             </section>
 
             <section class="profileSettingsCard">
               <div class="profileSettingsHead">
-                <h4>Immagine profilo</h4>
-                <p>Carica un avatar JPG, PNG o WEBP fino a 2 MB.</p>
-              </div>
-              <div class="profileAvatarEditor">
-                @if (reservedUserAvatarSrc) {
-                  <div class="profileAvatarPreview hasImage"><img [src]="reservedUserAvatarSrc" alt="Anteprima avatar" /></div>
-                } @else {
-                  <div class="profileAvatarPreview">{{ reservedUserInitials }}</div>
-                }
-                <div class="profileAvatarActions">
-                  <input #profileAvatarInput type="file" accept="image/png,image/jpeg,image/webp" class="srOnly" (change)="onProfileAvatarSelected($event)" />
-                  <button type="button" class="btn ghost" (click)="profileAvatarInput.click()">
-                    {{ profileAvatarUploading ? 'Aggiornamento...' : 'Scegli immagine profilo' }}
-                  </button>
-                  <small>Se non carichi un'immagine, il sistema continua a mostrare le iniziali.</small>
-                </div>
-              </div>
-              <div class="fieldErrorSlot">{{ profileAvatarError }}</div>
-            </section>
-
-            <section class="profileSettingsCard">
-              <div class="profileSettingsHead">
-                <h4>Sicurezza</h4>
-                <p>L'accesso all'Area Riservata richiede autenticazione a due fattori.</p>
+                <h4>Sicurezza account</h4>
+                <p>Gestisci autenticazione a due fattori, codici di recupero e aggiornamento password.</p>
               </div>
               <div class="dashboardFormGrid">
                 <div class="field full">
@@ -2061,19 +2109,17 @@
                   </div>
                 </div>
               }
-            </section>
-
-            <section class="profileSettingsCard full">
-              <div class="profileSettingsHead">
-                <h4>Cambio password</h4>
-                <p>Aggiorna la password del tuo account. Le altre sessioni attive verranno revocate.</p>
-              </div>
-              <div class="dashboardFormGrid">
+              <div class="profileSecuritySection">
+                <div class="profileSettingsHead">
+                  <h4>Cambio password</h4>
+                  <p>Aggiorna la password del tuo account. Le altre sessioni attive verranno revocate.</p>
+                </div>
+                <div class="dashboardFormGrid">
                 <div class="field full">
                   <label>Password attuale</label>
                   <div class="passwordFieldRow">
                     <input class="passwordFieldInput" [type]="showProfileCurrentPassword ? 'text' : 'password'" [(ngModel)]="changePasswordForm.currentPassword" />
-                    <button type="button" class="passwordToggleBtn" (click)="showProfileCurrentPassword = !showProfileCurrentPassword">
+                    <button type="button" class="passwordToggleBtn" (click)="showProfileCurrentPassword = !showProfileCurrentPassword" [attr.aria-label]="showProfileCurrentPassword ? 'Nascondi password attuale' : 'Mostra password attuale'">
                       {{ showProfileCurrentPassword ? 'Nascondi' : 'Mostra' }}
                     </button>
                   </div>
@@ -2083,7 +2129,7 @@
                   <label>Nuova password</label>
                   <div class="passwordFieldRow">
                     <input class="passwordFieldInput" [type]="showProfileNewPassword ? 'text' : 'password'" [(ngModel)]="changePasswordForm.newPassword" />
-                    <button type="button" class="passwordToggleBtn" (click)="showProfileNewPassword = !showProfileNewPassword">
+                    <button type="button" class="passwordToggleBtn" (click)="showProfileNewPassword = !showProfileNewPassword" [attr.aria-label]="showProfileNewPassword ? 'Nascondi nuova password' : 'Mostra nuova password'">
                       {{ showProfileNewPassword ? 'Nascondi' : 'Mostra' }}
                     </button>
                   </div>
@@ -2093,32 +2139,30 @@
                   <label>Conferma nuova password</label>
                   <div class="passwordFieldRow">
                     <input class="passwordFieldInput" [type]="showProfileConfirmPassword ? 'text' : 'password'" [(ngModel)]="changePasswordForm.confirmPassword" />
-                    <button type="button" class="passwordToggleBtn" (click)="showProfileConfirmPassword = !showProfileConfirmPassword">
+                    <button type="button" class="passwordToggleBtn" (click)="showProfileConfirmPassword = !showProfileConfirmPassword" [attr.aria-label]="showProfileConfirmPassword ? 'Nascondi conferma nuova password' : 'Mostra conferma nuova password'">
                       {{ showProfileConfirmPassword ? 'Nascondi' : 'Mostra' }}
                     </button>
                   </div>
                   <div class="fieldErrorSlot"></div>
                 </div>
+                </div>
+                <p class="fieldHint" style="margin-top: 12px;">
+                  La nuova password deve contenere almeno 10 caratteri, una maiuscola, una minuscola, un numero e un simbolo.
+                </p>
+                @if (changePasswordError) {
+                  <div class="draftAlert error">{{ changePasswordError }}</div>
+                }
+                <div class="modalFooterActions modalFooterActionsInline">
+                  <button type="button" class="btn ghost" [disabled]="changePasswordLoading" (click)="submitChangePassword()">
+                    {{ changePasswordLoading ? 'Aggiorno...' : 'Aggiorna password' }}
+                  </button>
+                </div>
               </div>
-              <p class="fieldHint" style="margin-top: 12px;">
-                La nuova password deve contenere almeno 10 caratteri, una maiuscola, una minuscola, un numero e un simbolo.
-              </p>
-              @if (changePasswordError) {
-                <div class="draftAlert error">{{ changePasswordError }}</div>
-              }
             </section>
           </div>
         </div>
-        <div class="modalFooter modalFooterBetween">
+        <div class="modalFooter">
           <button type="button" class="btn ghost" (click)="closeProfileSettingsModal()">Torna dashboard</button>
-          <div class="modalFooterActions">
-            <button type="button" class="btn ghost" [disabled]="changePasswordLoading" (click)="submitChangePassword()">
-              {{ changePasswordLoading ? 'Aggiorno...' : 'Aggiorna password' }}
-            </button>
-            <button type="button" class="btn primary" [disabled]="profileSettingsLoading" (click)="saveProfileSettings()">
-              {{ profileSettingsLoading ? 'Salvataggio...' : 'Salva profilo' }}
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -2196,7 +2240,9 @@
         <div class="modalBody">
           <div class="actionMenuList">
             <button type="button" class="actionMenuCard" (click)="openAdminDraftRecord(archiveActionsTarget, true); closeArchiveActionsModal()">
-              <div class="actionMenuIcon">i</div>
+              <div class="actionMenuIcon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm-2 6a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v5h1a1 1 0 1 1 0 2h-4a1 1 0 1 1 0-2h1v-4a1 1 0 0 1-1-1Z"/></svg>
+              </div>
               <div>
                 <strong>Dettagli referto</strong>
                 <small>Apri il referto in sola lettura con tutti i dati archiviati.</small>
@@ -2205,7 +2251,9 @@
 
             @if ((archiveActionsTarget.stato === 'completato' || archiveActionsTarget.stato === 'firmato_caricato') && canOpenSignedPdf(archiveActionsTarget)) {
               <button type="button" class="actionMenuCard" (click)="openSignedPdfForDraft(archiveActionsTarget); closeArchiveActionsModal()">
-                <div class="actionMenuIcon">PDF</div>
+                <div class="actionMenuIcon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm6 1.5V9h4.5L13 4.5ZM8 13h1.2c1.7 0 2.8.9 2.8 2.4S10.9 18 9.2 18H8v-5Zm1.1 1v3h.2c1 0 1.6-.5 1.6-1.5S10.3 14 9.3 14h-.2Zm4.2-1h3v1h-1.9v1h1.7v1h-1.7v2h-1.1v-5Zm-7.3 0H7c1 0 1.7.5 1.7 1.4 0 .9-.7 1.5-1.7 1.5h-.4V18H5.5v-5Zm1.1 1h-.4v1.8h.4c.5 0 .8-.3.8-.9 0-.6-.3-.9-.8-.9Z"/></svg>
+                </div>
                 <div>
                   <strong>Scarica PDF firmato</strong>
                   <small>Apri il documento firmato definitivo disponibile per questo referto.</small>
@@ -2220,7 +2268,9 @@
                 [disabled]="adminArchiveDriveLoadingId === archiveActionsTarget.id"
                 (click)="saveArchiveDraftToDrive(archiveActionsTarget)"
               >
-                <div class="actionMenuIcon">D</div>
+                <div class="actionMenuIcon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 4a5 5 0 0 1 4.9 4H18a3 3 0 1 1 0 6h-1v2.59l1.3-1.3a1 1 0 1 1 1.4 1.42l-3 2.99a1 1 0 0 1-1.4 0l-3-3a1 1 0 0 1 1.4-1.41l1.3 1.29V14h-4a4 4 0 1 1 .8-7.92A5 5 0 0 1 12 4Z"/></svg>
+                </div>
                 <div>
                   <strong>{{ adminArchiveDriveLoadingId === archiveActionsTarget.id ? 'Operazione in corso...' : 'Salva su Drive' }}</strong>
                   <small>Archivia il PDF firmato nel Drive aziendale mantenendo il tracciamento nel sistema.</small>
@@ -2234,7 +2284,9 @@
 
             @if (canArchiveDraftBeSentToPatient(archiveActionsTarget) && !archiveActionsTarget.patient_email_sent) {
               <button type="button" class="actionMenuCard" (click)="openSendToPatientModal(archiveActionsTarget); closeArchiveActionsModal()">
-                <div class="actionMenuIcon">M</div>
+                <div class="actionMenuIcon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M4 6h16a2 2 0 0 1 2 2v.22l-10 5.55L2 8.22V8a2 2 0 0 1 2-2Zm18 4.5-9.52 5.29a1 1 0 0 1-.96 0L2 10.5V16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.5Z"/></svg>
+                </div>
                 <div>
                   <strong>Invia al paziente</strong>
                   <small>Invia via email il PDF firmato definitivo al paziente selezionato.</small>
@@ -2247,7 +2299,9 @@
             }
 
             <button type="button" class="actionMenuCard danger" (click)="requestDeleteArchiveDraft(archiveActionsTarget)">
-              <div class="actionMenuIcon">!</div>
+              <div class="actionMenuIcon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M9 3h6l1 2h4a1 1 0 1 1 0 2h-1l-1 12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7H4a1 1 0 1 1 0-2h4l1-2Zm1 6a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0v-6a1 1 0 0 0-1-1Zm4 0a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0v-6a1 1 0 0 0-1-1Z"/></svg>
+              </div>
               <div>
                 <strong>Elimina dall'archivio</strong>
                 <small>Rimuovi questo referto dalla vista archivio dell'Area Admin.</small>
@@ -2282,15 +2336,17 @@
               />
             </div>
 
-            <div class="field">
-              <label>Stato</label>
-              <select [(ngModel)]="draftFilters.stato">
-                <option value="">Tutti</option>
-                @for (item of filteredDraftStatusOptions; track item.value) {
-                  <option [value]="item.value">{{ item.label }}</option>
-                }
-              </select>
-            </div>
+            @if (!isAsyncResumeMode) {
+              <div class="field">
+                <label>Stato</label>
+                <select [(ngModel)]="draftFilters.stato">
+                  <option value="">Tutti</option>
+                  @for (item of filteredDraftStatusOptions; track item.value) {
+                    <option [value]="item.value">{{ item.label }}</option>
+                  }
+                </select>
+              </div>
+            }
 
             <div class="draftFiltersActions">
               <button type="button" class="btn ghost" (click)="applyDraftFilters(true)">
