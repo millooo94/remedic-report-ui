@@ -1,5 +1,18 @@
 <div class="page">
-  @if (uiState === 'initialTypeSelection') {
+  @if (isMobileBlocked) {
+    <main class="entryMain entryMainCentered">
+      <section class="entryCard entryCardNarrow mobileBlockCard">
+        <header class="entryHeader">
+          <div class="entryEyebrow">Remedic Report</div>
+          <h1>Accesso da schermo ampio richiesto</h1>
+          <p>
+            Per usare Remedic Report accedi da un computer desktop o da un tablet con
+            schermo ampio.
+          </p>
+        </header>
+      </section>
+    </main>
+  } @else if (uiState === 'initialTypeSelection') {
     <main class="entryMain entryMainCentered">
       <section class="entryCard">
         <header class="entryHeader">
@@ -9,8 +22,8 @@
               Area riservata
             </button>
           </div>
-          <h1>Scegli la tipologia di referto</h1>
-          <p>Seleziona il percorso operativo con cui vuoi iniziare.</p>
+          <h1>Scegli il percorso di refertazione</h1>
+          <p>Avvia un referto standard oppure scegli il percorso asincrono.</p>
         </header>
 
         <div class="entryTypeGrid">
@@ -21,9 +34,36 @@
               </svg>
             </div>
             <h3>Referto standard</h3>
-            <p>Crea un referto medico generico con sezioni personalizzabili.</p>
+            <p>Crea un referto medico con esportazione e archiviazione immediata.</p>
           </button>
 
+          <button type="button" class="entryTypeCard" (click)="openAsyncTypeSelection()">
+            <div class="entryTypeIcon">
+              <svg viewBox="0 0 24 24" aria-hidden="true" class="entryTypeIconSvg">
+                <path d="M7 4h10a2 2 0 0 1 2 2v8.2a2 2 0 0 1-.59 1.41l-3.8 3.8A2 2 0 0 1 13.2 20H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm1 2v12h5v-3a2 2 0 0 1 2-2h3V6H8Zm2.5 2.25h3a1 1 0 1 1 0 2h-3a1 1 0 1 1 0-2Zm0 4h5a1 1 0 1 1 0 2h-5a1 1 0 1 1 0-2Z"/>
+              </svg>
+            </div>
+            <h3>Referto asincrono</h3>
+            <p>Gestisci referti che richiedono completamento e firma da parte di un refertatore.</p>
+          </button>
+        </div>
+      </section>
+    </main>
+  } @else if (uiState === 'asyncTypeSelection') {
+    <main class="entryMain entryMainCentered">
+      <section class="entryCard">
+        <header class="entryHeader">
+          <div class="entryHeaderTop">
+            <div class="entryEyebrow">Referto asincrono</div>
+            <button type="button" class="ghostLinkBtn" (click)="goToInitialTypeSelection()">
+              Indietro
+            </button>
+          </div>
+          <h1>Scegli il tipo di referto asincrono</h1>
+          <p>Seleziona il percorso specialistico che vuoi avviare.</p>
+        </header>
+
+        <div class="entryTypeGrid entryTypeGridTwo">
           <button type="button" class="entryTypeCard" (click)="selectReportType('emg')">
             <div class="entryTypeIcon">
               <svg viewBox="0 0 24 24" aria-hidden="true" class="entryTypeIconSvg">
@@ -31,7 +71,7 @@
               </svg>
             </div>
             <h3>EMG / ENG</h3>
-            <p>Refertazione elettrofisiologica con dati tecnici, anamnesi mirata e tracciati.</p>
+            <p>Acquisizione tecnica, refertazione clinica e firma digitale del documento finale.</p>
           </button>
 
           <button type="button" class="entryTypeCard" (click)="selectReportType('psg')">
@@ -41,7 +81,7 @@
               </svg>
             </div>
             <h3>PSG</h3>
-            <p>Refertazione polisonnografica cardio-respiratoria con anamnesi del sonno, ESS e report strumentale.</p>
+            <p>Raccolta dati, refertazione clinica e caricamento del PDF firmato definitivo.</p>
           </button>
         </div>
       </section>
@@ -114,11 +154,6 @@
               </button>
             </div>
           </div>
-
-          <label class="rememberCheck">
-            <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" />
-            <span>Ricordami</span>
-          </label>
 
           @if (refertatoreLoginError) {
             <div class="draftAlert error">{{ refertatoreLoginError }}</div>
@@ -243,31 +278,37 @@
             </div>
           </div>
           <h1>Dashboard admin</h1>
-          <p>Gestisci professionisti, refertatori, referti in lavorazione, archivio e audit di base.</p>
+          <p>Gestisci professionisti, refertatori asincroni, referti in lavorazione, archivio e audit di base.</p>
         </header>
 
         @if (adminDashboardError) {
           <div class="draftAlert error">{{ adminDashboardError }}</div>
         }
 
-        <div class="dashboardTabs">
-          <button type="button" class="ghostLinkBtn" [class.isActive]="adminTab === 'professionals'" (click)="adminTab = 'professionals'">
-            Professionisti
-          </button>
-          <button type="button" class="ghostLinkBtn" [class.isActive]="adminTab === 'users'" (click)="adminTab = 'users'">
-            Refertatori
-          </button>
-          <button type="button" class="ghostLinkBtn" [class.isActive]="adminTab === 'drafts'" (click)="adminTab = 'drafts'">
-            In lavorazione
-          </button>
-          <button type="button" class="ghostLinkBtn" [class.isActive]="adminTab === 'archive'" (click)="adminTab = 'archive'">
-            Archivio
-          </button>
-          <button type="button" class="ghostLinkBtn" [class.isActive]="adminTab === 'audit'" (click)="adminTab = 'audit'">
-            Audit log
-          </button>
-        </div>
+        <div class="dashboardShell">
+          <aside class="dashboardSidebar">
+            <div class="dashboardSidebarHead">
+              <span class="entryEyebrow">Area Admin</span>
+              <h3>Sezioni</h3>
+            </div>
+            <nav class="dashboardSidebarNav">
+              @for (item of adminSidebarItems; track item.key) {
+                <button
+                  type="button"
+                  class="sidebarNavBtn"
+                  [class.isActive]="adminTab === item.key"
+                  (click)="adminTab = item.key"
+                >
+                  <span>{{ item.label }}</span>
+                  @if (item.badge) {
+                    <span class="sidebarBadge">{{ item.badge }}</span>
+                  }
+                </button>
+              }
+            </nav>
+          </aside>
 
+          <div class="dashboardContent">
         @if (adminDashboardLoading) {
           <div class="emptyStateCard">Sto caricando la dashboard admin...</div>
         } @else if (adminTab === 'professionals') {
@@ -348,8 +389,8 @@
           <section class="dashboardPanel">
             <div class="adminSectionHead">
               <div>
-                <h3>Refertatori</h3>
-                <p>Gestisci utenti refertatori, assegnazioni EMG/PSG e stato di accesso.</p>
+                <h3>Refertatori asincroni</h3>
+                <p>Gestisci utenti abilitati alla refertazione asincrona EMG e PSG.</p>
               </div>
               <button type="button" class="btn primary" (click)="openNewRefertatoreModal()">
                 Nuovo refertatore
@@ -409,32 +450,121 @@
               </div>
             }
           </section>
-        } @else if (adminTab === 'drafts' || adminTab === 'archive') {
+        } @else if (adminTab === 'drafts') {
           <section class="dashboardPanel">
-            <h3>{{ adminTab === 'drafts' ? 'Referti in lavorazione' : 'Archivio referti completati' }}</h3>
-            @if (!(adminTab === 'drafts' ? adminDrafts.length : adminArchiveDrafts.length)) {
-              <div class="emptyStateCard">Nessun referto da mostrare.</div>
+            <div class="adminSectionHead">
+              <div>
+                <h3>Referti in lavorazione</h3>
+                <p>Consulta e gestisci i referti non ancora completati.</p>
+              </div>
+            </div>
+            @if (!adminDrafts.length) {
+              <div class="emptyStateCard">Nessun referto in lavorazione da mostrare.</div>
             } @else {
               <div class="draftTableWrap">
                 <div class="draftTable draftTableHead draftTableAdminDrafts">
                   <div>Paziente</div>
                   <div>Tipo</div>
-                  <div>Refertatore</div>
+                  <div>Professionista</div>
                   <div>Stato</div>
                   <div>Ultima modifica</div>
                   <div>Azioni</div>
                 </div>
-                @for (draft of (adminTab === 'drafts' ? adminDrafts : adminArchiveDrafts); track draft.id) {
+                @for (draft of adminDrafts; track draft.id) {
                   <div class="draftTable draftTableRow draftTableAdminDrafts">
                     <div>
                       <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                      <small>{{ draft.data_nascita || '-' }}</small>
+                      <small>{{ formatDateValue(draft.data_nascita) }}</small>
                     </div>
                     <div>{{ reportTypeLabelFor(draft.tipo_referto) }}</div>
                     <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '-' }}</div>
                     <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                    <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
-                    <div class="draftRowActions">
+                    <div>{{ formatDateTime(draft.updated_at) }}</div>
+                    <div class="draftRowActions adminRowActions">
+                      <button type="button" class="btn tiny ghost" (click)="openAdminDraftRecord(draft, true)">
+                        Apri
+                      </button>
+                      <button type="button" class="btn tiny ghost danger" (click)="requestDeleteWorkingDraft(draft)">
+                        Elimina
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </section>
+        } @else if (adminTab === 'archive') {
+          <section class="dashboardPanel">
+            <div class="adminSectionHead">
+              <div>
+                <h3>Archivio referti</h3>
+                <p>Consulta referti standard e asincroni completati.</p>
+              </div>
+            </div>
+            <div class="dashboardSegmentTabs">
+              <button type="button" class="segmentTabBtn" [class.isActive]="adminArchiveTab === 'standard'" (click)="setAdminArchiveTab('standard')">
+                Standard
+              </button>
+              <button type="button" class="segmentTabBtn" [class.isActive]="adminArchiveTab === 'async'" (click)="setAdminArchiveTab('async')">
+                Asincroni
+                @if (adminPendingPatientSendCount) {
+                  <span class="segmentBadge">{{ adminPendingPatientSendCount }}</span>
+                }
+              </button>
+            </div>
+
+            <div class="dashboardFormGrid archiveFiltersGrid">
+              <div class="field adminAutocompleteField">
+                <label>{{ adminArchiveTab === 'standard' ? 'Professionista' : 'Refertatore' }}</label>
+                <input
+                  type="text"
+                  [(ngModel)]="archiveProfessionalSearch"
+                  (focus)="showArchiveProfessionalSuggestions = true"
+                  (input)="archiveProfessionalFilter = archiveProfessionalSearch"
+                  (blur)="showArchiveProfessionalSuggestions = false"
+                  placeholder="{{ adminArchiveTab === 'standard' ? 'Filtra per professionista...' : 'Filtra per refertatore...' }}"
+                />
+                <div class="fieldErrorSlot"></div>
+                @if (showArchiveProfessionalSuggestions && archiveProfessionalOptions.length) {
+                  <ul class="adminAutocomplete">
+                    @for (option of archiveProfessionalOptions; track option) {
+                      <li (mousedown)="selectArchiveProfessionalFilter(option)">
+                        <div class="line1">{{ option }}</div>
+                      </li>
+                    }
+                  </ul>
+                }
+              </div>
+              <div class="draftFiltersActions">
+                <button type="button" class="btn tiny ghost" (click)="clearArchiveProfessionalFilter()">
+                  Pulisci filtro
+                </button>
+              </div>
+            </div>
+
+            @if (!filteredAdminArchiveDrafts.length) {
+              <div class="emptyStateCard">Nessun referto archiviato corrisponde ai filtri selezionati.</div>
+            } @else {
+              <div class="draftTableWrap">
+                <div class="draftTable draftTableHead draftTableAdminDrafts">
+                  <div>Paziente</div>
+                  <div>Tipo</div>
+                  <div>{{ adminArchiveTab === 'standard' ? 'Professionista' : 'Refertatore' }}</div>
+                  <div>Stato</div>
+                  <div>Ultima modifica</div>
+                  <div>Azioni</div>
+                </div>
+                @for (draft of filteredAdminArchiveDrafts; track draft.id) {
+                  <div class="draftTable draftTableRow draftTableAdminDrafts">
+                    <div>
+                      <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
+                      <small>{{ formatDateValue(draft.data_nascita) }}</small>
+                    </div>
+                    <div>{{ reportTypeLabelFor(draft.tipo_referto) }}</div>
+                    <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '-' }}</div>
+                    <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
+                    <div>{{ formatDateTime(draft.completed_at || draft.updated_at) }}</div>
+                    <div class="draftRowActions adminRowActions">
                       <button type="button" class="btn tiny ghost" (click)="openAdminDraftRecord(draft, true)">
                         Apri
                       </button>
@@ -442,15 +572,30 @@
                         <button type="button" class="btn tiny ghost" (click)="openSignedPdfForDraft(draft)">
                           Apri PDF firmato
                         </button>
+                      }
+                      @if (draft.drive_web_view_link) {
+                        <button type="button" class="btn tiny ghost" (click)="openDraftDriveLink(draft)">
+                          Apri su Drive
+                        </button>
+                      }
+                      @if (canArchiveDraftBeSavedToDrive(draft)) {
+                        <button type="button" class="btn tiny primary" [disabled]="adminArchiveDriveLoadingId === draft.id" (click)="saveArchiveDraftToDrive(draft)">
+                          {{ adminArchiveDriveLoadingId === draft.id ? 'Operazione in corso...' : 'Salva su Drive' }}
+                        </button>
+                      } @else if ((draft.tipo_referto === 'emg' || draft.tipo_referto === 'psg') && draft.drive_file_id) {
+                        <span class="draftMetaPill">Gia salvato su Drive</span>
+                      }
+                      @if (canArchiveDraftBeSentToPatient(draft) && !draft.patient_email_sent) {
                         <button type="button" class="btn tiny primary" (click)="openSendToPatientModal(draft)">
                           Invia al paziente
                         </button>
                       }
-                      @if (adminTab === 'archive') {
-                        <button type="button" class="btn tiny ghost danger" (click)="requestDeleteArchiveDraft(draft)">
-                          Elimina
-                        </button>
+                      @if (draft.patient_email_sent) {
+                        <span class="draftMetaPill muted">Inviato al paziente</span>
                       }
+                      <button type="button" class="btn tiny ghost danger" (click)="requestDeleteArchiveDraft(draft)">
+                        Elimina
+                      </button>
                     </div>
                   </div>
                 }
@@ -494,6 +639,8 @@
             }
           </section>
         }
+          </div>
+        </div>
       </section>
     </main>
     } @else if (uiState === 'refertatoreDashboard') {
@@ -549,9 +696,15 @@
             <div class="dashboardSegmentTabs">
               <button type="button" class="segmentTabBtn" [class.isActive]="activeRefertatoreTab === 'emg'" (click)="setRefertatoreTab('emg')">
                 EMG
+                @if (refertatorePendingBadge('emg')) {
+                  <span class="segmentBadge">{{ refertatorePendingBadge('emg') }}</span>
+                }
               </button>
               <button type="button" class="segmentTabBtn" [class.isActive]="activeRefertatoreTab === 'psg'" (click)="setRefertatoreTab('psg')">
                 PSG
+                @if (refertatorePendingBadge('psg')) {
+                  <span class="segmentBadge">{{ refertatorePendingBadge('psg') }}</span>
+                }
               </button>
             </div>
           }
@@ -588,11 +741,11 @@
                         <div class="draftTable draftTableRow refertatoreTable">
                           <div>
                             <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                            <small>{{ draft.data_nascita || '-' }}</small>
+                            <small>{{ formatDateValue(draft.data_nascita) }}</small>
                           </div>
-                          <div>{{ draft.data_esame || '-' }}</div>
+                          <div>{{ formatDateValue(draft.data_esame) }}</div>
                           <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                          <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+                          <div>{{ formatDateTime(draft.updated_at) }}</div>
                           <div class="draftRowActions adminRowActions">
                             <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
                               {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri e completa' }}
@@ -607,12 +760,12 @@
                 <section class="reviewerStageCard">
                   <div class="reviewerStageHead">
                     <div>
-                      <h4>Pronti per firma</h4>
-                      <p>Esporta il PDF temporaneo da firmare e carica qui il firmato definitivo.</p>
+                      <h4>PDF da caricare</h4>
+                      <p>Carica il PDF firmato definitivo per chiudere il referto.</p>
                     </div>
                   </div>
                   @if (!readyForSignatureDraftsByType('emg').length) {
-                    <div class="emptyStateCard">Nessun referto EMG pronto per firma.</div>
+                    <div class="emptyStateCard">Nessun referto EMG con PDF firmato da caricare.</div>
                   } @else {
                     <div class="draftTableWrap">
                       <div class="draftTable draftTableHead refertatoreTableReady">
@@ -626,15 +779,12 @@
                         <div class="draftTable draftTableRow refertatoreTableReady">
                           <div>
                             <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                            <small>{{ draft.data_nascita || '-' }}</small>
+                            <small>{{ formatDateValue(draft.data_nascita) }}</small>
                           </div>
-                          <div>{{ draft.data_esame || '-' }}</div>
+                          <div>{{ formatDateValue(draft.data_esame) }}</div>
                           <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                          <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+                          <div>{{ formatDateTime(draft.updated_at) }}</div>
                           <div class="draftRowActions adminRowActions">
-                            <button type="button" class="btn tiny ghost" [disabled]="draftActionLoadingId === draft.id" (click)="exportReadyRefertatoreDraft(draft)">
-                              {{ draftActionLoadingId === draft.id ? 'Esporto...' : 'Esporta PDF da firmare' }}
-                            </button>
                             <button type="button" class="btn tiny primary" (click)="openDashboardSignedPdfModal(draft)">
                               Carica PDF firmato
                             </button>
@@ -667,11 +817,11 @@
                         <div class="draftTable draftTableRow refertatoreTableArchive">
                           <div>
                             <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                            <small>{{ draft.data_nascita || '-' }}</small>
+                            <small>{{ formatDateValue(draft.data_nascita) }}</small>
                           </div>
-                          <div>{{ draft.data_esame || '-' }}</div>
+                          <div>{{ formatDateValue(draft.data_esame) }}</div>
                           <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                          <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
+                          <div>{{ formatDateTime(draft.completed_at || draft.updated_at) }}</div>
                           <div class="draftRowActions adminRowActions">
                             <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
                               {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
@@ -723,11 +873,11 @@
                         <div class="draftTable draftTableRow refertatoreTable">
                           <div>
                             <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                            <small>{{ draft.data_nascita || '-' }}</small>
+                            <small>{{ formatDateValue(draft.data_nascita) }}</small>
                           </div>
-                          <div>{{ draft.data_esame || '-' }}</div>
+                          <div>{{ formatDateValue(draft.data_esame) }}</div>
                           <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                          <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+                          <div>{{ formatDateTime(draft.updated_at) }}</div>
                           <div class="draftRowActions adminRowActions">
                             <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
                               {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri e completa' }}
@@ -742,12 +892,12 @@
                 <section class="reviewerStageCard">
                   <div class="reviewerStageHead">
                     <div>
-                      <h4>Pronti per firma</h4>
-                      <p>Esporta il PDF temporaneo da firmare e carica qui il firmato definitivo.</p>
+                      <h4>PDF da caricare</h4>
+                      <p>Carica il PDF firmato definitivo per chiudere il referto.</p>
                     </div>
                   </div>
                   @if (!readyForSignatureDraftsByType('psg').length) {
-                    <div class="emptyStateCard">Nessun referto PSG pronto per firma.</div>
+                    <div class="emptyStateCard">Nessun referto PSG con PDF firmato da caricare.</div>
                   } @else {
                     <div class="draftTableWrap">
                       <div class="draftTable draftTableHead refertatoreTableReady">
@@ -761,15 +911,12 @@
                         <div class="draftTable draftTableRow refertatoreTableReady">
                           <div>
                             <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                            <small>{{ draft.data_nascita || '-' }}</small>
+                            <small>{{ formatDateValue(draft.data_nascita) }}</small>
                           </div>
-                          <div>{{ draft.data_esame || '-' }}</div>
+                          <div>{{ formatDateValue(draft.data_esame) }}</div>
                           <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                          <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+                          <div>{{ formatDateTime(draft.updated_at) }}</div>
                           <div class="draftRowActions adminRowActions">
-                            <button type="button" class="btn tiny ghost" [disabled]="draftActionLoadingId === draft.id" (click)="exportReadyRefertatoreDraft(draft)">
-                              {{ draftActionLoadingId === draft.id ? 'Esporto...' : 'Esporta PDF da firmare' }}
-                            </button>
                             <button type="button" class="btn tiny primary" (click)="openDashboardSignedPdfModal(draft)">
                               Carica PDF firmato
                             </button>
@@ -802,11 +949,11 @@
                         <div class="draftTable draftTableRow refertatoreTableArchive">
                           <div>
                             <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                            <small>{{ draft.data_nascita || '-' }}</small>
+                            <small>{{ formatDateValue(draft.data_nascita) }}</small>
                           </div>
-                          <div>{{ draft.data_esame || '-' }}</div>
+                          <div>{{ formatDateValue(draft.data_esame) }}</div>
                           <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                          <div>{{ (draft.completed_at || draft.updated_at) | date: 'dd/MM/yyyy HH:mm' }}</div>
+                          <div>{{ formatDateTime(draft.completed_at || draft.updated_at) }}</div>
                           <div class="draftRowActions adminRowActions">
                             <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
                               {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
@@ -1019,6 +1166,7 @@
                 title="Esporta copia di controllo"
                 aria-label="Esporta copia di controllo"
                 (click)="exportControlCopy()"
+                [disabled]="draftSaving || standardPdfGenerating"
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path
@@ -1029,7 +1177,7 @@
             }
 
             @if (showPrimaryAction) {
-              <button type="button" class="btn primary" (click)="primaryAction()">
+              <button type="button" class="btn primary" (click)="primaryAction()" [disabled]="draftSaving || standardPdfGenerating">
                 {{ canProceedLabel() }}
               </button>
             }
@@ -1092,7 +1240,7 @@
                 (change)="onDashboardSignedPdfSelected($event)"
               />
               <button type="button" class="btn ghost" (click)="dashboardSignedPdfInput.click()">
-                Carica PDF firmato
+                Seleziona PDF firmato
               </button>
             </div>
 
@@ -1116,7 +1264,7 @@
         <div class="modalFooter">
           <button type="button" class="btn ghost" (click)="closeDashboardSignedPdfModal()">Annulla</button>
           <button type="button" class="btn primary" [disabled]="dashboardSignedPdfSaving" (click)="saveDashboardSignedPdf()">
-            {{ dashboardSignedPdfSaving ? 'Salvataggio...' : 'Salva referto firmato' }}
+            {{ dashboardSignedPdfSaving ? 'Caricamento referto firmato...' : 'Salva referto firmato' }}
           </button>
         </div>
       </div>
@@ -1395,6 +1543,9 @@
             @if (deleteResourceTarget.kind === 'archiveDraft') {
               <p>Eliminare questo referto archiviato?</p>
               <p><strong>{{ deleteResourceTarget.name }}</strong></p>
+            } @else if (deleteResourceTarget.kind === 'workingDraft') {
+              <p>Eliminare questo referto in lavorazione?</p>
+              <p><strong>{{ deleteResourceTarget.name }}</strong></p>
             } @else {
               <p>
                 Sei sicuro di voler eliminare/disattivare
@@ -1405,6 +1556,8 @@
               {{
                 deleteResourceTarget.kind === 'archiveDraft'
                   ? 'Il referto non sara piu visibile nell\'archivio admin. I file gia salvati resteranno gestiti secondo la logica server.'
+                  : deleteResourceTarget.kind === 'workingDraft'
+                    ? 'La bozza verra rimossa dall\'area admin e gli allegati collegati saranno gestiti secondo la logica server.'
                   : 'L\'azione non puo essere annullata dalla dashboard. Eventuali referti storici collegati resteranno conservati.'
               }}
             </p>
@@ -1643,8 +1796,8 @@
                     }
                   </div>
                   <div><span class="draftRowStatus">{{ draft.stato }}</span></div>
-                  <div>{{ draft.data_nascita || '-' }}</div>
-                  <div>{{ draft.updated_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+                  <div>{{ formatDateValue(draft.data_nascita) }}</div>
+                  <div>{{ formatDateTime(draft.updated_at) }}</div>
                   <div class="draftRowActions">
                     <button
                       type="button"

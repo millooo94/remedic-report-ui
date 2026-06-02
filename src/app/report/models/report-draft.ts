@@ -53,6 +53,10 @@ export interface ReportDraftSummary extends ReportDraftSummaryData {
   id: string;
   tipo_referto: ReportType;
   stato: ReportDraftStatus;
+  has_signed_pdf?: boolean;
+  patient_email_sent?: boolean;
+  drive_file_id?: string | null;
+  drive_web_view_link?: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;

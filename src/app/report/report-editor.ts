@@ -78,6 +78,7 @@ import {
 type SectionKey = (typeof REPORT_SECTION_KEYS)[number];
 type EditorUiState =
   | 'initialTypeSelection'
+  | 'asyncTypeSelection'
   | 'typeActionSelection'
   | 'wizard'
   | 'reservedLogin'
@@ -150,6 +151,7 @@ export class ReportEditor {
   adminDashboardLoading = false;
   adminDashboardError = '';
   adminTab: 'professionals' | 'users' | 'drafts' | 'archive' | 'audit' = 'professionals';
+  adminArchiveTab: 'standard' | 'async' = 'standard';
   showAdminProfessionalModal = false;
   showAdminUserModal = false;
   showChangePasswordModal = false;
@@ -166,16 +168,23 @@ export class ReportEditor {
   adminUserProfessionalError = '';
   adminProfessionalFieldErrors: Record<string, string> = {};
   adminUserFieldErrors: Record<string, string> = {};
+  archiveProfessionalFilter = '';
+  archiveProfessionalSearch = '';
+  showArchiveProfessionalSuggestions = false;
   deleteResourceLoading = false;
   deleteResourceError = '';
   deleteResourceTarget: {
-    kind: 'professional' | 'refertatore' | 'archiveDraft';
+    kind: 'professional' | 'refertatore' | 'workingDraft' | 'archiveDraft';
     id: string;
     name: string;
   } | null = null;
   entryContext: EntryContext = 'public';
   specializations = [...PROFESSIONAL_SPECIALIZATIONS];
   draftActionLoadingId: string | null = null;
+  adminArchiveDriveLoadingId: string | null = null;
+  standardPdfGenerating = false;
+  viewportWidth =
+    typeof window !== 'undefined' ? window.innerWidth : 1440;
   adminUserForm = {
     id: '',
     role: 'refertatore' as 'admin' | 'refertatore',
@@ -250,7 +259,6 @@ export class ReportEditor {
   ];
   refertatoreEmail = '';
   refertatorePassword = '';
-  rememberMe = false;
   showReservedPassword = false;
   refertatoreLoginLoading = false;
   refertatoreLoginError = '';
@@ -394,6 +402,12 @@ export class ReportEditor {
     }
   }
 
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.viewportWidth =
+      typeof window !== 'undefined' ? window.innerWidth : this.viewportWidth;
+  }
+
   control(path: string): FormControl {
     const ctrl = this.form.get(path);
     if (!ctrl) {
@@ -457,14 +471,18 @@ export class ReportEditor {
 
   get selectedTypeDescription(): string {
     if (this.selectedReportType === 'emg') {
-      return 'Refertazione elettrofisiologica con dati tecnici, checklist anamnestica e tracciati.';
+      return 'Gestisci acquisizione tecnica, refertazione clinica e firma digitale del documento finale.';
     }
 
     if (this.selectedReportType === 'psg') {
-      return 'Refertazione polisonnografica cardio-respiratoria con anamnesi del sonno, ESS e report strumentale.';
+      return 'Gestisci raccolta dati, refertazione clinica e caricamento del PDF firmato definitivo.';
     }
 
-    return 'Referto medico generico con sezioni personalizzabili.';
+    return 'Crea un referto medico con esportazione e archiviazione immediata.';
+  }
+
+  get isMobileBlocked(): boolean {
+    return this.viewportWidth < 1024;
   }
 
   get showRefertatoreAreaCard(): boolean {
@@ -594,6 +612,84 @@ export class ReportEditor {
     }
 
     return (this.reservedUser.assignedTypes || []).map((item) => item.toUpperCase()).join(', ');
+  }
+
+  get adminSidebarItems(): Array<{
+    key: 'professionals' | 'users' | 'drafts' | 'archive' | 'audit';
+    label: string;
+    badge?: number;
+  }> {
+    return [
+      { key: 'professionals', label: 'Professionisti' },
+      { key: 'users', label: 'Refertatori asincroni' },
+      { key: 'drafts', label: 'Referti in lavorazione' },
+      { key: 'archive', label: 'Archivio', badge: this.adminPendingPatientSendCount || undefined },
+      { key: 'audit', label: 'Audit log' },
+    ];
+  }
+
+  get archiveProfessionalOptions(): string[] {
+    const source =
+      this.adminArchiveTab === 'standard'
+        ? [
+            ...this.adminProfessionals.map((item) => item.display_name),
+            ...this.adminArchiveDrafts
+              .filter((item) => item.tipo_referto === 'standard')
+              .map((item) => item.medico_refertatore || '')
+              .filter(Boolean),
+          ]
+        : [
+            ...this.adminUsers
+              .filter((item) => item.role === 'refertatore')
+              .map((item) => item.display_name),
+            ...this.adminArchiveDrafts
+              .map((item) => item.assigned_refertatore_name || item.medico_refertatore || '')
+              .filter(Boolean),
+          ];
+
+    const query = this.archiveProfessionalSearch.trim().toLowerCase();
+    return [...new Set(source.filter(Boolean))]
+      .filter((item) => !query || item.toLowerCase().includes(query))
+      .sort((a, b) => a.localeCompare(b, 'it'));
+  }
+
+  get filteredAdminArchiveDrafts(): ReportDraftSummary[] {
+    const professionistaFilter = this.archiveProfessionalFilter.trim().toLowerCase();
+    return this.adminArchiveDrafts.filter((draft) => {
+      const matchesType =
+        this.adminArchiveTab === 'standard'
+          ? draft.tipo_referto === 'standard'
+          : draft.tipo_referto === 'emg' || draft.tipo_referto === 'psg';
+
+      if (!matchesType) {
+        return false;
+      }
+
+      if (!professionistaFilter) {
+        return true;
+      }
+
+      const professionista =
+        this.adminArchiveTab === 'standard'
+          ? draft.medico_refertatore || ''
+          : draft.assigned_refertatore_name || draft.medico_refertatore || '';
+
+      return professionista.toLowerCase().includes(professionistaFilter);
+    });
+  }
+
+  get adminPendingPatientSendCount(): number {
+    return this.adminArchiveDrafts.filter(
+      (draft) =>
+        (draft.tipo_referto === 'emg' || draft.tipo_referto === 'psg') &&
+        draft.stato === 'completato' &&
+        draft.has_signed_pdf &&
+        !draft.patient_email_sent,
+    ).length;
+  }
+
+  refertatorePendingBadge(tipo: 'emg' | 'psg'): number {
+    return this.readyForSignatureDraftsByType(tipo).length;
   }
 
   get showControlPreviewButton(): boolean {
@@ -1798,14 +1894,16 @@ export class ReportEditor {
       (this.reportType === 'emg' || this.reportType === 'psg') &&
       !this.reviewerMode
     ) {
-      return 'Invia al refertatore';
+      return this.draftSaving ? 'Invio in corso...' : 'Invia al refertatore';
     }
 
     if (this.reviewerMode) {
-      return 'Completa referto';
+      return this.draftSaving
+        ? 'Completo ed esporto...'
+        : 'Completa ed esporta PDF da firmare';
     }
 
-    return 'Genera Referto';
+    return this.standardPdfGenerating ? 'Esportazione in corso...' : 'Genera referto';
   }
 
   selectReportType(type: ReportType): void {
@@ -1820,6 +1918,13 @@ export class ReportEditor {
     this.attachmentsReloadNotice = '';
   }
 
+  openAsyncTypeSelection(): void {
+    this.selectedReportType = null;
+    this.uiState = 'asyncTypeSelection';
+    this.draftMessage = '';
+    this.draftError = '';
+  }
+
   goToInitialTypeSelection(): void {
     this.entryContext = 'public';
     this.uiState = 'initialTypeSelection';
@@ -1828,6 +1933,9 @@ export class ReportEditor {
     this.closeResumeDraftModal();
     this.closePsgAnamnesisModal();
     this.closeEmgAnamnesisModal();
+    this.archiveProfessionalFilter = '';
+    this.archiveProfessionalSearch = '';
+    this.showArchiveProfessionalSuggestions = false;
   }
 
   goToTypeActionSelection(): void {
@@ -2007,9 +2115,19 @@ export class ReportEditor {
 
       this.currentDraftStatus = completedDraft.stato;
       this.draftLoaded = true;
+      const previewPayload = this.payloadBuilder.build(
+        this.form.getRawValue(),
+        this.sections.getRawValue(),
+      );
+      const exported = await this.openPreviewPdfBlob(
+        previewPayload,
+        completedDraft.id,
+      );
       this.setDraftMessage(
-        "Referto completato. Lo trovi ora nella sezione 'Pronti per firma' della dashboard refertatore.",
-        'success',
+        exported
+          ? 'PDF esportato. Firmalo digitalmente e caricalo dalla dashboard.'
+          : "Referto completato. Se necessario puoi caricare il PDF firmato dalla dashboard dopo aver ripetuto l'esportazione.",
+        exported ? 'success' : 'warning',
       );
       await this.openRefertatoreDashboard(this.reportType as 'emg' | 'psg');
     } catch (error: any) {
@@ -2331,7 +2449,6 @@ export class ReportEditor {
         this.api.login(
           this.refertatoreEmail.trim(),
           this.refertatorePassword,
-          this.rememberMe,
         ),
       );
 
@@ -2339,7 +2456,6 @@ export class ReportEditor {
       this.reservedUser = response.user;
       this.refertatoreToken = 'session';
       this.refertatorePassword = '';
-      this.rememberMe = false;
       this.showReservedPassword = false;
       this.persistRefertatoreSession();
       await this.routeReservedUserDashboard();
@@ -2359,7 +2475,6 @@ export class ReportEditor {
     }
 
     this.refertatorePassword = '';
-    this.rememberMe = false;
     this.showReservedPassword = false;
     this.refertatoreLoginError = '';
     this.showReservedUserMenu = false;
@@ -2891,6 +3006,13 @@ export class ReportEditor {
       }
     }
 
+    if (this.reportType === 'standard') {
+      const prepared = await this.ensureStandardArchiveDraftBeforePdf();
+      if (!prepared) {
+        return;
+      }
+    }
+
     const formValue = this.form.getRawValue();
     const sectionsValue = this.sections.getRawValue();
     const payload = this.payloadBuilder.build(formValue, sectionsValue);
@@ -3143,12 +3265,18 @@ export class ReportEditor {
 `);
     printWindow?.document.close();
 
+    this.standardPdfGenerating = true;
+
     this.api.generatePdf(payload).subscribe({
-      next: (htmlResponse) => {
+      next: (response) => {
+        const htmlResponse = response.body || '';
         printWindow?.document.open();
         printWindow?.document.write(htmlResponse);
         printWindow?.document.close();
-        void this.markDraftCompletedAfterPdfSuccess();
+        void this.markDraftCompletedAfterPdfSuccess({
+          driveFileId: response.headers.get('x-remedic-drive-file-id'),
+          driveWebViewLink: response.headers.get('x-remedic-drive-link'),
+        });
       },
       error: (err) => {
         console.error('Errore generazione PDF:', err);
@@ -3187,6 +3315,10 @@ export class ReportEditor {
         printWindow?.document.close();
 
         alert('Errore durante la generazione del PDF.');
+        this.standardPdfGenerating = false;
+      },
+      complete: () => {
+        this.standardPdfGenerating = false;
       },
     });
   }
@@ -3544,21 +3676,56 @@ export class ReportEditor {
     }
   }
 
-  private async markDraftCompletedAfterPdfSuccess(): Promise<void> {
+  private async ensureStandardArchiveDraftBeforePdf(): Promise<boolean> {
+    this.draftError = '';
+
+    try {
+      const payload = this.buildDraftPayload('in_refertazione');
+      const savedDraft = this.currentDraftId
+        ? await firstValueFrom(this.api.updateDraft(this.currentDraftId, payload))
+        : await firstValueFrom(this.api.createDraft(payload));
+
+      this.currentDraftId = savedDraft.id;
+      this.currentDraftStatus = savedDraft.stato;
+      this.draftLoaded = true;
+      return true;
+    } catch (error) {
+      console.error('Errore preparazione archivio referto standard:', error);
+      this.setDraftMessage(
+        'Impossibile preparare l’archivio del referto standard prima dell’esportazione.',
+        'error',
+      );
+      return false;
+    }
+  }
+
+  private async markDraftCompletedAfterPdfSuccess(driveInfo?: {
+    driveFileId?: string | null;
+    driveWebViewLink?: string | null;
+  }): Promise<void> {
     if (!this.currentDraftId) {
       return;
     }
 
     try {
+      const payload = this.buildDraftPayload('completato');
+      payload.form_data.meta = {
+        ...payload.form_data.meta,
+        ...(driveInfo?.driveFileId ? { driveFileId: driveInfo.driveFileId } : {}),
+        ...(driveInfo?.driveWebViewLink
+          ? { driveWebViewLink: driveInfo.driveWebViewLink }
+          : {}),
+      };
+
       const updatedDraft = await firstValueFrom(
-        this.api.updateDraftStatus(this.currentDraftId, 'completato'),
+        this.api.updateDraft(this.currentDraftId, payload),
       );
       this.currentDraftStatus = updatedDraft.stato;
-      this.setDraftMessage('Bozza aggiornata come completata.', 'success');
+      this.setDraftMessage('Referto standard archiviato correttamente.', 'success');
     } catch (error) {
       console.error('Errore aggiornamento stato bozza:', error);
       this.setDraftMessage(
-        "Il PDF e stato generato, ma non sono riuscito a segnare la bozza come completata.",
+        'Il PDF e stato generato, ma non sono riuscito ad aggiornare correttamente l’archivio.',
         'warning',
       );
     }
@@ -3788,6 +3955,11 @@ export class ReportEditor {
       );
 
       this.setDraftMessage(response.message, 'success');
+      this.adminArchiveDrafts = this.adminArchiveDrafts.map((draft) =>
+        draft.id === this.sendToPatientDraft?.id
+          ? { ...draft, patient_email_sent: true }
+          : draft,
+      );
       const deliveries = await firstValueFrom(
         this.api.listAdminDraftEmailDeliveries(this.sendToPatientDraft.id),
       );
@@ -3865,6 +4037,18 @@ export class ReportEditor {
     }
 
     window.open(link, '_blank', 'noopener,noreferrer');
+  }
+
+  openDraftDriveLink(draft: ReportDraftSummary): void {
+    if (!draft.drive_web_view_link) {
+      this.setDraftMessage(
+        'Link Drive non disponibile per il referto selezionato.',
+        'warning',
+      );
+      return;
+    }
+
+    window.open(draft.drive_web_view_link, '_blank', 'noopener,noreferrer');
   }
 
   async openSignedPdfForDraft(draft: ReportDraftSummary): Promise<void> {
@@ -4052,6 +4236,39 @@ export class ReportEditor {
     const year = date.getFullYear();
 
     return `${day}/${month}/${year}`;
+  }
+
+  formatDateValue(value?: string | null): string {
+    if (!value) {
+      return '-';
+    }
+
+    const dateOnly = this.extractDatePart(value);
+    if (!dateOnly) {
+      return '-';
+    }
+
+    const [year, month, day] = dateOnly.split('-');
+    if (!year || !month || !day) {
+      return '-';
+    }
+
+    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+  }
+
+  formatDateTime(value?: string | null): string {
+    if (!value) {
+      return '-';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return this.formatDateValue(value);
+    }
+
+    return `${this.formatDateDisplay(date)} ${String(date.getHours()).padStart(2, '0')}:${String(
+      date.getMinutes(),
+    ).padStart(2, '0')}`;
   }
 
   private filteredDoctors(): DoctorInfo[] {
@@ -4295,6 +4512,10 @@ export class ReportEditor {
       await this.loadAuditLogs(1);
       this.professionalsPage = 1;
       this.refertatoriPage = 1;
+      this.adminArchiveTab = 'standard';
+      this.archiveProfessionalFilter = '';
+      this.archiveProfessionalSearch = '';
+      this.showArchiveProfessionalSuggestions = false;
       this.showReservedUserMenu = false;
       this.entryContext = 'admin';
       this.uiState = 'adminDashboard';
@@ -4707,6 +4928,14 @@ export class ReportEditor {
     this.openDeleteResourceModal('refertatore', user.id, user.display_name);
   }
 
+  requestDeleteWorkingDraft(draft: ReportDraftSummary): void {
+    this.openDeleteResourceModal(
+      'workingDraft',
+      draft.id,
+      draft.paziente_nome_completo || 'Referto in lavorazione',
+    );
+  }
+
   requestDeleteArchiveDraft(draft: ReportDraftSummary): void {
     this.openDeleteResourceModal(
       'archiveDraft',
@@ -4716,7 +4945,7 @@ export class ReportEditor {
   }
 
   openDeleteResourceModal(
-    kind: 'professional' | 'refertatore' | 'archiveDraft',
+    kind: 'professional' | 'refertatore' | 'workingDraft' | 'archiveDraft',
     id: string,
     name: string,
   ): void {
@@ -4773,6 +5002,15 @@ export class ReportEditor {
           'Refertatore disattivato. I referti storici restano conservati.',
           'success',
         );
+      } else if (this.deleteResourceTarget.kind === 'workingDraft') {
+        await firstValueFrom(this.api.deleteAdminDraft(this.deleteResourceTarget.id));
+        this.adminDrafts = this.adminDrafts.filter(
+          (item) => item.id !== this.deleteResourceTarget?.id,
+        );
+        this.setDraftMessage(
+          'Referto in lavorazione eliminato correttamente.',
+          'success',
+        );
       } else {
         await firstValueFrom(
           this.api.deleteAdminArchiveDraft(this.deleteResourceTarget.id),
@@ -4797,6 +5035,86 @@ export class ReportEditor {
         'Impossibile eliminare la risorsa selezionata.';
     } finally {
       this.deleteResourceLoading = false;
+    }
+  }
+
+  setAdminArchiveTab(tab: 'standard' | 'async'): void {
+    this.adminArchiveTab = tab;
+    this.archiveProfessionalFilter = '';
+    this.archiveProfessionalSearch = '';
+    this.showArchiveProfessionalSuggestions = false;
+  }
+
+  selectArchiveProfessionalFilter(value: string): void {
+    this.archiveProfessionalFilter = value;
+    this.archiveProfessionalSearch = value;
+    this.showArchiveProfessionalSuggestions = false;
+  }
+
+  clearArchiveProfessionalFilter(): void {
+    this.archiveProfessionalFilter = '';
+    this.archiveProfessionalSearch = '';
+    this.showArchiveProfessionalSuggestions = false;
+  }
+
+  canArchiveDraftBeSentToPatient(draft: ReportDraftSummary): boolean {
+    return (
+      (draft.tipo_referto === 'emg' || draft.tipo_referto === 'psg') &&
+      draft.stato === 'completato' &&
+      !!draft.has_signed_pdf
+    );
+  }
+
+  canArchiveDraftBeSavedToDrive(draft: ReportDraftSummary): boolean {
+    return (
+      (draft.tipo_referto === 'emg' || draft.tipo_referto === 'psg') &&
+      draft.stato === 'completato' &&
+      !!draft.has_signed_pdf &&
+      !draft.drive_file_id
+    );
+  }
+
+  async saveArchiveDraftToDrive(draft: ReportDraftSummary): Promise<void> {
+    if (!this.canArchiveDraftBeSavedToDrive(draft)) {
+      return;
+    }
+
+    this.adminArchiveDriveLoadingId = draft.id;
+    this.adminDashboardError = '';
+
+    try {
+      await firstValueFrom(this.api.getCsrf());
+      const response = await firstValueFrom(
+        this.api.saveAdminArchiveDraftToDrive(draft.id),
+      );
+      this.adminArchiveDrafts = this.adminArchiveDrafts.map((item) =>
+        item.id === draft.id
+          ? {
+              ...item,
+              drive_file_id:
+                response?.attachment?.drive_file_id ||
+                response?.drive?.driveFileId ||
+                item.drive_file_id ||
+                null,
+              drive_web_view_link:
+                response?.attachment?.drive_web_view_link ||
+                response?.drive?.driveWebViewLink ||
+                item.drive_web_view_link ||
+                null,
+            }
+          : item,
+      );
+      this.setDraftMessage(
+        response?.message || 'Referto archiviato su Drive correttamente.',
+        'success',
+      );
+    } catch (error: any) {
+      console.error('Errore archiviazione su Drive da area admin:', error);
+      this.adminDashboardError =
+        error?.error?.message ||
+        "Impossibile completare il salvataggio su Drive dall'archivio admin.";
+    } finally {
+      this.adminArchiveDriveLoadingId = null;
     }
   }
 

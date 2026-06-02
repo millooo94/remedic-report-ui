@@ -69,8 +69,12 @@
 .entryTypeGrid {
   margin-top: 30px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
+}
+
+.entryTypeGridTwo {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .entryTypeCard,
@@ -722,16 +726,8 @@
   font-weight: 600;
 }
 
-.rememberCheck {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: #475569;
-  font-size: 14px;
-}
-
-.rememberCheck input {
-  margin: 0;
+.mobileBlockCard {
+  text-align: center;
 }
 
 .dashboardTopActions {
@@ -767,11 +763,85 @@
   flex-direction: column;
 }
 
-.dashboardTabs {
+.dashboardShell {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  flex: 1;
+}
+
+.dashboardSidebar {
+  position: sticky;
+  top: 24px;
+  border: 1px solid #dbe7ee;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #f8fcfe 0%, #eef7fb 100%);
+  padding: 18px;
+}
+
+.dashboardSidebarHead h3 {
+  margin: 6px 0 0;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.dashboardSidebarNav {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 24px 0 18px;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.sidebarNavBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 12px 14px;
+  border-radius: 14px;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebarNavBtn:hover {
+  background: rgba(28, 158, 189, 0.08);
+}
+
+.sidebarNavBtn.isActive {
+  background: #1c9ebd;
+  color: #fff;
+  box-shadow: 0 14px 26px rgba(28, 158, 189, 0.24);
+}
+
+.sidebarBadge,
+.segmentBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(174, 202, 32, 0.18);
+  color: #5b6f11;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sidebarNavBtn.isActive .sidebarBadge {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.dashboardContent {
+  min-width: 0;
 }
 
 .dashboardSegmentTabs {
@@ -783,6 +853,10 @@
   border-radius: 999px;
   background: #eef7fa;
   border: 1px solid #d7e8ee;
+}
+
+.segmentBadge {
+  margin-left: 6px;
 }
 
 .segmentTabBtn {
@@ -884,6 +958,11 @@
   min-height: 560px;
   display: flex;
   flex-direction: column;
+}
+
+.archiveFiltersGrid {
+  align-items: end;
+  margin-bottom: 18px;
 }
 
 .dashboardPanel h3 {
@@ -1142,6 +1221,14 @@
 
   .dashboardCard {
     min-height: auto;
+  }
+
+  .dashboardShell {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboardSidebar {
+    position: static;
   }
 
   .dashboardPanel {

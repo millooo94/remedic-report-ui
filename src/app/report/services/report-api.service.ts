@@ -1,4 +1,4 @@
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -64,9 +64,10 @@ export class ReportApiService {
     this.csrfToken = '';
   }
 
-  generatePdf(payload: ReportPdfRequest): Observable<string> {
+  generatePdf(payload: ReportPdfRequest): Observable<HttpResponse<string>> {
     return this.http.post<string>(`${environment.API.BASE_URL}/pdf`, payload, {
       headers: this.buildPublicHeaders(),
+      observe: 'response',
       responseType: 'text' as 'json',
     });
   }
@@ -78,15 +79,11 @@ export class ReportApiService {
     });
   }
 
-  login(
-    email: string,
-    password: string,
-    rememberMe = false,
-  ): Observable<AuthLoginResponse> {
+  login(email: string, password: string): Observable<AuthLoginResponse> {
     return this.http
       .post<AuthLoginResponse>(
         `${environment.API.BASE_URL}/auth/login`,
-        { email, password, rememberMe },
+        { email, password },
         {
           headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
           withCredentials: true,
@@ -456,6 +453,24 @@ export class ReportApiService {
       headers: this.buildAuthHeaders(),
       withCredentials: true,
     });
+  }
+
+  deleteAdminDraft(id: string): Observable<any> {
+    return this.http.delete(`${environment.API.BASE_URL}/admin/drafts/${id}`, {
+      headers: this.buildAuthHeaders(),
+      withCredentials: true,
+    });
+  }
+
+  saveAdminArchiveDraftToDrive(id: string): Observable<any> {
+    return this.http.post(
+      `${environment.API.BASE_URL}/admin/archive/${id}/save-to-drive`,
+      {},
+      {
+        headers: this.buildAuthHeaders(),
+        withCredentials: true,
+      },
+    );
   }
 
   listAuditLogs(page = 1, pageSize = 20): Observable<AuditLogsResponse> {
