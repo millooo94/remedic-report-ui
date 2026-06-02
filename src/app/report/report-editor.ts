@@ -80,6 +80,7 @@ import {
 
 type SectionKey = (typeof REPORT_SECTION_KEYS)[number];
 type EditorUiState =
+  | 'bootstrapping'
   | 'initialTypeSelection'
   | 'asyncTypeSelection'
   | 'typeActionSelection'
@@ -114,7 +115,7 @@ type EntryContext = 'public' | 'admin' | 'refertatore';
 })
 export class ReportEditor {
   step = 0;
-  uiState: EditorUiState = 'initialTypeSelection';
+  uiState: EditorUiState = 'bootstrapping';
   selectedReportType: ReportType | null = null;
 
   readonly standardSteps = REPORT_STEPS;
@@ -404,12 +405,7 @@ export class ReportEditor {
     this.updatePsgBmi();
     this.updatePsgEssSummary();
     this.updateModeValidators();
-    this.restoreReservedSession();
-    this.captureRequestedEntryView();
-    this.loadCreationAccess();
-    this.loadOperationalOptions();
-    this.captureResetPasswordToken();
-    this.goToInitialTypeSelection();
+    void this.bootstrapApp();
   }
 
   @HostListener('document:keydown.enter', ['$event'])
@@ -3565,7 +3561,9 @@ export class ReportEditor {
 
     const formValue = this.form.getRawValue();
     const sectionsValue = this.sections.getRawValue();
-    const payload = this.payloadBuilder.build(formValue, sectionsValue);
+    const payload = this.payloadBuilder.build(formValue, sectionsValue, {
+      includeStandardAttachments: this.reportType === 'standard',
+    });
 
     const printWindow = window.open('', '_blank');
 
@@ -3830,6 +3828,10 @@ export class ReportEditor {
       },
       error: (err) => {
         console.error('Errore generazione PDF:', err);
+        const pdfErrorMessage =
+          typeof err?.error === 'string' && err.error.trim()
+            ? err.error.trim()
+            : 'Errore durante la generazione del PDF.';
 
         printWindow?.document.open();
         printWindow?.document.write(`
@@ -3857,14 +3859,14 @@ export class ReportEditor {
             <body>
               <div class="box">
                 <h2>Errore durante la generazione del PDF</h2>
-                <p>Controlla console e backend.</p>
+                <p>${pdfErrorMessage}</p>
               </div>
             </body>
           </html>
         `);
         printWindow?.document.close();
 
-        alert('Errore durante la generazione del PDF.');
+        this.setDraftMessage(pdfErrorMessage, 'error');
         this.standardPdfGenerating = false;
       },
       complete: () => {
@@ -5084,6 +5086,28 @@ export class ReportEditor {
     }
 
     this.requestedEntryView = 'default';
+  }
+
+  private async bootstrapApp(): Promise<void> {
+    this.uiState = 'bootstrapping';
+    this.captureRequestedEntryView();
+    this.captureResetPasswordToken();
+
+    await Promise.allSettled([
+      this.restoreReservedSession(),
+      this.loadOperationalOptions(),
+    ]);
+
+    if (this.resetPasswordToken) {
+      return;
+    }
+
+    if (this.reservedUser) {
+      await this.routeReservedUserDashboard();
+      return;
+    }
+
+    this.goToInitialTypeSelection();
   }
 
   openReservedArea(): void {

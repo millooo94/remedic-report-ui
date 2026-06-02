@@ -1,5 +1,16 @@
 <div class="page" [class.pageAppShell]="isDashboardShellMode">
-  @if (isMobileBlocked) {
+  @if (uiState === 'bootstrapping') {
+    <main class="entryMain entryMainCentered">
+      <section class="entryCard entryCardNarrow bootstrapCard">
+        <header class="entryHeader">
+          <div class="entryEyebrow">Remedic Report</div>
+          <h1>Verifica accesso in corso...</h1>
+          <p>Sto controllando la sessione e le abilitazioni disponibili.</p>
+        </header>
+        <div class="bootstrapLoader" aria-hidden="true"></div>
+      </section>
+    </main>
+  } @else if (isMobileBlocked) {
     <main class="entryMain entryMainCentered">
       <section class="entryCard entryCardNarrow mobileBlockCard">
         <header class="entryHeader">
@@ -152,7 +163,7 @@
         <form class="loginForm" (ngSubmit)="submitRefertatoreLogin()">
           <div class="field">
             <label>Email</label>
-            <input type="email" [(ngModel)]="refertatoreEmail" placeholder="nome@remedic.it" name="reservedEmail" />
+            <input type="email" [(ngModel)]="refertatoreEmail" placeholder="nome@remedic.it" name="loginEmail" />
           </div>
 
           <div class="field">

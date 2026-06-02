@@ -591,7 +591,10 @@
       <div class="uploadCardHead">
         <div>
           <h3>Allegati facoltativi</h3>
-          <p>Aggiungi PDF o immagini utili al referto. Gli allegati non sono obbligatori.</p>
+          <p>
+            Aggiungi PDF o immagini utili al referto. Gli allegati non sono obbligatori e
+            saranno accodati al PDF finale del referto.
+          </p>
         </div>
 
         @if (!readonlyMode) {
@@ -631,6 +634,7 @@
               <div class="uploadMeta">
                 <strong>{{ asset.name }}</strong>
                 <small>{{ fileSizeLabel(asset.size) }}</small>
+                <span class="uploadHint">Sara incluso in appendice nel PDF finale del referto.</span>
               </div>
 
               @if (readonlyMode) {

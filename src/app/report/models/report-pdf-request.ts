@@ -7,9 +7,19 @@ export interface ReportPdfRequest {
   titolo_visita: string;
   data_visita: string;
   attachments?: {
-    pdfs: Array<{
+    pdfs?: Array<{
       fileName: string;
       mimeType: 'application/pdf';
+      base64: string;
+    }>;
+    files?: Array<{
+      fileName: string;
+      mimeType:
+        | 'application/pdf'
+        | 'image/png'
+        | 'image/jpeg'
+        | 'image/jpg'
+        | 'image/webp';
       base64: string;
     }>;
   };

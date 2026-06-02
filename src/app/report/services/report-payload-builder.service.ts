@@ -11,7 +11,11 @@ import { PSG_DEFAULTS } from '../config/psg-report.config';
 export class ReportPayloadBuilderService {
   constructor(private htmlBuilder: ReportHtmlBuilderService) {}
 
-  build(formValue: any, sectionsValue: any): ReportPdfRequest {
+  build(
+    formValue: any,
+    sectionsValue: any,
+    options: { includeStandardAttachments?: boolean } = {},
+  ): ReportPdfRequest {
     const pazienteNome =
       `${formValue.anagrafica.nome} ${formValue.anagrafica.cognome}`.trim();
 
@@ -66,6 +70,9 @@ export class ReportPayloadBuilderService {
     });
 
     const pdfAttachments = this.collectPdfAttachments(formValue);
+    const standardAttachments = options.includeStandardAttachments
+      ? this.collectStandardAttachments(formValue)
+      : [];
 
     return {
       html,
@@ -87,10 +94,13 @@ export class ReportPayloadBuilderService {
             ? PSG_DEFAULTS.titoloVisita
             : ''),
       data_visita: formValue.dataVisita || '',
-      ...(pdfAttachments.length
+      ...(pdfAttachments.length || standardAttachments.length
         ? {
             attachments: {
-              pdfs: pdfAttachments,
+              ...(pdfAttachments.length ? { pdfs: pdfAttachments } : {}),
+              ...(standardAttachments.length
+                ? { files: standardAttachments }
+                : {}),
             },
           }
         : {}),
@@ -139,5 +149,56 @@ export class ReportPayloadBuilderService {
     }
 
     return attachments;
+  }
+
+  private collectStandardAttachments(formValue: any) {
+    const assets = Array.isArray(formValue.standardAttachments)
+      ? (formValue.standardAttachments as EmgUploadedAsset[])
+      : [];
+
+    return assets
+      .map((asset) => {
+        const mimeType = String(asset.mimeType || '').trim().toLowerCase();
+        const base64 =
+          asset.kind === 'pdf'
+            ? asset.base64 || ''
+            : this.extractBase64FromDataUrl(asset.dataUrl);
+
+        if (!asset.name || !base64) {
+          return null;
+        }
+
+        if (
+          mimeType !== 'application/pdf' &&
+          mimeType !== 'image/png' &&
+          mimeType !== 'image/jpeg' &&
+          mimeType !== 'image/jpg' &&
+          mimeType !== 'image/webp'
+        ) {
+          return null;
+        }
+
+        return {
+          fileName: asset.name,
+          mimeType: mimeType as
+            | 'application/pdf'
+            | 'image/png'
+            | 'image/jpeg'
+            | 'image/jpg'
+            | 'image/webp',
+          base64,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => !!item);
+  }
+
+  private extractBase64FromDataUrl(dataUrl?: string | null): string {
+    const value = String(dataUrl || '');
+    const separatorIndex = value.indexOf(',');
+    if (!value.startsWith('data:') || separatorIndex < 0) {
+      return '';
+    }
+
+    return value.slice(separatorIndex + 1);
   }
 }
