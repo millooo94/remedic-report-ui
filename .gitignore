@@ -38,6 +38,9 @@ testem.log
 /typings
 /.firebase
 /.vercel
+/test-results
+/playwright-report
+/blob-report
 
 # System files
 .DS_Store
