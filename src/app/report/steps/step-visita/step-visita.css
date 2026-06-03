@@ -15,8 +15,8 @@
 }
 
 .typeCard {
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border: 1px solid var(--rr-color-border, #d7e1e6);
+  border-radius: var(--rr-radius-lg, 12px);
   padding: 14px;
   display: flex;
   gap: 12px;
@@ -26,12 +26,12 @@
     border 0.15s ease,
     background 0.15s ease,
     box-shadow 0.15s ease;
-  background: #fff;
+  background: var(--rr-color-surface, #ffffff);
 }
 
 .typeCard:hover {
-  border-color: #1c9ebd;
-  background: #f0f9fc;
+  border-color: var(--rr-color-brand, #1c9ebd);
+  background: var(--rr-color-surface-alt, #f8fbfc);
 }
 
 .typeCard input {
@@ -49,7 +49,7 @@
 
 .typeCard small {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--rr-color-text-muted, #6b848d);
 }
 
 .extraGrid {
@@ -76,13 +76,13 @@
 .sectionTitle {
   font-size: 15px;
   font-weight: 700;
-  color: #1f2933;
+  color: var(--rr-color-text, #15313a);
   margin: 0 0 12px;
 }
 
 .divider {
   height: 1px;
-  background: #e5e7eb;
+  background: var(--rr-color-border-soft, #e3eaee);
   margin: 18px 0 24px;
 }
 
@@ -101,19 +101,21 @@
 
 .field label {
   font-size: 13px;
-  color: #374151;
-  font-weight: 500;
+  color: var(--rr-color-text-secondary, #44606a);
+  font-weight: 600;
 }
 
 .field input,
 .field select,
 .field textarea {
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
+  border: 1px solid var(--rr-color-border-strong, #b8c8d0);
+  border-radius: var(--rr-radius-md, 10px);
   padding: 10px 12px;
   font-size: 14px;
+  color: var(--rr-color-text, #15313a);
+  background: var(--rr-color-surface, #ffffff);
   transition:
-    border 0.15s ease,
+    border-color 0.15s ease,
     box-shadow 0.15s ease;
 }
 
@@ -126,44 +128,54 @@
 .field select:focus,
 .field textarea:focus {
   outline: none;
-  border-color: #1c9ebd;
-  box-shadow: 0 0 0 2px rgba(28, 158, 189, 0.15);
+  border-color: var(--rr-color-brand, #1c9ebd);
+  box-shadow: var(--rr-focus-ring, 0 0 0 3px rgba(28, 158, 189, 0.18));
 }
 
 .field input[readonly] {
-  background: #f9fafb;
-  color: #374151;
+  background: var(--rr-color-surface-muted, #f1f5f7);
+  color: var(--rr-color-text-secondary, #44606a);
 }
 
 .err {
   font-size: 12px;
-  color: #dc2626;
+  color: var(--rr-color-danger, #b13a3a);
 }
 
 /* ================== BUTTONS ================== */
 
 .btn {
-  border-radius: 10px;
+  border-radius: var(--rr-radius-md, 10px);
   padding: 10px 18px;
   font-size: 14px;
   cursor: pointer;
   border: 1px solid transparent;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .btn.ghost {
-  background: #ffffff;
-  border-color: #d1d5db;
-  color: #374151;
+  background: var(--rr-color-surface, #ffffff);
+  border-color: var(--rr-color-border-strong, #b8c8d0);
+  color: var(--rr-color-text-secondary, #44606a);
 }
 
 .btn.ghost:hover {
-  background: #f3f4f6;
+  background: var(--rr-color-surface-alt, #f8fbfc);
 }
 
 .btn.tiny {
   padding: 6px 10px;
-  border-radius: 10px;
+  border-radius: var(--rr-radius-md, 10px);
   font-size: 12px;
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--rr-focus-ring, 0 0 0 3px rgba(28, 158, 189, 0.18));
 }
 
 @media (max-width: 820px) {

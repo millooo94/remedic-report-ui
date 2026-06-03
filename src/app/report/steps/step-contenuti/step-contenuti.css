@@ -6,7 +6,7 @@
 
 .divider {
   height: 1px;
-  background: #e5e7eb;
+  background: var(--rr-color-border-soft, #e3eaee);
   margin: 18px 0 24px;
 }
 
@@ -19,25 +19,27 @@
 
 .field label {
   font-size: 13px;
-  color: #374151;
-  font-weight: 500;
+  color: var(--rr-color-text-secondary, #44606a);
+  font-weight: 600;
 }
 
 .fieldHint {
   margin: -2px 0 6px;
   font-size: 13px;
   line-height: 1.5;
-  color: #6b7280;
+  color: var(--rr-color-text-muted, #6b848d);
 }
 
 .field input,
 .field textarea {
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
+  border: 1px solid var(--rr-color-border-strong, #b8c8d0);
+  border-radius: var(--rr-radius-md, 10px);
   padding: 10px 12px;
   font-size: 14px;
+  color: var(--rr-color-text, #15313a);
+  background: var(--rr-color-surface, #ffffff);
   transition:
-    border 0.15s ease,
+    border-color 0.15s ease,
     box-shadow 0.15s ease;
 }
 
@@ -49,22 +51,22 @@
 .field input:focus,
 .field textarea:focus {
   outline: none;
-  border-color: #1c9ebd;
-  box-shadow: 0 0 0 2px rgba(28, 158, 189, 0.15);
+  border-color: var(--rr-color-brand, #1c9ebd);
+  box-shadow: var(--rr-focus-ring, 0 0 0 3px rgba(28, 158, 189, 0.18));
 }
 
 .readonlyFieldCard,
 .uploadCard,
 .panelCard {
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
+  border: 1px solid var(--rr-color-border, #d7e1e6);
+  border-radius: var(--rr-radius-xl, 16px);
   padding: 16px;
-  background: #fff;
+  background: var(--rr-color-surface, #ffffff);
 }
 
 .readonlyFieldCard {
-  background: linear-gradient(180deg, #f8fafc 0%, #f4f6f8 100%);
-  border-color: #d8dee6;
+  background: var(--rr-color-surface-muted, #f1f5f7);
+  border-color: var(--rr-color-border, #d7e1e6);
 }
 
 .readonlyFieldHead,
@@ -88,22 +90,22 @@
   margin: 0 0 6px;
   font-size: 18px;
   line-height: 1.2;
-  color: #111827;
+  color: var(--rr-color-text, #15313a);
 }
 
 .panelTitleRow p {
   margin: 0;
   font-size: 13px;
   line-height: 1.5;
-  color: #64748b;
+  color: var(--rr-color-text-secondary, #44606a);
 }
 
 .readonlyBadge {
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
-  background: #e5eaef;
-  color: #64748b;
+  border-radius: var(--rr-radius-pill, 999px);
+  background: var(--rr-color-neutral-soft, #eef3f5);
+  color: var(--rr-color-neutral, #5b6e78);
   font-size: 11px;
   font-weight: 700;
   padding: 7px 10px;
@@ -112,9 +114,9 @@
 
 .freeReportField {
   padding: 14px;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  background: #fcfeff;
+  border: 1px solid var(--rr-color-border, #d7e1e6);
+  border-radius: var(--rr-radius-lg, 12px);
+  background: var(--rr-color-surface-alt, #f8fbfc);
 }
 
 .freeEditorWrap {
@@ -187,55 +189,63 @@
 .charCount {
   font-size: 11px;
   line-height: 1.3;
-  color: #9ca3af;
+  color: var(--rr-color-text-muted, #6b848d);
   font-weight: 400;
 }
 
 .charCount.overLimit {
-  color: #dc2626;
+  color: var(--rr-color-danger, #b13a3a);
   font-weight: 500;
 }
 
 .err {
   font-size: 12px;
-  color: #dc2626;
+  color: var(--rr-color-danger, #b13a3a);
 }
 
 .uploadCardHead h3 {
   margin: 0 0 6px;
   font-size: 16px;
   line-height: 1.2;
-  color: #111827;
+  color: var(--rr-color-text, #15313a);
 }
 
 .uploadCardHead p {
   margin: 0;
   font-size: 13px;
   line-height: 1.5;
-  color: #6b7280;
+  color: var(--rr-color-text-muted, #6b848d);
 }
 
 .uploadBtn,
 .removeBtn {
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  background: #fff;
-  color: #374151;
+  border: 1px solid var(--rr-color-border-strong, #b8c8d0);
+  border-radius: var(--rr-radius-md, 10px);
+  background: var(--rr-color-surface, #ffffff);
+  color: var(--rr-color-text-secondary, #44606a);
   font-size: 13px;
   font-weight: 600;
   padding: 10px 14px;
   cursor: pointer;
   transition:
-    border 0.15s ease,
-    background 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease,
     color 0.15s ease;
 }
 
 .uploadBtn:hover,
 .removeBtn:hover {
-  border-color: #1c9ebd;
-  background: #f0f9fc;
-  color: #0f5f74;
+  border-color: var(--rr-color-brand, #1c9ebd);
+  background: var(--rr-color-brand-soft, #eaf5f8);
+  color: var(--rr-color-info, #2c6e91);
+}
+
+.uploadBtn:focus-visible,
+.removeBtn:focus-visible,
+.choiceBtn:focus-visible,
+.scoreBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--rr-focus-ring, 0 0 0 3px rgba(28, 158, 189, 0.18));
 }
 
 .srOnly {
@@ -251,11 +261,11 @@
 }
 
 .emptyUploadState {
-  border: 1px dashed #cbd5e1;
-  border-radius: 14px;
+  border: 1px dashed var(--rr-color-border-strong, #b8c8d0);
+  border-radius: var(--rr-radius-lg, 12px);
   padding: 18px;
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--rr-color-surface-alt, #f8fbfc);
+  color: var(--rr-color-text-secondary, #44606a);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -272,18 +282,18 @@
   grid-template-columns: 120px minmax(0, 1fr) auto;
   gap: 14px;
   align-items: center;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
+  border: 1px solid var(--rr-color-border, #d7e1e6);
+  border-radius: var(--rr-radius-lg, 12px);
   padding: 12px;
-  background: #fbfdff;
+  background: var(--rr-color-surface-alt, #f8fbfc);
 }
 
 .uploadPreview,
 .signaturePreview {
   height: 88px;
-  border-radius: 12px;
-  border: 1px solid #dbe4ea;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: var(--rr-radius-lg, 12px);
+  border: 1px solid var(--rr-color-border, #d7e1e6);
+  background: var(--rr-color-surface, #ffffff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -303,9 +313,9 @@
   justify-content: center;
   min-width: 56px;
   min-height: 40px;
-  border-radius: 999px;
-  background: #e0f2fe;
-  color: #0f5f74;
+  border-radius: var(--rr-radius-pill, 999px);
+  background: var(--rr-color-brand-soft, #eaf5f8);
+  color: var(--rr-color-info, #2c6e91);
   font-size: 12px;
   font-weight: 800;
 }
@@ -319,14 +329,14 @@
 
 .uploadMeta strong {
   font-size: 14px;
-  color: #111827;
+  color: var(--rr-color-text, #15313a);
   word-break: break-word;
 }
 
 .uploadMeta small,
 .uploadHint {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--rr-color-text-muted, #6b848d);
 }
 
 .signedPdfCard .draftRowActions {
@@ -337,14 +347,14 @@
 }
 
 .signatureCard {
-  background: linear-gradient(180deg, #fbfdff 0%, #f8fcff 100%);
+  background: var(--rr-color-surface-alt, #f8fbfc);
 }
 
 .psgTableWrap {
-  border: 1px solid #dbe7ee;
-  border-radius: 14px;
+  border: 1px solid var(--rr-color-border, #d7e1e6);
+  border-radius: var(--rr-radius-lg, 12px);
   overflow: hidden;
-  background: #fff;
+  background: var(--rr-color-surface, #ffffff);
 }
 
 .psgTableHeader,
@@ -356,16 +366,16 @@
 }
 
 .psgTableHeader {
-  background: #f3f9fc;
+  background: var(--rr-color-surface-alt, #f8fbfc);
   font-size: 12px;
   font-weight: 700;
-  color: #3b5561;
+  color: var(--rr-color-text-secondary, #44606a);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .psgTableRow {
-  border-top: 1px solid #edf3f7;
+  border-top: 1px solid var(--rr-color-border-soft, #e3eaee);
 }
 
 .sleepTableHeader,
@@ -385,10 +395,10 @@
 }
 
 .choiceBtn {
-  border: 1px solid #d1d5db;
-  border-radius: 999px;
-  background: #fff;
-  color: #475569;
+  border: 1px solid var(--rr-color-border-strong, #b8c8d0);
+  border-radius: var(--rr-radius-pill, 999px);
+  background: var(--rr-color-surface, #ffffff);
+  color: var(--rr-color-text-secondary, #44606a);
   font-size: 12px;
   font-weight: 600;
   padding: 7px 12px;
@@ -402,27 +412,29 @@
 }
 
 .choiceBtn:hover {
-  border-color: #1c9ebd;
-  background: #f0f9fc;
+  border-color: var(--rr-color-brand, #1c9ebd);
+  background: var(--rr-color-brand-soft, #eaf5f8);
 }
 
 .choiceBtn.active {
-  background: #1c9ebd;
-  border-color: #1c9ebd;
-  color: #fff;
+  background: var(--rr-color-brand, #1c9ebd);
+  border-color: var(--rr-color-brand, #1c9ebd);
+  color: var(--rr-color-text-on-brand, #ffffff);
 }
 
 .choiceBtn.error {
-  border-color: #dc2626;
-  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.1);
+  border-color: var(--rr-color-danger, #b13a3a);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--rr-color-danger, #b13a3a) 10%, white);
 }
 
 .noteInput {
   width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
+  border: 1px solid var(--rr-color-border-strong, #b8c8d0);
+  border-radius: var(--rr-radius-md, 10px);
   padding: 9px 10px;
   font-size: 13px;
+  color: var(--rr-color-text, #15313a);
+  background: var(--rr-color-surface, #ffffff);
 }
 
 .essTableHeader,
@@ -461,13 +473,13 @@
 }
 
 .checkboxCard {
-  border: 1px solid #d1d5db;
-  border-radius: 12px;
+  border: 1px solid var(--rr-color-border-strong, #b8c8d0);
+  border-radius: var(--rr-radius-lg, 12px);
   padding: 10px 12px;
   display: flex;
   gap: 10px;
   align-items: center;
-  background: #fff;
+  background: var(--rr-color-surface, #ffffff);
 }
 
 .noteFieldAligned textarea {
@@ -484,10 +496,10 @@
 
 .essSummaryCard {
   min-width: 160px;
-  border: 1px solid #d8e5eb;
-  border-radius: 14px;
+  border: 1px solid var(--rr-color-border, #d7e1e6);
+  border-radius: var(--rr-radius-lg, 12px);
   padding: 12px 14px;
-  background: linear-gradient(180deg, #f8fdff 0%, #f2fbfe 100%);
+  background: var(--rr-color-surface-alt, #f8fbfc);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -496,19 +508,19 @@
 .essSummaryCard strong {
   font-size: 22px;
   line-height: 1;
-  color: #0f5f74;
+  color: var(--rr-color-info, #2c6e91);
 }
 
 .essSummaryCard small {
   font-size: 12px;
-  color: #5b6b76;
+  color: var(--rr-color-text-muted, #6b848d);
 }
 
 .scoreBtn {
-  border: 1px solid #d1d5db;
-  border-radius: 12px;
-  background: #ffffff;
-  color: #475569;
+  border: 1px solid var(--rr-color-border-strong, #b8c8d0);
+  border-radius: var(--rr-radius-lg, 12px);
+  background: var(--rr-color-surface, #ffffff);
+  color: var(--rr-color-text-secondary, #44606a);
   min-height: 42px;
   font-weight: 700;
   cursor: pointer;
@@ -519,18 +531,18 @@
 }
 
 .scoreBtn:hover {
-  border-color: #1c9ebd;
-  background: #f0f9fc;
+  border-color: var(--rr-color-brand, #1c9ebd);
+  background: var(--rr-color-brand-soft, #eaf5f8);
 }
 
 .scoreBtn.active {
-  background: #1c9ebd;
-  border-color: #1c9ebd;
-  color: #ffffff;
+  background: var(--rr-color-brand, #1c9ebd);
+  border-color: var(--rr-color-brand, #1c9ebd);
+  color: var(--rr-color-text-on-brand, #ffffff);
 }
 
 .scoreBtn.error {
-  border-color: #dc2626;
+  border-color: var(--rr-color-danger, #b13a3a);
 }
 
 .fullRowError {
@@ -546,31 +558,32 @@
   height: 38px;
   min-height: 38px;
   padding: 0 12px;
-  border: 1px solid #d5e0e7;
-  border-radius: 10px;
+  border: 1px solid var(--rr-color-border-strong, #b8c8d0);
+  border-radius: var(--rr-radius-md, 10px);
   font-size: 14px;
-  color: #0f172a;
+  color: var(--rr-color-text, #15313a);
+  background: var(--rr-color-surface, #ffffff);
 }
 
 .psgNoteInput:focus {
   outline: none;
-  border-color: #1c9ebd;
-  box-shadow: 0 0 0 3px rgba(28, 158, 189, 0.12);
+  border-color: var(--rr-color-brand, #1c9ebd);
+  box-shadow: var(--rr-focus-ring, 0 0 0 3px rgba(28, 158, 189, 0.18));
 }
 
 ::ng-deep .readonlyFieldCard .toolbar.readonly,
 ::ng-deep .readonlyFieldCard .editor-container.readonly {
-  background: #eef2f6;
+  background: var(--rr-color-surface-muted, #f1f5f7);
 }
 
 ::ng-deep .readonlyFieldCard .editor-container.readonly {
-  border-color: #d6dde5;
+  border-color: var(--rr-color-border, #d7e1e6);
   box-shadow: none;
   cursor: not-allowed;
 }
 
 ::ng-deep .readonlyFieldCard .editor-host .ProseMirror {
-  color: #64748b;
+  color: var(--rr-color-text-muted, #6b848d);
 }
 
 @media (max-width: 1024px) {

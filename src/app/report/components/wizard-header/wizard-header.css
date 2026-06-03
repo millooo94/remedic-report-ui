@@ -2,8 +2,8 @@
 
 .topbar {
   height: 80px;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--rr-color-surface, #ffffff);
+  border-bottom: 1px solid var(--rr-color-border-soft, #e3eaee);
   padding: 0 24px;
   display: flex;
   align-items: center;
@@ -23,7 +23,7 @@
 
 .brand .subtitle {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--rr-color-text-muted, #6b848d);
 }
 
 /* ================== PROGRESS ================== */
@@ -36,10 +36,10 @@
 }
 
 .resumeBtn {
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  color: #374151;
-  border-radius: 10px;
+  border: 1px solid var(--rr-color-border-strong, #b8c8d0);
+  background: var(--rr-color-surface, #ffffff);
+  color: var(--rr-color-text-secondary, #44606a);
+  border-radius: var(--rr-radius-md, 10px);
   padding: 10px 16px;
   font-size: 14px;
   font-weight: 600;
@@ -53,37 +53,42 @@
 }
 
 .resumeBtn:hover {
-  border-color: #1c9ebd;
-  background: #f0f9fc;
-  color: #0f5f74;
+  border-color: var(--rr-color-brand, #1c9ebd);
+  background: var(--rr-color-brand-soft, #eaf5f8);
+  color: var(--rr-color-info, #2c6e91);
+}
+
+.resumeBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--rr-focus-ring, 0 0 0 3px rgba(28, 158, 189, 0.18));
 }
 
 .progressMeta {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--rr-color-text-muted, #6b848d);
   margin-bottom: 4px;
 }
 
 .progress {
   height: 6px;
-  background: #e5e7eb;
-  border-radius: 999px;
+  background: var(--rr-color-border-soft, #e3eaee);
+  border-radius: var(--rr-radius-pill, 999px);
   overflow: hidden;
 }
 
 .progress .bar {
   height: 100%;
-  background: #1c9ebd;
+  background: var(--rr-color-brand, #1c9ebd);
   transition: width 0.3s ease;
 }
 
 /* ================== STEPPER ================== */
 
 .stepper {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--rr-color-surface, #ffffff);
+  border-bottom: 1px solid var(--rr-color-border-soft, #e3eaee);
   padding: 8px 16px;
   display: flex;
   gap: 8px;
@@ -91,15 +96,15 @@
 }
 
 .stepPill {
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
+  border: 1px solid var(--rr-color-border-soft, #e3eaee);
+  background: var(--rr-color-surface, #ffffff);
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: var(--rr-radius-pill, 999px);
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #374151;
+  color: var(--rr-color-text-secondary, #44606a);
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -107,29 +112,34 @@
 .stepPill .idx {
   width: 20px;
   height: 20px;
-  border-radius: 999px;
-  background: #e5e7eb;
+  border-radius: var(--rr-radius-pill, 999px);
+  background: var(--rr-color-border-soft, #e3eaee);
   font-size: 12px;
   display: grid;
   place-items: center;
 }
 
 .stepPill.active {
-  border-color: #1c9ebd;
-  color: #1c9ebd;
+  border-color: var(--rr-color-brand, #1c9ebd);
+  color: var(--rr-color-brand, #1c9ebd);
 }
 
 .stepPill.active .idx {
-  background: #1c9ebd;
-  color: #ffffff;
+  background: var(--rr-color-brand, #1c9ebd);
+  color: var(--rr-color-text-on-brand, #ffffff);
 }
 
 .stepPill.done {
-  border-color: #aeca20;
-  color: #6b7280;
+  border-color: color-mix(in srgb, var(--rr-color-success, #1f7a52) 35%, white);
+  color: var(--rr-color-text-muted, #6b848d);
 }
 
 .stepPill.done .idx {
-  background: #aeca20;
-  color: #ffffff;
+  background: var(--rr-color-success, #1f7a52);
+  color: var(--rr-color-text-on-brand, #ffffff);
+}
+
+.stepPill:focus-visible {
+  outline: none;
+  box-shadow: var(--rr-focus-ring, 0 0 0 3px rgba(28, 158, 189, 0.18));
 }

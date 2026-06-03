@@ -34,30 +34,30 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #d1d5db;
-  background: #fff;
+  border: 1px solid var(--rr-color-border-strong, #b8c8d0);
+  background: var(--rr-color-surface, #ffffff);
   padding: 6px 10px;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: var(--rr-radius-sm, 6px);
   font-weight: 700;
   min-width: 38px;
   min-height: 38px;
-  color: #111827;
+  color: var(--rr-color-text, #15313a);
   transition:
-    border 0.15s ease,
-    background 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease,
     color 0.15s ease,
     box-shadow 0.15s ease;
 }
 
 .toolbar button:hover {
-  background: #f3f4f6;
+  background: var(--rr-color-surface-alt, #f8fbfc);
 }
 
 .toolbar button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
-  background: #f8fafc;
+  background: var(--rr-color-surface-muted, #f1f5f7);
 }
 
 .toolbar.readonly {
@@ -66,14 +66,14 @@
 
 .toolbar button:focus-visible {
   outline: none;
-  border-color: #1c9ebd;
-  box-shadow: 0 0 0 2px rgba(28, 158, 189, 0.15);
+  border-color: var(--rr-color-brand, #1c9ebd);
+  box-shadow: var(--rr-focus-ring, 0 0 0 3px rgba(28, 158, 189, 0.18));
 }
 
 .toolbar button.active {
-  background: #1c9ebd;
-  color: #fff;
-  border-color: #1c9ebd;
+  background: var(--rr-color-brand, #1c9ebd);
+  color: var(--rr-color-text-on-brand, #ffffff);
+  border-color: var(--rr-color-brand, #1c9ebd);
 }
 
 .toolbar button:nth-child(2) {
@@ -94,12 +94,12 @@
 /* ================== EDITOR ================== */
 
 .editor-container {
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  background: #fff;
+  border: 1px solid var(--rr-color-border-strong, #b8c8d0);
+  border-radius: var(--rr-radius-md, 10px);
+  background: var(--rr-color-surface, #ffffff);
   cursor: text;
   transition:
-    border 0.15s ease,
+    border-color 0.15s ease,
     box-shadow 0.15s ease;
   width: 100%;
   min-width: 0;
@@ -109,12 +109,12 @@
 }
 
 .editor-container:focus-within {
-  border-color: #1c9ebd;
-  box-shadow: 0 0 0 2px rgba(28, 158, 189, 0.15);
+  border-color: var(--rr-color-brand, #1c9ebd);
+  box-shadow: var(--rr-focus-ring, 0 0 0 3px rgba(28, 158, 189, 0.18));
 }
 
 .editor-container.readonly {
-  background: #f8fafc;
+  background: var(--rr-color-surface-muted, #f1f5f7);
   cursor: default;
 }
 
@@ -163,7 +163,7 @@
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
-  color: #111827;
+  color: var(--rr-color-text, #15313a);
   height: auto;
 }
 

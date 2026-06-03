@@ -13,19 +13,21 @@
 
 .field label {
   font-size: 13px;
-  color: #374151;
-  font-weight: 500;
+  color: var(--rr-color-text-secondary, #44606a);
+  font-weight: 600;
 }
 
 .field input,
 .field select,
 .field textarea {
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
+  border: 1px solid var(--rr-color-border-strong, #b8c8d0);
+  border-radius: var(--rr-radius-md, 10px);
   padding: 10px 12px;
   font-size: 14px;
+  color: var(--rr-color-text, #15313a);
+  background: var(--rr-color-surface, #ffffff);
   transition:
-    border 0.15s ease,
+    border-color 0.15s ease,
     box-shadow 0.15s ease;
 }
 
@@ -38,8 +40,8 @@
 .field select:focus,
 .field textarea:focus {
   outline: none;
-  border-color: #1c9ebd;
-  box-shadow: 0 0 0 2px rgba(28, 158, 189, 0.15);
+  border-color: var(--rr-color-brand, #1c9ebd);
+  box-shadow: var(--rr-focus-ring, 0 0 0 3px rgba(28, 158, 189, 0.18));
 }
 
 .date-input {
@@ -47,7 +49,7 @@
 }
 
 .date-input::placeholder {
-  color: #9ca3af;
+  color: var(--rr-color-text-muted, #6b848d);
 }
 
 .field input.uppercase-input {
@@ -56,15 +58,15 @@
 
 .err {
   font-size: 12px;
-  color: #dc2626;
+  color: var(--rr-color-danger, #b13a3a);
 }
 
 .psgAnamnesiCard {
   margin-top: 24px;
-  border: 1px solid #dbe7ee;
-  border-radius: 18px;
+  border: 1px solid var(--rr-color-border, #d7e1e6);
+  border-radius: var(--rr-radius-xl, 16px);
   padding: 18px 20px;
-  background: linear-gradient(135deg, #f8fcfe 0%, #eef8fc 100%);
+  background: var(--rr-color-surface-alt, #f8fbfc);
 }
 
 .psgAnamnesiCardContent {
@@ -78,9 +80,9 @@
   display: inline-flex;
   margin-bottom: 8px;
   padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(28, 158, 189, 0.12);
-  color: #0f5f74;
+  border-radius: var(--rr-radius-pill, 999px);
+  background: var(--rr-color-brand-soft, #eaf5f8);
+  color: var(--rr-color-info, #2c6e91);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -90,7 +92,7 @@
 .psgAnamnesiCard h3 {
   margin: 0 0 6px;
   font-size: 18px;
-  color: #0f172a;
+  color: var(--rr-color-text, #15313a);
 }
 
 .psgAnamnesiCard p {
@@ -98,7 +100,7 @@
   max-width: 560px;
   font-size: 14px;
   line-height: 1.5;
-  color: #475569;
+  color: var(--rr-color-text-secondary, #44606a);
 }
 
 .psgAnamnesiCardMeta {
@@ -113,23 +115,32 @@
   align-items: center;
   justify-content: center;
   padding: 7px 12px;
-  border-radius: 999px;
-  background: #fff;
-  border: 1px solid #d8e5ec;
-  color: #0f5f74;
+  border-radius: var(--rr-radius-pill, 999px);
+  background: var(--rr-color-surface, #ffffff);
+  border: 1px solid var(--rr-color-border, #d7e1e6);
+  color: var(--rr-color-info, #2c6e91);
   font-size: 12px;
   font-weight: 700;
 }
 
 .actionBtn {
-  border: 1px solid #1c9ebd;
-  border-radius: 10px;
+  border: 1px solid var(--rr-color-brand, #1c9ebd);
+  border-radius: var(--rr-radius-md, 10px);
   padding: 10px 14px;
-  background: #1c9ebd;
-  color: #fff;
+  background: var(--rr-color-brand, #1c9ebd);
+  color: var(--rr-color-text-on-brand, #ffffff);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.actionBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--rr-focus-ring, 0 0 0 3px rgba(28, 158, 189, 0.18));
 }
 
 .actionBtn:disabled {
