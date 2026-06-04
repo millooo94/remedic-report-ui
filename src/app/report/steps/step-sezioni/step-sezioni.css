@@ -20,9 +20,41 @@
   margin-bottom: 16px;
 }
 
+.selectorEyebrowRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.selectorEyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 12px;
+  border-radius: var(--rr-radius-pill, 999px);
+  background: var(--rr-color-brand-soft, #eaf5f8);
+  color: var(--rr-color-info, #2c6e91);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.selectorEyebrow.neutral {
+  background: var(--rr-color-neutral-soft, #eef3f5);
+  color: var(--rr-color-neutral, #5b6e78);
+}
+
+.selectorSupport {
+  font-size: 12px;
+  color: var(--rr-color-text-muted, #6b848d);
+}
+
 .panelHead h3 {
   margin: 0 0 6px;
-  font-size: 18px;
+  font-size: 22px;
   line-height: 1.2;
   color: var(--rr-color-text, #15313a);
 }
@@ -37,45 +69,168 @@
 .modeGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 18px;
 }
 
 .modeCard {
   border: 1px solid var(--rr-color-border, #d7e1e6);
-  border-radius: var(--rr-radius-lg, 12px);
-  padding: 14px;
+  border-radius: 20px;
+  padding: 18px;
   display: flex;
   gap: 12px;
   align-items: flex-start;
   cursor: pointer;
   transition:
-    border 0.15s ease,
-    background 0.15s ease,
-    box-shadow 0.15s ease;
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
   background: var(--rr-color-surface, #ffffff);
+  box-shadow: var(--rr-shadow-sm, 0 8px 20px rgba(21, 49, 58, 0.06));
 }
 
 .modeCard:hover {
   border-color: var(--rr-color-brand, #1c9ebd);
   background: var(--rr-color-surface-alt, #f8fbfc);
+  transform: translateY(-1px);
 }
 
 .modeCard input {
   margin-top: 4px;
+  accent-color: var(--rr-color-brand, #1c9ebd);
 }
 
-.modeCard span {
+.modeCardRecommended {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--rr-color-brand-soft, #eaf5f8) 55%, white) 0%,
+      var(--rr-color-surface, #ffffff) 100%
+    );
+}
+
+.modeCardSecondary {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--rr-color-neutral-soft, #eef3f5) 60%, white) 0%,
+      var(--rr-color-surface, #ffffff) 100%
+    );
+}
+
+.modeCardBody {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.modeCardTopline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.modeCardKicker,
+.modeCardBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 10px;
+  border-radius: var(--rr-radius-pill, 999px);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.modeCardKicker {
+  background: color-mix(in srgb, var(--rr-color-success-soft, #e8f5ee) 72%, white);
+  color: var(--rr-color-success, #1f7a52);
+}
+
+.modeCardKicker.muted {
+  background: var(--rr-color-neutral-soft, #eef3f5);
+  color: var(--rr-color-neutral, #5b6e78);
+}
+
+.modeCardBadge {
+  background: var(--rr-color-brand-soft, #eaf5f8);
+  color: var(--rr-color-info, #2c6e91);
+}
+
+.modeCardBadge.muted {
+  background: color-mix(in srgb, var(--rr-color-surface-alt, #f8fbfc) 60%, white);
+  color: var(--rr-color-text-muted, #6b848d);
 }
 
 .modeCard strong {
-  font-size: 14px;
+  font-size: 16px;
+  line-height: 1.3;
 }
 
 .modeCard small {
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1.55;
   color: var(--rr-color-text-muted, #6b848d);
+}
+
+.modeCardPoints {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.modeCardPoints span {
+  position: relative;
+  padding-left: 16px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--rr-color-text-secondary, #44606a);
+}
+
+.modeCardPoints span::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rr-color-brand, #1c9ebd);
+}
+
+.modeCardPoints.subdued span::before {
+  background: var(--rr-color-neutral, #5b6e78);
+}
+
+.modeCard input:focus-visible {
+  outline: none;
+}
+
+.modeCard:has(input:checked) {
+  border-color: color-mix(in srgb, var(--rr-color-brand, #1c9ebd) 62%, white);
+  box-shadow: var(--rr-focus-ring, 0 0 0 3px rgba(28, 158, 189, 0.18));
+}
+
+.modeCardRecommended:has(input:checked) {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--rr-color-brand-soft, #eaf5f8) 78%, white) 0%,
+      var(--rr-color-surface, #ffffff) 100%
+    );
+}
+
+.modeCardSecondary:has(input:checked) {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--rr-color-neutral-soft, #eef3f5) 82%, white) 0%,
+      var(--rr-color-surface, #ffffff) 100%
+    );
 }
 
 .sectionsColumns {
@@ -88,57 +243,123 @@
 .sectionColumn {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+}
+
+.sectionColumnHead {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--rr-color-border-soft, #e3eaee);
+  border-radius: 16px;
+  background: var(--rr-color-surface, #ffffff);
+}
+
+.sectionColumnHead strong {
+  font-size: 14px;
+  color: var(--rr-color-text, #15313a);
+}
+
+.sectionColumnHead small {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--rr-color-text-muted, #6b848d);
 }
 
 .toggle {
   border: 1px solid var(--rr-color-border, #d7e1e6);
-  border-radius: var(--rr-radius-lg, 12px);
-  padding: 14px;
+  border-radius: 18px;
+  padding: 16px;
   display: flex;
   gap: 12px;
   align-items: flex-start;
   cursor: pointer;
   transition:
-    border 0.15s ease,
-    background 0.15s ease;
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
   background: var(--rr-color-surface, #ffffff);
 }
 
 .toggle:hover {
   border-color: var(--rr-color-brand, #1c9ebd);
   background: var(--rr-color-surface-alt, #f8fbfc);
+  transform: translateY(-1px);
 }
 
 .toggle input {
   margin-top: 4px;
+  accent-color: var(--rr-color-brand, #1c9ebd);
 }
 
-.toggle span {
+.toggleBody {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+}
+
+.toggleMeta {
+  display: flex;
+  align-items: center;
+}
+
+.toggleBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 10px;
+  border-radius: var(--rr-radius-pill, 999px);
+  background: color-mix(in srgb, var(--rr-color-success-soft, #e8f5ee) 72%, white);
+  color: var(--rr-color-success, #1f7a52);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.toggleBadge.muted {
+  background: var(--rr-color-neutral-soft, #eef3f5);
+  color: var(--rr-color-neutral, #5b6e78);
 }
 
 .toggle strong {
   font-size: 14px;
+  color: var(--rr-color-text, #15313a);
 }
 
 .toggle small {
   font-size: 12px;
+  line-height: 1.5;
   color: var(--rr-color-text-muted, #6b848d);
+}
+
+.toggleMandatory {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--rr-color-success-soft, #e8f5ee) 34%, white) 0%,
+      var(--rr-color-surface, #ffffff) 100%
+    );
+}
+
+.toggle:has(input:checked) {
+  border-color: color-mix(in srgb, var(--rr-color-brand, #1c9ebd) 62%, white);
+  box-shadow: var(--rr-focus-ring, 0 0 0 3px rgba(28, 158, 189, 0.18));
 }
 
 .freeModeInfo {
   border: 1px dashed var(--rr-color-border-strong, #b8c8d0);
-  border-radius: var(--rr-radius-lg, 12px);
-  padding: 18px;
+  border-radius: 18px;
+  padding: 20px;
   background: var(--rr-color-surface-alt, #f8fbfc);
 }
 
 .freeModeInfo strong {
   display: block;
-  margin-bottom: 8px;
-  font-size: 15px;
+  margin: 4px 0 8px;
+  font-size: 17px;
   color: var(--rr-color-text, #15313a);
 }
 
@@ -147,6 +368,14 @@
   font-size: 14px;
   line-height: 1.6;
   color: var(--rr-color-text-secondary, #44606a);
+}
+
+.freeModeInfo small {
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--rr-color-text-muted, #6b848d);
 }
 
 .clinicalGrid {
@@ -354,5 +583,9 @@
   .sectionsColumns,
   .clinicalGrid {
     grid-template-columns: 1fr;
+  }
+
+  .selectorEyebrowRow {
+    align-items: flex-start;
   }
 }

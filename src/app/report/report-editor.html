@@ -1,3 +1,98 @@
+<ng-template #workflowBadgeTpl let-status="status">
+  @switch (status) {
+    @case ('bozza') {
+      <span class="draftRowStatus" style="border:1px solid var(--rr-color-border);background:var(--rr-color-neutral-soft);color:var(--rr-color-neutral);">Bozza</span>
+    }
+    @case ('anamnesi_raccolta') {
+      <span class="draftRowStatus" style="border:1px solid color-mix(in srgb, var(--rr-color-info) 22%, white);background:var(--rr-color-info-soft);color:var(--rr-color-info);">Anamnesi raccolta</span>
+    }
+    @case ('in_refertazione') {
+      <span class="draftRowStatus" style="border:1px solid color-mix(in srgb, var(--rr-color-brand) 24%, white);background:var(--rr-color-brand-soft);color:var(--rr-color-info);">In refertazione</span>
+    }
+    @case ('in_attesa_refertatore') {
+      <span class="draftRowStatus" style="border:1px solid color-mix(in srgb, var(--rr-color-warning) 24%, white);background:var(--rr-color-warning-soft);color:var(--rr-color-warning);">In attesa refertatore</span>
+    }
+    @case ('in_refertazione_refertatore') {
+      <span class="draftRowStatus" style="border:1px solid color-mix(in srgb, var(--rr-color-info) 24%, white);background:var(--rr-color-info-soft);color:var(--rr-color-info);">In refertazione refertatore</span>
+    }
+    @case ('pronto_per_firma') {
+      <span class="draftRowStatus" style="border:1px solid color-mix(in srgb, var(--rr-color-warning) 32%, white);background:var(--rr-color-warning-soft);color:var(--rr-color-warning);">Pronto per firma</span>
+    }
+    @case ('firmato_caricato') {
+      <span class="draftRowStatus" style="border:1px solid color-mix(in srgb, var(--rr-color-success) 26%, white);background:var(--rr-color-success-soft);color:var(--rr-color-success);">Firmato caricato</span>
+    }
+    @case ('completato') {
+      <span class="draftRowStatus" style="border:1px solid color-mix(in srgb, var(--rr-color-success) 24%, white);background:var(--rr-color-surface-muted);color:var(--rr-color-success);">Completato</span>
+    }
+    @default {
+      <span class="draftRowStatus">{{ draftStatusLabel(status) }}</span>
+    }
+  }
+</ng-template>
+
+<ng-template #typeBadgeTpl let-type="type">
+  <span class="draftMetaPill muted" style="text-transform:uppercase;letter-spacing:.04em;">{{ reportTypeLabelFor(type) }}</span>
+</ng-template>
+
+<ng-template #actionBadgeTpl let-kind="kind">
+  @switch (kind) {
+    @case ('toReview') {
+      <span class="draftMetaPill" style="background:var(--rr-color-info-soft);color:var(--rr-color-info);">Da refertare</span>
+    }
+    @case ('toSign') {
+      <span class="draftMetaPill" style="background:var(--rr-color-warning-soft);color:var(--rr-color-warning);">Da firmare</span>
+    }
+    @case ('uploadSignedPdf') {
+      <span class="draftMetaPill" style="background:var(--rr-color-warning-soft);color:var(--rr-color-warning);">Carica PDF firmato</span>
+    }
+    @case ('sendRequired') {
+      <span class="draftMetaPill" style="background:var(--rr-color-warning-soft);color:var(--rr-color-warning);">Invio richiesto</span>
+    }
+    @case ('sendError') {
+      <span class="draftMetaPill" style="background:var(--rr-color-danger-soft);color:var(--rr-color-danger);">Errore invio</span>
+    }
+  }
+</ng-template>
+
+<ng-template #driveBadgeTpl let-saved="saved">
+  @if (saved) {
+    <span class="draftMetaPill muted" style="background:var(--rr-color-success-soft);color:var(--rr-color-success);">Drive salvato</span>
+  } @else {
+    <span class="draftMetaPill muted">Non salvato su Drive</span>
+  }
+</ng-template>
+
+<ng-template #emailBadgeTpl let-state="state">
+  @switch (state) {
+    @case ('sent') {
+      <span class="draftMetaPill muted" style="background:var(--rr-color-success-soft);color:var(--rr-color-success);">Email inviata</span>
+    }
+    @case ('notSent') {
+      <span class="draftMetaPill muted" style="background:var(--rr-color-warning-soft);color:var(--rr-color-warning);">Email non inviata</span>
+    }
+    @case ('error') {
+      <span class="draftMetaPill muted" style="background:var(--rr-color-danger-soft);color:var(--rr-color-danger);">Errore email</span>
+    }
+  }
+</ng-template>
+
+<ng-template #riskBadgeTpl let-kind="kind">
+  @switch (kind) {
+    @case ('delicate') {
+      <span class="draftMetaPill" style="background:var(--rr-color-warning-soft);color:var(--rr-color-warning);">Azione delicata</span>
+    }
+    @case ('destructive') {
+      <span class="draftMetaPill" style="background:var(--rr-color-danger-soft);color:var(--rr-color-danger);">Azione distruttiva</span>
+    }
+    @case ('accessDenied') {
+      <span class="draftMetaPill" style="background:var(--rr-color-danger-soft);color:var(--rr-color-danger);">Accesso negato</span>
+    }
+    @case ('fileMissing') {
+      <span class="draftMetaPill" style="background:var(--rr-color-warning-soft);color:var(--rr-color-warning);">File mancante</span>
+    }
+  }
+</ng-template>
+
 <div class="page" [class.pageAppShell]="isDashboardShellMode">
   @if (uiState === 'bootstrapping') {
     <main class="entryMain entryMainCentered">
@@ -40,6 +135,9 @@
           <div class="emptyStateCard">Sto verificando l'accesso alla creazione dei referti...</div>
         } @else if (!canShowOperationalEntry) {
           <div class="emptyStateCard">
+            <div class="draftMetaRow" style="margin-top:0;margin-bottom:12px;">
+              <ng-container [ngTemplateOutlet]="riskBadgeTpl" [ngTemplateOutletContext]="{ kind: 'accessDenied' }"></ng-container>
+            </div>
             <strong>Accesso non disponibile da questa postazione</strong>
             <p>
               La creazione dei referti e consentita solo dalle postazioni autorizzate Remedic.
@@ -397,57 +495,144 @@
     </main>
   } @else if (uiState === 'adminDashboard') {
     <main class="entryMain entryMainAppShell">
-      <section class="entryCard dashboardCard">
-        <header class="entryHeader">
-          <div class="entryHeaderTop">
-            <div class="entryEyebrow">Area riservata</div>
-            <div class="dashboardTopActions">
-              <div class="userMenuWrap">
-                <button type="button" class="userMenuTrigger" (click)="toggleReservedUserMenu()">
-                  @if (reservedUserAvatarSrc) {
-                    <span class="userAvatarCircle hasImage"><img [src]="reservedUserAvatarSrc" alt="Avatar profilo" /></span>
-                  } @else {
-                    <span class="userAvatarCircle">{{ reservedUserInitials }}</span>
-                  }
-                </button>
-                @if (showReservedUserMenu) {
-                  <div class="userMenuPanel">
-                    <div class="userMenuHead">
-                      @if (reservedUserAvatarSrc) {
-                        <span class="userAvatarCircle large hasImage"><img [src]="reservedUserAvatarSrc" alt="Avatar profilo" /></span>
-                      } @else {
-                        <span class="userAvatarCircle large">{{ reservedUserInitials }}</span>
-                      }
-                      <div>
+      <section class="entryCard dashboardCard dashboardCardAdmin">
+        <header class="entryHeader dashboardHeader">
+          <div style="display:flex;flex-direction:column;gap:18px;padding:18px 20px 20px;border:1px solid var(--rr-color-border);border-radius:30px;background:var(--rr-color-surface-alt);box-shadow:var(--rr-shadow-sm);">
+            <div class="dashboardTopbar" style="padding-bottom:18px;border-bottom:1px solid var(--rr-color-border-soft);">
+              <div class="dashboardTopbarIdentity">
+                <div class="entryEyebrow">Area riservata</div>
+                <span class="dashboardTopbarLabel">Controllo operativo</span>
+              </div>
+              <div class="dashboardTopActions">
+                <div class="userMenuWrap">
+                  <button type="button" class="userMenuTrigger userMenuTriggerDetailed" (click)="toggleReservedUserMenu()">
+                    <span class="dashboardUserSummary">
+                      <span class="dashboardUserSummaryText">
                         <strong>{{ reservedUserFullName }}</strong>
-                        <small>{{ reservedUser?.email || '-' }}</small>
+                        <small>{{ reservedUserRoleLabel }}</small>
+                      </span>
+                    </span>
+                    @if (reservedUserAvatarSrc) {
+                      <span class="userAvatarCircle hasImage"><img [src]="reservedUserAvatarSrc" alt="Avatar profilo" /></span>
+                    } @else {
+                      <span class="userAvatarCircle">{{ reservedUserInitials }}</span>
+                    }
+                  </button>
+                  @if (showReservedUserMenu) {
+                    <div class="userMenuPanel">
+                      <div class="userMenuHead">
+                        @if (reservedUserAvatarSrc) {
+                          <span class="userAvatarCircle large hasImage"><img [src]="reservedUserAvatarSrc" alt="Avatar profilo" /></span>
+                        } @else {
+                          <span class="userAvatarCircle large">{{ reservedUserInitials }}</span>
+                        }
+                        <div>
+                          <strong>{{ reservedUserFullName }}</strong>
+                          <small>{{ reservedUser?.email || '-' }}</small>
+                        </div>
+                      </div>
+                      <div class="userMenuMeta">
+                        <div><span>Ruolo</span><strong>{{ reservedUserRoleLabel }}</strong></div>
+                      </div>
+                      <div class="userMenuActions">
+                        <button type="button" class="ghostLinkBtn" (click)="openChangePasswordFromMenu()">Profilo e sicurezza</button>
+                        <button type="button" class="ghostLinkBtn" (click)="logoutRefertatore()">Logout</button>
                       </div>
                     </div>
-                    <div class="userMenuMeta">
-                      <div><span>Ruolo</span><strong>{{ reservedUserRoleLabel }}</strong></div>
-                    </div>
-                    <div class="userMenuActions">
-                      <button type="button" class="ghostLinkBtn" (click)="openChangePasswordFromMenu()">Profilo e sicurezza</button>
-                      <button type="button" class="ghostLinkBtn" (click)="logoutRefertatore()">Logout</button>
-                    </div>
-                  </div>
-                }
+                  }
+                </div>
+              </div>
+            </div>
+            <div class="dashboardHero" style="padding-top:0;grid-template-columns:minmax(0,1.38fr) minmax(320px,.96fr);gap:18px;">
+              <article class="dashboardHeroMain" style="display:flex;flex-direction:column;gap:18px;padding:24px 26px;border:1px solid var(--rr-color-border);border-radius:28px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
+                <div class="draftMetaRow" style="margin-top:0;">
+                  <span class="dashboardHeroKicker" style="margin-bottom:0;">Workspace admin</span>
+                  <span class="draftMetaPill muted">Governance</span>
+                </div>
+                <div>
+                  <h1 style="margin:0 0 10px;">Dashboard admin</h1>
+                  <p style="margin:0;max-width:58ch;">Gestisci professionisti, refertatori asincroni, referti in lavorazione, archivio e audit di base con una gerarchia piu vicina a una control room clinico-operativa.</p>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;">
+                  <article style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface-alt);">
+                    <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Lavorazioni aperte</span>
+                    <strong style="font-size:26px;line-height:1;color:var(--rr-color-text);">{{ adminDrafts.length }}</strong>
+                    <small style="color:var(--rr-color-text-secondary);">Bozze e referti ancora in presidio.</small>
+                  </article>
+                  <article style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface-alt);">
+                    <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Invii pendenti</span>
+                    <strong style="font-size:26px;line-height:1;color:var(--rr-color-text);">{{ adminPendingPatientSendCount }}</strong>
+                    <small style="color:var(--rr-color-text-secondary);">Documenti definitivi ancora da inviare.</small>
+                  </article>
+                  <article style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface-alt);">
+                    <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Archivio visibile</span>
+                    <strong style="font-size:26px;line-height:1;color:var(--rr-color-text);">{{ adminArchiveDrafts.length }}</strong>
+                    <small style="color:var(--rr-color-text-secondary);">Referti definitivi consultabili.</small>
+                  </article>
+                </div>
+              </article>
+              <div class="dashboardHeroAside" style="display:flex;flex-direction:column;gap:14px;justify-content:stretch;">
+                <article class="dashboardRoleCard dashboardRoleCardAdmin" style="min-width:0;padding:18px 20px;border-radius:24px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
+                  <span class="dashboardRoleCardLabel">Contesto attivo</span>
+                  <strong>
+                    {{
+                      adminTab === 'professionals'
+                        ? 'Professionisti'
+                        : adminTab === 'users'
+                          ? 'Refertatori asincroni'
+                          : adminTab === 'drafts'
+                            ? 'Referti in lavorazione'
+                            : adminTab === 'archive'
+                              ? 'Archivio referti'
+                              : 'Audit log'
+                    }}
+                  </strong>
+                  <small>
+                    {{
+                      adminTab === 'professionals'
+                        ? 'Gestione anagrafica e disponibilita clinica.'
+                        : adminTab === 'users'
+                          ? 'Abilitazioni reviewer e assegnazioni async.'
+                          : adminTab === 'drafts'
+                            ? 'Monitoraggio delle lavorazioni ancora aperte.'
+                            : adminTab === 'archive'
+                              ? 'Documenti definitivi, invio paziente e azioni accessorie.'
+                              : 'Tracciabilita essenziale delle operazioni.'
+                    }}
+                  </small>
+                </article>
+                <article style="display:flex;flex-direction:column;gap:10px;padding:18px 20px;border:1px solid var(--rr-color-border);border-radius:24px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
+                  <span class="entryEyebrow" style="align-self:flex-start;background:var(--rr-color-warning-soft);color:var(--rr-color-warning);">Sorveglianza</span>
+                  <strong style="font-size:30px;line-height:1;color:var(--rr-color-text);">{{ adminPendingPatientSendCount }}</strong>
+                  <span style="font-size:15px;font-weight:700;color:var(--rr-color-text);">Invii paziente da presidiare</span>
+                  <small style="color:var(--rr-color-text-secondary);line-height:1.6;">Il workflow resta completo anche senza Drive: qui stai solo controllando la chiusura documentale e amministrativa.</small>
+                </article>
               </div>
             </div>
           </div>
-          <h1>Dashboard admin</h1>
-          <p>Gestisci professionisti, refertatori asincroni, referti in lavorazione, archivio e audit di base.</p>
         </header>
 
         @if (adminDashboardError) {
           <div class="draftAlert error">{{ adminDashboardError }}</div>
         }
 
-        <div class="dashboardShell">
-          <aside class="dashboardSidebar">
-            <div class="dashboardSidebarHead">
+        <div style="padding:18px;border:1px solid var(--rr-color-border);border-radius:30px;background:var(--rr-color-surface-muted);box-shadow:var(--rr-shadow-sm);">
+          <div class="dashboardShell" style="gap:20px;">
+          <aside class="dashboardSidebar dashboardSidebarAdmin" style="padding:22px;border-radius:26px;background:var(--rr-color-surface-overlay);box-shadow:var(--rr-shadow-sm);">
+            <div class="dashboardSidebarHead" style="gap:12px;">
               <span class="entryEyebrow">Area Admin</span>
-              <h3>Sezioni</h3>
+              <h3>Governance e controlli</h3>
+              <p>Presidio di account, flussi attivi, archivio e verifiche operative.</p>
+              <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+                <div style="padding:12px 13px;border:1px solid var(--rr-color-border-soft);border-radius:16px;background:var(--rr-color-surface-alt);">
+                  <span style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Bozze aperte</span>
+                  <strong style="display:block;margin-top:6px;font-size:22px;line-height:1;color:var(--rr-color-text);">{{ adminDrafts.length }}</strong>
+                </div>
+                <div style="padding:12px 13px;border:1px solid var(--rr-color-border-soft);border-radius:16px;background:var(--rr-color-surface-alt);">
+                  <span style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Archivio</span>
+                  <strong style="display:block;margin-top:6px;font-size:22px;line-height:1;color:var(--rr-color-text);">{{ adminArchiveDrafts.length }}</strong>
+                </div>
+              </div>
             </div>
             <nav class="dashboardSidebarNav">
               @for (item of adminSidebarItems; track item.key) {
@@ -457,19 +642,116 @@
                   [class.isActive]="adminTab === item.key"
                   (click)="adminTab = item.key"
                 >
-                  <span>{{ item.label }}</span>
+                  <span class="sidebarNavCopy">
+                    <span class="sidebarNavLabel">{{ item.label }}</span>
+                    <span class="sidebarNavHint">
+                      {{
+                        item.key === 'professionals'
+                          ? 'Anagrafica clinica e disponibilita.'
+                          : item.key === 'users'
+                            ? 'Reviewer async, ruoli e aree abilitate.'
+                            : item.key === 'drafts'
+                              ? 'Lavorazioni aperte da seguire.'
+                              : item.key === 'archive'
+                                ? 'Documenti definitivi e invii.'
+                                : 'Eventi e controlli di base.'
+                      }}
+                    </span>
+                  </span>
                   @if (item.badge) {
                     <span class="sidebarBadge">{{ item.badge }}</span>
                   }
                 </button>
               }
             </nav>
+            <div class="dashboardSidebarFoot">
+              <strong>Nota operativa</strong>
+              <p>Le azioni puntuali restano nei pannelli centrali per non alterare i flussi esistenti.</p>
+            </div>
           </aside>
 
-          <div class="dashboardContent">
+          <div class="dashboardContent" style="display:flex;flex-direction:column;gap:20px;">
         @if (adminDashboardLoading) {
           <div class="emptyStateCard">Sto caricando la dashboard admin...</div>
-        } @else if (adminTab === 'professionals') {
+        } @else {
+          <section class="dashboardPanel" style="margin-top:0;padding:18px;background:var(--rr-color-surface-alt);border-color:var(--rr-color-border);border-radius:28px;">
+            <div style="display:grid;grid-template-columns:minmax(0,1.65fr) minmax(320px,.92fr);gap:18px;align-items:stretch;">
+              <article style="display:flex;flex-direction:column;gap:16px;padding:24px;border:1px solid var(--rr-color-border);border-radius:24px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
+                <div class="draftMetaRow" style="margin-top:0;">
+                  <span class="entryEyebrow" style="background:var(--rr-color-surface-muted);color:var(--rr-color-info);">Cruscotto operativo</span>
+                  @if (adminPendingPatientSendCount) {
+                    <ng-container [ngTemplateOutlet]="actionBadgeTpl" [ngTemplateOutletContext]="{ kind: 'sendRequired' }"></ng-container>
+                  }
+                </div>
+                <div>
+                  <h3 style="margin:0 0 8px;font-size:28px;line-height:1.1;color:var(--rr-color-text);">Cosa richiede attenzione adesso</h3>
+                  <p style="margin:0;color:var(--rr-color-text-secondary);line-height:1.6;">Mantieni sotto controllo lavorazioni aperte, invii al paziente e documenti definitivi senza perdere accesso alle tabelle operative che eseguono davvero il lavoro.</p>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;">
+                  <button type="button" class="summaryMetricCard" style="align-items:flex-start;text-align:left;padding:18px 18px 16px;border-radius:20px;background:var(--rr-color-surface-alt);cursor:pointer;" (click)="adminTab = 'drafts'">
+                    <span>Referti aperti</span>
+                    <strong>{{ adminDrafts.length }}</strong>
+                    <small>Lavorazioni ancora da chiudere.</small>
+                  </button>
+                  <button type="button" class="summaryMetricCard" style="align-items:flex-start;text-align:left;padding:18px 18px 16px;border-radius:20px;background:var(--rr-color-surface-alt);cursor:pointer;" (click)="adminTab = 'archive'">
+                    <span>Invio al paziente</span>
+                    <strong>{{ adminPendingPatientSendCount }}</strong>
+                    <small>Referti asincroni completati ancora da inviare.</small>
+                  </button>
+                  <button type="button" class="summaryMetricCard" style="align-items:flex-start;text-align:left;padding:18px 18px 16px;border-radius:20px;background:var(--rr-color-surface-alt);cursor:pointer;" (click)="adminTab = 'audit'">
+                    <span>Archivio visibile</span>
+                    <strong>{{ adminArchiveDrafts.length }}</strong>
+                    <small>Documenti definitivi attualmente consultabili.</small>
+                  </button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;">
+                  <div style="padding:12px 14px;border:1px solid var(--rr-color-border-soft);border-radius:16px;background:var(--rr-color-surface-alt);">
+                    <strong style="display:block;font-size:13px;color:var(--rr-color-text);">Account e ruoli</strong>
+                    <small style="display:block;margin-top:4px;color:var(--rr-color-text-muted);">Professionisti e reviewer restano governati dalle liste, non dalle card.</small>
+                  </div>
+                  <div style="padding:12px 14px;border:1px solid var(--rr-color-border-soft);border-radius:16px;background:var(--rr-color-surface-alt);">
+                    <strong style="display:block;font-size:13px;color:var(--rr-color-text);">Workflow prima di Drive</strong>
+                    <small style="display:block;margin-top:4px;color:var(--rr-color-text-muted);">Lo stato del referto resta sempre piu forte dei metadati accessori.</small>
+                  </div>
+                  <div style="padding:12px 14px;border:1px solid var(--rr-color-border-soft);border-radius:16px;background:var(--rr-color-surface-alt);">
+                    <strong style="display:block;font-size:13px;color:var(--rr-color-text);">Tabelle al centro</strong>
+                    <small style="display:block;margin-top:4px;color:var(--rr-color-text-muted);">Le superfici sopra orientano, quelle sotto eseguono.</small>
+                  </div>
+                </div>
+              </article>
+              <article style="display:flex;flex-direction:column;justify-content:space-between;gap:14px;padding:24px;border:1px solid var(--rr-color-border);border-radius:24px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
+                <div>
+                  <span class="entryEyebrow" style="background:var(--rr-color-warning-soft);color:var(--rr-color-warning);">Da fare ora</span>
+                  <h3 style="margin:12px 0 8px;font-size:22px;color:var(--rr-color-text);">Governance, documenti e rischio operativo</h3>
+                  <p style="margin:0;color:var(--rr-color-text-secondary);line-height:1.6;">Le card sintetizzano il carico; i pannelli sotto restano il punto di esecuzione per gestire persone, bozze, archivio e tracciabilita.</p>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                  <button type="button" class="ghostLinkBtn" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-radius:18px;" (click)="adminTab = 'drafts'">
+                    <span style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
+                      <strong style="font-size:14px;color:var(--rr-color-text);">Apri le lavorazioni attive</strong>
+                      <small style="color:var(--rr-color-text-muted);">Bozze e referti non ancora completati.</small>
+                    </span>
+                    <span class="draftMetaPill muted">{{ adminDrafts.length }}</span>
+                  </button>
+                  <button type="button" class="ghostLinkBtn" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-radius:18px;" (click)="adminTab = 'archive'">
+                    <span style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
+                      <strong style="font-size:14px;color:var(--rr-color-text);">Gestisci invii e documenti finali</strong>
+                      <small style="color:var(--rr-color-text-muted);">Archivio, firma caricata e stati accessori.</small>
+                    </span>
+                    <span class="draftMetaPill muted">{{ adminPendingPatientSendCount }}</span>
+                  </button>
+                  <button type="button" class="ghostLinkBtn" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-radius:18px;" (click)="adminTab = 'users'">
+                    <span style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
+                      <strong style="font-size:14px;color:var(--rr-color-text);">Controlla ruoli e abilitazioni</strong>
+                      <small style="color:var(--rr-color-text-muted);">Reviewer async e accessi riservati.</small>
+                    </span>
+                    <span class="draftMetaPill muted">{{ refertatoriTotal }}</span>
+                  </button>
+                </div>
+              </article>
+            </div>
+          </section>
+        @if (adminTab === 'professionals') {
           <section class="dashboardPanel">
             <div class="adminSectionHead">
               <div>
@@ -494,22 +776,44 @@
             } @else if (!filteredAdminProfessionals.length) {
               <div class="emptyStateCard">Nessun professionista corrisponde alla ricerca.</div>
             } @else {
-              <div class="draftTableWrap">
-                <div class="draftTable draftTableHead draftTableAdminProfessionals">
+              <div class="draftTableWrap" style="padding:12px;border-color:var(--rr-color-border-soft);background:var(--rr-color-surface-muted);">
+                <div class="draftTable draftTableHead draftTableAdminProfessionals" style="gap:16px;align-items:start;padding:14px 18px;border:1px solid var(--rr-color-border);border-radius:14px;background:var(--rr-color-surface);font-size:11px;letter-spacing:.08em;color:var(--rr-color-text-muted);">
                   <div>Professionista</div>
                   <div>Specializzazione</div>
                   <div>Stato</div>
                   <div>Azioni</div>
                 </div>
                 @for (professional of pagedAdminProfessionals; track professional.id) {
-                  <div class="draftTable draftTableRow draftTableAdminProfessionals">
+                  <div class="draftTable draftTableRow draftTableAdminProfessionals" style="gap:16px;align-items:start;padding:16px 18px;margin-top:10px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
                     <div>
                       <strong>{{ professional.display_name }}</strong>
-                      <small>{{ professional.role_label || '-' }}</small>
+                      <small>{{ professional.role_label || 'Professionista' }}</small>
                     </div>
-                    <div>{{ professional.specializzazione || '-' }}</div>
-                    <div><span class="draftRowStatus">{{ professional.active ? 'Attivo' : 'Disattivato' }}</span></div>
-                    <div class="draftRowActions adminRowActions">
+                    <div>
+                      <strong>{{ professional.specializzazione || '-' }}</strong>
+                      <small>
+                        {{
+                          professional.visible_in_standard
+                            ? 'Disponibile nei referti standard'
+                            : 'Non visibile nei referti standard'
+                        }}
+                      </small>
+                    </div>
+                    <div>
+                      <span class="draftRowStatus">{{ professional.active ? 'Attivo' : 'Disattivato' }}</span>
+                      <div class="draftMetaRow" style="margin-top:8px;">
+                        <span class="draftMetaText">
+                          {{
+                            professional.reserved_user_active === false
+                              ? 'Area riservata disattivata'
+                              : professional.reserved_user_id
+                                ? 'Area riservata collegata'
+                                : 'Area riservata non collegata'
+                          }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="draftRowActions adminRowActions" style="flex-direction:column;white-space:normal;">
                       <button type="button" class="btn tiny ghost" (click)="editAdminProfessional(professional)">
                         Modifica
                       </button>
@@ -557,8 +861,8 @@
             @if (!refertatoriTotal) {
               <div class="emptyStateCard">Nessun refertatore configurato.</div>
             } @else {
-              <div class="draftTableWrap">
-                <div class="draftTable draftTableHead draftTableAdminUsers">
+              <div class="draftTableWrap" style="padding:12px;border-color:var(--rr-color-border-soft);background:var(--rr-color-surface-muted);">
+                <div class="draftTable draftTableHead draftTableAdminUsers" style="gap:16px;align-items:start;padding:14px 18px;border:1px solid var(--rr-color-border);border-radius:14px;background:var(--rr-color-surface);font-size:11px;letter-spacing:.08em;color:var(--rr-color-text-muted);">
                   <div>Utente</div>
                   <div>Ruolo</div>
                   <div>Assegnazioni</div>
@@ -566,15 +870,40 @@
                   <div>Azioni</div>
                 </div>
                 @for (user of pagedAdminRefertatori; track user.id) {
-                  <div class="draftTable draftTableRow draftTableAdminUsers">
+                  <div class="draftTable draftTableRow draftTableAdminUsers" style="gap:16px;align-items:start;padding:16px 18px;margin-top:10px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
                     <div>
                       <strong>{{ user.display_name }}</strong>
                       <small>{{ user.email }}</small>
                     </div>
-                    <div>{{ user.role }}</div>
-                    <div>{{ user.assignedTypes.length ? user.assignedTypes.join(', ').toUpperCase() : '-' }}</div>
-                    <div><span class="draftRowStatus">{{ user.active ? 'Attivo' : 'Disattivato' }}</span></div>
-                    <div class="draftRowActions adminRowActions">
+                    <div>
+                      <strong>{{ user.role }}</strong>
+                      <small>{{ user.active ? 'Accesso operativo' : 'Accesso sospeso' }}</small>
+                    </div>
+                    <div>
+                      <div class="draftMetaRow" style="margin-top:0;">
+                        @if (user.assignedTypes.length) {
+                          @for (assignedType of user.assignedTypes; track assignedType) {
+                            <ng-container [ngTemplateOutlet]="typeBadgeTpl" [ngTemplateOutletContext]="{ type: assignedType }"></ng-container>
+                          }
+                        } @else {
+                          <span class="draftMetaText">Nessuna assegnazione</span>
+                        }
+                      </div>
+                      <small>Tipologie abilitate</small>
+                    </div>
+                    <div>
+                      <span class="draftRowStatus">{{ user.active ? 'Attivo' : 'Disattivato' }}</span>
+                      <div class="draftMetaRow" style="margin-top:8px;">
+                        <span class="draftMetaText">
+                          {{
+                            user.assignedTypes.length
+                              ? 'Refertazione asincrona abilitata'
+                              : 'Solo accesso riservato'
+                          }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="draftRowActions adminRowActions" style="flex-direction:column;white-space:normal;">
                       <button type="button" class="btn tiny ghost" (click)="editAdminUser(user)">
                         Modifica
                       </button>
@@ -619,26 +948,49 @@
             @if (!adminDrafts.length) {
               <div class="emptyStateCard">Nessun referto in lavorazione da mostrare.</div>
             } @else {
-              <div class="draftTableWrap">
-                <div class="draftTable draftTableHead draftTableAdminDrafts">
+              <div class="draftTableWrap" style="padding:12px;border-color:var(--rr-color-border-soft);background:var(--rr-color-surface-muted);">
+                <div class="draftTable draftTableHead draftTableAdminDrafts" style="gap:16px;align-items:start;padding:14px 18px;border:1px solid var(--rr-color-border);border-radius:14px;background:var(--rr-color-surface);font-size:11px;letter-spacing:.08em;color:var(--rr-color-text-muted);">
                   <div>Paziente</div>
                   <div>Tipo</div>
                   <div>Professionista</div>
                   <div>Stato</div>
-                  <div>Ultima modifica</div>
+                  <div>Aggiornato</div>
                   <div>Azioni</div>
                 </div>
                 @for (draft of adminDrafts; track draft.id) {
-                  <div class="draftTable draftTableRow draftTableAdminDrafts">
+                  <div class="draftTable draftTableRow draftTableAdminDrafts" style="gap:16px;align-items:start;padding:16px 18px;margin-top:10px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
                     <div>
                       <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
                       <small>{{ formatDateValue(draft.data_nascita) }}</small>
+                      <div class="draftMetaRow" style="margin-top:8px;">
+                        @if (draft.codice_fiscale) {
+                          <span class="draftMetaText">CF {{ draft.codice_fiscale }}</span>
+                        }
+                        @if (draft.data_esame) {
+                          <span class="draftMetaText">Esame {{ formatDateValue(draft.data_esame) }}</span>
+                        }
+                      </div>
                     </div>
-                    <div>{{ reportTypeLabelFor(draft.tipo_referto) }}</div>
-                    <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '-' }}</div>
-                    <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                    <div>{{ formatDateTime(draft.updated_at) }}</div>
-                    <div class="draftRowActions adminRowActions">
+                    <div>
+                      <ng-container [ngTemplateOutlet]="typeBadgeTpl" [ngTemplateOutletContext]="{ type: draft.tipo_referto }"></ng-container>
+                      @if (draft.prestazione || draft.specializzazione) {
+                        <div class="draftMetaRow" style="margin-top:8px;">
+                          <span class="draftMetaText">{{ draft.prestazione || draft.specializzazione }}</span>
+                        </div>
+                      }
+                    </div>
+                    <div>
+                      <strong>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '-' }}</strong>
+                      <small>{{ draft.assigned_refertatore_specializzazione || draft.specializzazione || 'Professionista non specificato' }}</small>
+                    </div>
+                    <div>
+                      <ng-container [ngTemplateOutlet]="workflowBadgeTpl" [ngTemplateOutletContext]="{ status: draft.stato }"></ng-container>
+                    </div>
+                    <div>
+                      <strong>{{ formatDateTime(draft.updated_at) }}</strong>
+                      <small>Ultimo aggiornamento</small>
+                    </div>
+                    <div class="draftRowActions adminRowActions" style="flex-direction:column;white-space:normal;">
                       <button type="button" class="btn tiny ghost" (click)="openAdminDraftRecord(draft, true)">
                         Apri
                       </button>
@@ -703,26 +1055,57 @@
             @if (!filteredAdminArchiveDrafts.length) {
               <div class="emptyStateCard">Nessun referto archiviato corrisponde ai filtri selezionati.</div>
             } @else {
-              <div class="draftTableWrap">
-                <div class="draftTable draftTableHead draftTableAdminDrafts">
+              <div class="draftTableWrap" style="padding:12px;border-color:var(--rr-color-border-soft);background:var(--rr-color-surface-muted);">
+                <div class="draftTable draftTableHead draftTableAdminDrafts" style="gap:16px;align-items:start;padding:14px 18px;border:1px solid var(--rr-color-border);border-radius:14px;background:var(--rr-color-surface);font-size:11px;letter-spacing:.08em;color:var(--rr-color-text-muted);">
                   <div>Paziente</div>
                   <div>Tipo</div>
                   <div>{{ adminArchiveTab === 'standard' ? 'Professionista' : 'Refertatore' }}</div>
                   <div>Stato</div>
-                  <div>Ultima modifica</div>
+                  <div>Completato</div>
                   <div>Azioni</div>
                 </div>
                 @for (draft of filteredAdminArchiveDrafts; track draft.id) {
-                  <div class="draftTable draftTableRow draftTableAdminDrafts">
+                  <div class="draftTable draftTableRow draftTableAdminDrafts" style="gap:16px;align-items:start;padding:16px 18px;margin-top:10px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
                     <div>
                       <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
                       <small>{{ formatDateValue(draft.data_nascita) }}</small>
+                      <div class="draftMetaRow" style="margin-top:8px;">
+                        @if (draft.codice_fiscale) {
+                          <span class="draftMetaText">CF {{ draft.codice_fiscale }}</span>
+                        }
+                        @if (draft.data_esame) {
+                          <span class="draftMetaText">Esame {{ formatDateValue(draft.data_esame) }}</span>
+                        }
+                      </div>
                     </div>
-                    <div>{{ reportTypeLabelFor(draft.tipo_referto) }}</div>
-                    <div>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '-' }}</div>
-                    <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                    <div>{{ formatDateTime(draft.completed_at || draft.updated_at) }}</div>
-                    <div class="draftRowActions adminRowActions">
+                    <div>
+                      <ng-container [ngTemplateOutlet]="typeBadgeTpl" [ngTemplateOutletContext]="{ type: draft.tipo_referto }"></ng-container>
+                      @if (draft.prestazione || draft.specializzazione) {
+                        <div class="draftMetaRow" style="margin-top:8px;">
+                          <span class="draftMetaText">{{ draft.prestazione || draft.specializzazione }}</span>
+                        </div>
+                      }
+                    </div>
+                    <div>
+                      <strong>{{ draft.assigned_refertatore_name || draft.medico_refertatore || '-' }}</strong>
+                      <small>{{ draft.assigned_refertatore_specializzazione || draft.specializzazione || 'Professionista non specificato' }}</small>
+                    </div>
+                    <div>
+                      <ng-container [ngTemplateOutlet]="workflowBadgeTpl" [ngTemplateOutletContext]="{ status: draft.stato }"></ng-container>
+                      <div class="draftMetaRow" style="margin-top:8px;">
+                        <ng-container [ngTemplateOutlet]="driveBadgeTpl" [ngTemplateOutletContext]="{ saved: !!draft.drive_file_id }"></ng-container>
+                        @if (draft.patient_email_sent) {
+                          <ng-container [ngTemplateOutlet]="emailBadgeTpl" [ngTemplateOutletContext]="{ state: 'sent' }"></ng-container>
+                        } @else if (canArchiveDraftBeSentToPatient(draft)) {
+                          <ng-container [ngTemplateOutlet]="actionBadgeTpl" [ngTemplateOutletContext]="{ kind: 'sendRequired' }"></ng-container>
+                        }
+                      </div>
+                    </div>
+                    <div>
+                      <strong>{{ formatDateTime(draft.completed_at || draft.updated_at) }}</strong>
+                      <small>{{ draft.completed_at ? 'Documento definitivo disponibile' : 'Ultimo aggiornamento' }}</small>
+                    </div>
+                    <div class="draftRowActions adminRowActions" style="flex-direction:column;white-space:normal;">
                       <button type="button" class="btn tiny ghost" (click)="openArchiveActionsModal(draft)">
                         Azioni
                       </button>
@@ -738,19 +1121,31 @@
             @if (!auditLogs.length) {
               <div class="emptyStateCard">Nessun evento disponibile.</div>
             } @else {
-              <div class="draftTableWrap">
-                <div class="draftTable draftTableHead draftTableAudit">
+              <div class="draftTableWrap" style="padding:12px;border-color:var(--rr-color-border-soft);background:var(--rr-color-surface-muted);">
+                <div class="draftTable draftTableHead draftTableAudit" style="gap:16px;align-items:start;padding:14px 18px;border:1px solid var(--rr-color-border);border-radius:14px;background:var(--rr-color-surface);font-size:11px;letter-spacing:.08em;color:var(--rr-color-text-muted);">
                   <div>Quando</div>
                   <div>Azione</div>
                   <div>Ruolo</div>
                   <div>Entita</div>
                 </div>
                 @for (log of auditLogs; track log.id) {
-                  <div class="draftTable draftTableRow draftTableAudit">
-                    <div>{{ log.created_at | date: 'dd/MM/yyyy HH:mm' }}</div>
-                    <div>{{ log.action }}</div>
-                    <div>{{ log.role || '-' }}</div>
-                    <div>{{ log.entity_type || '-' }}</div>
+                  <div class="draftTable draftTableRow draftTableAudit" style="gap:16px;align-items:start;padding:16px 18px;margin-top:10px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
+                    <div>
+                      <strong>{{ log.created_at | date: 'dd/MM/yyyy HH:mm' }}</strong>
+                      <small>ID {{ log.id }}</small>
+                    </div>
+                    <div>
+                      <strong>{{ log.action }}</strong>
+                      <small>{{ log.entity_id ? 'Record ' + log.entity_id : 'Record non disponibile' }}</small>
+                    </div>
+                    <div>
+                      <strong>{{ log.role || '-' }}</strong>
+                      <small>{{ log.user_id || 'Utente non disponibile' }}</small>
+                    </div>
+                    <div>
+                      <strong>{{ log.entity_type || '-' }}</strong>
+                      <small>{{ log.ip_address || 'IP non disponibile' }}</small>
+                    </div>
                   </div>
                 }
               </div>
@@ -769,80 +1164,202 @@
             }
           </section>
         }
+        }
           </div>
+        </div>
         </div>
       </section>
     </main>
     } @else if (uiState === 'refertatoreDashboard') {
     <main class="entryMain entryMainAppShell">
-      <section class="entryCard dashboardCard">
-        <header class="entryHeader">
-          <div class="entryHeaderTop">
-            <div class="entryEyebrow">Area refertatore</div>
-            <div class="dashboardTopActions">
-              @if (canCreateReservedReports) {
-                <button type="button" class="btn ghost" (click)="startReservedCreationFlow()">
-                  Crea nuovo referto
-                </button>
-              }
-              <div class="userMenuWrap">
-                <button type="button" class="userMenuTrigger" (click)="toggleReservedUserMenu()">
-                  @if (reservedUserAvatarSrc) {
-                    <span class="userAvatarCircle hasImage"><img [src]="reservedUserAvatarSrc" alt="Avatar profilo" /></span>
-                  } @else {
-                    <span class="userAvatarCircle">{{ reservedUserInitials }}</span>
-                  }
-                </button>
-                @if (showReservedUserMenu) {
-                  <div class="userMenuPanel">
-                    <div class="userMenuHead">
-                      @if (reservedUserAvatarSrc) {
-                        <span class="userAvatarCircle large hasImage"><img [src]="reservedUserAvatarSrc" alt="Avatar profilo" /></span>
-                      } @else {
-                        <span class="userAvatarCircle large">{{ reservedUserInitials }}</span>
-                      }
-                      <div>
+      <section class="entryCard dashboardCard dashboardCardReserved">
+        <header class="entryHeader dashboardHeader">
+          <div style="display:flex;flex-direction:column;gap:18px;padding:18px 20px 20px;border:1px solid var(--rr-color-border);border-radius:30px;background:var(--rr-color-surface-alt);box-shadow:var(--rr-shadow-sm);">
+            <div class="dashboardTopbar" style="padding-bottom:18px;border-bottom:1px solid var(--rr-color-border-soft);">
+              <div class="dashboardTopbarIdentity">
+                <div class="entryEyebrow">{{ hasAsyncAssignments ? 'Area refertatore' : 'Area professionista' }}</div>
+                <span class="dashboardTopbarLabel">{{ hasAsyncAssignments ? 'Da fare ora' : 'Archivio personale' }}</span>
+              </div>
+              <div class="dashboardTopActions">
+                @if (canCreateReservedReports) {
+                  <button type="button" class="btn ghost" (click)="startReservedCreationFlow()">
+                    Crea nuovo referto
+                  </button>
+                }
+                <div class="userMenuWrap">
+                  <button type="button" class="userMenuTrigger userMenuTriggerDetailed" (click)="toggleReservedUserMenu()">
+                    <span class="dashboardUserSummary">
+                      <span class="dashboardUserSummaryText">
                         <strong>{{ reservedUserFullName }}</strong>
-                        <small>{{ reservedUser?.email || '-' }}</small>
+                        <small>{{ reservedUserRoleLabel }}</small>
+                      </span>
+                    </span>
+                    @if (reservedUserAvatarSrc) {
+                      <span class="userAvatarCircle hasImage"><img [src]="reservedUserAvatarSrc" alt="Avatar profilo" /></span>
+                    } @else {
+                      <span class="userAvatarCircle">{{ reservedUserInitials }}</span>
+                    }
+                  </button>
+                  @if (showReservedUserMenu) {
+                    <div class="userMenuPanel">
+                      <div class="userMenuHead">
+                        @if (reservedUserAvatarSrc) {
+                          <span class="userAvatarCircle large hasImage"><img [src]="reservedUserAvatarSrc" alt="Avatar profilo" /></span>
+                        } @else {
+                          <span class="userAvatarCircle large">{{ reservedUserInitials }}</span>
+                        }
+                        <div>
+                          <strong>{{ reservedUserFullName }}</strong>
+                          <small>{{ reservedUser?.email || '-' }}</small>
+                        </div>
+                      </div>
+                      <div class="userMenuMeta">
+                        <div><span>Ruolo</span><strong>{{ reservedUserRoleLabel }}</strong></div>
+                        @if (reservedUser?.specializzazione) {
+                          <div><span>Specializzazione</span><strong>{{ reservedUser?.specializzazione }}</strong></div>
+                        }
+                        @if (reservedUserAssignedAreasLabel) {
+                          <div><span>Aree abilitate</span><strong>{{ reservedUserAssignedAreasLabel }}</strong></div>
+                        }
+                      </div>
+                      <div class="userMenuActions">
+                        <button type="button" class="ghostLinkBtn" (click)="openChangePasswordFromMenu()">Profilo e sicurezza</button>
+                        <button type="button" class="ghostLinkBtn" (click)="logoutRefertatore()">Logout</button>
                       </div>
                     </div>
-                    <div class="userMenuMeta">
-                      <div><span>Ruolo</span><strong>{{ reservedUserRoleLabel }}</strong></div>
-                      @if (reservedUser?.specializzazione) {
-                        <div><span>Specializzazione</span><strong>{{ reservedUser?.specializzazione }}</strong></div>
-                      }
-                      @if (reservedUserAssignedAreasLabel) {
-                        <div><span>Aree abilitate</span><strong>{{ reservedUserAssignedAreasLabel }}</strong></div>
-                      }
-                    </div>
-                    <div class="userMenuActions">
-                      <button type="button" class="ghostLinkBtn" (click)="openChangePasswordFromMenu()">Profilo e sicurezza</button>
-                      <button type="button" class="ghostLinkBtn" (click)="logoutRefertatore()">Logout</button>
-                    </div>
-                  </div>
-                }
+                  }
+                </div>
+              </div>
+            </div>
+            <div class="dashboardHero" style="padding-top:0;grid-template-columns:minmax(0,1.38fr) minmax(320px,.96fr);gap:18px;">
+              <article class="dashboardHeroMain" style="display:flex;flex-direction:column;gap:18px;padding:24px 26px;border:1px solid var(--rr-color-border);border-radius:28px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
+                <div class="draftMetaRow" style="margin-top:0;">
+                  <span class="dashboardHeroKicker" style="margin-bottom:0;">{{ hasAsyncAssignments ? 'Workspace refertatore' : 'Workspace professionista' }}</span>
+                  <span class="draftMetaPill muted">{{ hasAsyncAssignments ? 'Action queue' : 'Readonly archive' }}</span>
+                </div>
+                <div>
+                  <h1 style="margin:0 0 10px;">{{ hasAsyncAssignments ? 'Dashboard refertatore' : 'Area riservata professionista' }}</h1>
+                  <p style="margin:0;max-width:58ch;">
+                    {{
+                      hasAsyncAssignments
+                        ? 'Completa i referti assegnati, esporta il PDF temporaneo da firmare e carica il firmato definitivo in un workspace che privilegia la prossima azione.'
+                        : 'Consulta il tuo archivio personale e gestisci le impostazioni del tuo account in un contesto dichiaratamente di sola consultazione.'
+                    }}
+                  </p>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;">
+                  @if (hasAsyncAssignments) {
+                    <article style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface-alt);">
+                      <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Da refertare</span>
+                      <strong style="font-size:26px;line-height:1;color:var(--rr-color-text);">{{ draftsToCompleteByType(activeRefertatoreTab).length }}</strong>
+                      <small style="color:var(--rr-color-text-secondary);">Coda clinica assegnata.</small>
+                    </article>
+                    <article style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface-alt);">
+                      <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Da firmare</span>
+                      <strong style="font-size:26px;line-height:1;color:var(--rr-color-text);">{{ readyForSignatureDraftsByType(activeRefertatoreTab).length }}</strong>
+                      <small style="color:var(--rr-color-text-secondary);">PDF firmati ancora da acquisire.</small>
+                    </article>
+                    <article style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface-alt);">
+                      <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Archivio</span>
+                      <strong style="font-size:26px;line-height:1;color:var(--rr-color-text);">{{ archiveRefertatoreDrafts(activeRefertatoreTab).length }}</strong>
+                      <small style="color:var(--rr-color-text-secondary);">Documenti gia definitivi.</small>
+                    </article>
+                  } @else {
+                    <article style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface-alt);">
+                      <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Archivio personale</span>
+                      <strong style="font-size:26px;line-height:1;color:var(--rr-color-text);">{{ personalArchiveDrafts.length }}</strong>
+                      <small style="color:var(--rr-color-text-secondary);">Referti collegati al tuo profilo.</small>
+                    </article>
+                    <article style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface-alt);">
+                      <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Postura</span>
+                      <strong style="font-size:26px;line-height:1;color:var(--rr-color-text);">Readonly</strong>
+                      <small style="color:var(--rr-color-text-secondary);">Nessuna coda attiva in questa vista.</small>
+                    </article>
+                    <article style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface-alt);">
+                      <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Accesso al PDF</span>
+                      <strong style="font-size:26px;line-height:1;color:var(--rr-color-text);">Diretto</strong>
+                      <small style="color:var(--rr-color-text-secondary);">Il firmato resta consultabile quando presente.</small>
+                    </article>
+                  }
+                </div>
+              </article>
+              <div class="dashboardHeroAside" style="display:flex;flex-direction:column;gap:14px;justify-content:stretch;">
+                <article class="dashboardRoleCard" [class.dashboardRoleCardArchive]="!hasAsyncAssignments" style="min-width:0;padding:18px 20px;border-radius:24px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
+                  <span class="dashboardRoleCardLabel">{{ hasAsyncAssignments ? 'Contesto attivo' : 'Postura del ruolo' }}</span>
+                  <strong>
+                    {{
+                      hasAsyncAssignments
+                        ? (
+                            refertatoreSection === 'dashboard'
+                              ? 'Panoramica operativa'
+                              : refertatoreSection === 'toReview'
+                                ? 'Da refertare'
+                                : refertatoreSection === 'documents'
+                                  ? 'Referti da firmare'
+                                  : 'Archivio referti'
+                          )
+                        : 'Archivio personale in sola lettura'
+                    }}
+                  </strong>
+                  <small>
+                    {{
+                      hasAsyncAssignments
+                        ? (
+                            refertatoreSection === 'dashboard'
+                              ? 'Visione rapida delle attivita aperte e dei documenti da chiudere.'
+                              : refertatoreSection === 'toReview'
+                                ? 'Code cliniche assegnate da completare.'
+                                : refertatoreSection === 'documents'
+                                  ? 'Passaggi finali per acquisire il PDF firmato.'
+                                  : 'Referti definitivi gia archiviati.'
+                          )
+                        : 'Consulta solo i referti completati collegati al tuo profilo.'
+                    }}
+                  </small>
+                </article>
+                <article style="display:flex;flex-direction:column;gap:10px;padding:18px 20px;border:1px solid var(--rr-color-border);border-radius:24px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
+                  <span
+                    class="entryEyebrow"
+                    style="align-self:flex-start;"
+                    [style.background]="hasAsyncAssignments ? 'var(--rr-color-warning-soft)' : 'var(--rr-color-neutral-soft)'"
+                    [style.color]="hasAsyncAssignments ? 'var(--rr-color-warning)' : 'var(--rr-color-neutral)'"
+                  >{{ hasAsyncAssignments ? 'Priorita' : 'Archivio' }}</span>
+                  <strong style="font-size:30px;line-height:1;color:var(--rr-color-text);">{{ hasAsyncAssignments ? readyForSignatureDraftsByType(activeRefertatoreTab).length : personalArchiveDrafts.length }}</strong>
+                  <span style="font-size:15px;font-weight:700;color:var(--rr-color-text);">{{ hasAsyncAssignments ? 'Documenti nella fase decisiva' : 'Documenti personali consultabili' }}</span>
+                  <small style="color:var(--rr-color-text-secondary);line-height:1.6;">{{ hasAsyncAssignments ? 'Il tipo resta un filtro secondario: prima viene la coda da chiudere.' : 'Il profilo professionista resta separato dalle code di refertazione.' }}</small>
+                </article>
               </div>
             </div>
           </div>
-          <h1>{{ hasAsyncAssignments ? 'Dashboard refertatore' : 'Area riservata professionista' }}</h1>
-          <p>
-            {{
-              hasAsyncAssignments
-                ? 'Completa i referti assegnati, esporta il PDF temporaneo da firmare e carica il firmato definitivo dalla dashboard.'
-                : 'Consulta il tuo archivio personale e gestisci le impostazioni del tuo account.'
-            }}
-          </p>
         </header>
 
         @if (refertatoreDraftsError) {
           <div class="draftAlert error">{{ refertatoreDraftsError }}</div>
         }
 
-        <div class="dashboardShell">
-          <aside class="dashboardSidebar">
-            <div class="dashboardSidebarHead">
-              <span class="entryEyebrow">Area Refertatore</span>
-              <h3>Sezioni</h3>
+        <div style="padding:18px;border:1px solid var(--rr-color-border);border-radius:30px;background:var(--rr-color-surface-muted);box-shadow:var(--rr-shadow-sm);">
+          <div class="dashboardShell" style="gap:20px;">
+          <aside class="dashboardSidebar" [class.dashboardSidebarArchive]="!hasAsyncAssignments" style="padding:22px;border-radius:26px;background:var(--rr-color-surface-overlay);box-shadow:var(--rr-shadow-sm);">
+            <div class="dashboardSidebarHead" style="gap:12px;">
+              <span class="entryEyebrow">{{ hasAsyncAssignments ? 'Area Refertatore' : 'Area Professionista' }}</span>
+              <h3>{{ hasAsyncAssignments ? 'Attivita e archivio' : 'Archivio e profilo' }}</h3>
+              <p>
+                {{
+                  hasAsyncAssignments
+                    ? 'Lavora per priorita operative senza perdere il contesto dei documenti definitivi.'
+                    : 'Consulta il tuo archivio unificato e mantieni il contesto di sola lettura.'
+                }}
+              </p>
+              <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+                <div style="padding:12px 13px;border:1px solid var(--rr-color-border-soft);border-radius:16px;background:var(--rr-color-surface-alt);">
+                  <span style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">{{ hasAsyncAssignments ? 'Da refertare' : 'Archivio' }}</span>
+                  <strong style="display:block;margin-top:6px;font-size:22px;line-height:1;color:var(--rr-color-text);">{{ hasAsyncAssignments ? draftsToCompleteByType(activeRefertatoreTab).length : personalArchiveDrafts.length }}</strong>
+                </div>
+                <div style="padding:12px 13px;border:1px solid var(--rr-color-border-soft);border-radius:16px;background:var(--rr-color-surface-alt);">
+                  <span style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">{{ hasAsyncAssignments ? 'Da firmare' : 'Ruolo' }}</span>
+                  <strong style="display:block;margin-top:6px;font-size:22px;line-height:1;color:var(--rr-color-text);">{{ hasAsyncAssignments ? readyForSignatureDraftsByType(activeRefertatoreTab).length : 'RO' }}</strong>
+                </div>
+              </div>
             </div>
             <nav class="dashboardSidebarNav">
               @for (item of refertatoreSidebarItems; track item.key) {
@@ -852,32 +1369,92 @@
                   [class.isActive]="refertatoreSection === item.key"
                   (click)="setRefertatoreSection(item.key)"
                 >
-                  <span>{{ item.label }}</span>
+                  <span class="sidebarNavCopy">
+                    <span class="sidebarNavLabel">{{ item.label }}</span>
+                    <span class="sidebarNavHint">
+                      {{
+                        item.key === 'dashboard'
+                          ? (hasAsyncAssignments ? 'Panoramica del lavoro assegnato.' : 'Accesso rapido all archivio personale.')
+                          : item.key === 'toReview'
+                            ? 'Code cliniche da completare.'
+                            : item.key === 'documents'
+                              ? 'PDF firmati ancora da acquisire.'
+                              : 'Documenti definitivi consultabili.'
+                      }}
+                    </span>
+                  </span>
                   @if (item.badge) {
                     <span class="sidebarBadge">{{ item.badge }}</span>
                   }
                 </button>
               }
             </nav>
+            <div class="dashboardSidebarFoot">
+              <strong>{{ hasAsyncAssignments ? 'Orientamento' : 'Archivio' }}</strong>
+              <p>
+                {{
+                  hasAsyncAssignments
+                    ? 'Le categorie EMG e PSG restano un filtro secondario rispetto alle azioni da eseguire.'
+                    : 'Il profilo professionista resta separato dalle code di refertazione.'
+                }}
+              </p>
+            </div>
           </aside>
 
-          <div class="dashboardContent">
+          <div class="dashboardContent" style="display:flex;flex-direction:column;gap:20px;">
         @if (refertatoreDraftsLoading) {
           <div class="emptyStateCard">Sto caricando i referti assegnati...</div>
         } @else {
           @if (!hasAsyncAssignments) {
-            <section class="dashboardPanel">
+            <section class="dashboardPanel" style="border-radius:28px;">
               <div class="adminSectionHead">
                 <div>
                   <h3>Dashboard professionista</h3>
                   <p>Consulta il tuo archivio personale in sola lettura e aggiorna le impostazioni del profilo.</p>
                 </div>
               </div>
-              <div class="summaryCardGrid">
-                <article class="summaryMetricCard">
-                  <span>Referti archiviati</span>
-                  <strong>{{ personalArchiveDrafts.length }}</strong>
-                  <small>Documenti completati collegati al tuo profilo professionale.</small>
+              <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr);gap:18px;">
+                <article style="display:flex;flex-direction:column;gap:16px;padding:24px;border:1px solid var(--rr-color-border);border-radius:24px;background:var(--rr-color-surface-alt);box-shadow:var(--rr-shadow-sm);">
+                  <div class="draftMetaRow" style="margin-top:0;">
+                    <span class="entryEyebrow" style="background:var(--rr-color-neutral-soft);color:var(--rr-color-neutral);">Archivio personale</span>
+                    <span class="draftMetaPill muted">Sola lettura</span>
+                  </div>
+                  <div>
+                    <h3 style="margin:0 0 8px;font-size:28px;line-height:1.1;color:var(--rr-color-text);">Il tuo contesto e archivistico</h3>
+                    <p style="margin:0;color:var(--rr-color-text-secondary);line-height:1.6;">Qui trovi solo documenti gia completati e collegati al tuo profilo. Le code di refertazione restano separate e non entrano mai in questa vista.</p>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;">
+                    <article class="summaryMetricCard" style="padding:18px 18px 16px;border-radius:20px;background:var(--rr-color-surface);">
+                      <span>Referti archiviati</span>
+                      <strong>{{ personalArchiveDrafts.length }}</strong>
+                      <small>Record disponibili per consultazione.</small>
+                    </article>
+                    <article class="summaryMetricCard" style="padding:18px 18px 16px;border-radius:20px;background:var(--rr-color-surface);">
+                      <span>Postura del ruolo</span>
+                      <strong>Readonly</strong>
+                      <small>Nessuna attivita clinica da completare qui.</small>
+                    </article>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+                    <div style="padding:12px 14px;border:1px solid var(--rr-color-border-soft);border-radius:16px;background:var(--rr-color-surface);">
+                      <strong style="display:block;font-size:13px;color:var(--rr-color-text);">Archivio unificato</strong>
+                      <small style="display:block;margin-top:4px;color:var(--rr-color-text-muted);">Tipi e PDF restano visibili senza trasformare la vista in una coda.</small>
+                    </div>
+                    <div style="padding:12px 14px;border:1px solid var(--rr-color-border-soft);border-radius:16px;background:var(--rr-color-surface);">
+                      <strong style="display:block;font-size:13px;color:var(--rr-color-text);">Ruolo dichiarato</strong>
+                      <small style="display:block;margin-top:4px;color:var(--rr-color-text-muted);">Lettura e consultazione prima di tutto.</small>
+                    </div>
+                  </div>
+                </article>
+                <article style="display:flex;flex-direction:column;justify-content:space-between;gap:14px;padding:24px;border:1px solid var(--rr-color-border);border-radius:24px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
+                  <div>
+                    <span class="entryEyebrow" style="background:var(--rr-color-brand-soft);color:var(--rr-color-info);">Contesto</span>
+                    <h3 style="margin:12px 0 8px;font-size:22px;color:var(--rr-color-text);">Apri l'archivio personale</h3>
+                    <p style="margin:0;color:var(--rr-color-text-secondary);line-height:1.6;">Usa questa area per rivedere i referti collegati al tuo profilo e raggiungere il PDF firmato quando disponibile, senza introdurre ambiguita operative.</p>
+                  </div>
+                  <button type="button" class="btn ghost" style="align-self:flex-start;" (click)="setRefertatoreSection('archive')">
+                    Vai all'archivio
+                  </button>
                 </article>
               </div>
             </section>
@@ -893,8 +1470,8 @@
                 @if (!personalArchiveDrafts.length) {
                   <div class="emptyStateCard">Nessun referto presente nel tuo archivio personale.</div>
                 } @else {
-                  <div class="draftTableWrap">
-                    <div class="draftTable draftTableHead refertatoreTableArchive">
+                  <div class="draftTableWrap" style="padding:12px;border-color:var(--rr-color-border-soft);background:var(--rr-color-surface-muted);">
+                    <div class="draftTable draftTableHead refertatoreTableArchive" style="gap:16px;align-items:start;padding:14px 18px;border:1px solid var(--rr-color-border);border-radius:14px;background:var(--rr-color-surface);font-size:11px;letter-spacing:.08em;color:var(--rr-color-text-muted);">
                       <div>Paziente</div>
                       <div>Tipo</div>
                       <div>Professionista</div>
@@ -902,15 +1479,28 @@
                       <div>Azioni</div>
                     </div>
                     @for (draft of personalArchiveDrafts; track draft.id) {
-                      <div class="draftTable draftTableRow refertatoreTableArchive">
+                      <div class="draftTable draftTableRow refertatoreTableArchive" style="gap:16px;align-items:start;padding:16px 18px;margin-top:10px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
                         <div>
                           <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
                           <small>{{ formatDateValue(draft.data_nascita) }}</small>
+                          <div class="draftMetaRow" style="margin-top:8px;">
+                            @if (draft.codice_fiscale) {
+                              <span class="draftMetaText">CF {{ draft.codice_fiscale }}</span>
+                            }
+                          </div>
                         </div>
-                        <div>{{ reportTypeLabelFor(draft.tipo_referto) }}</div>
-                        <div>{{ draft.medico_refertatore || draft.assigned_refertatore_name || '-' }}</div>
-                        <div>{{ formatDateTime(draft.completed_at || draft.updated_at) }}</div>
-                        <div class="draftRowActions adminRowActions">
+                        <div>
+                          <ng-container [ngTemplateOutlet]="typeBadgeTpl" [ngTemplateOutletContext]="{ type: draft.tipo_referto }"></ng-container>
+                        </div>
+                        <div>
+                          <strong>{{ draft.medico_refertatore || draft.assigned_refertatore_name || '-' }}</strong>
+                          <small>{{ draft.specializzazione || 'Archivio personale' }}</small>
+                        </div>
+                        <div>
+                          <strong>{{ formatDateTime(draft.completed_at || draft.updated_at) }}</strong>
+                          <small>Consultazione in sola lettura</small>
+                        </div>
+                        <div class="draftRowActions adminRowActions" style="flex-direction:column;white-space:normal;">
                           <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openPersonalArchiveDraft(draft.id)">
                             {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
                           </button>
@@ -928,45 +1518,107 @@
             }
           } @else {
           @if (showRefertatoreTabs) {
-            <div class="dashboardSegmentTabs">
-              <button type="button" class="segmentTabBtn" [class.isActive]="activeRefertatoreTab === 'emg'" (click)="setRefertatoreTab('emg')">
-                EMG
-                @if (refertatorePendingBadge('emg')) {
-                  <span class="segmentBadge">{{ refertatorePendingBadge('emg') }}</span>
-                }
-              </button>
-              <button type="button" class="segmentTabBtn" [class.isActive]="activeRefertatoreTab === 'psg'" (click)="setRefertatoreTab('psg')">
-                PSG
-                @if (refertatorePendingBadge('psg')) {
-                  <span class="segmentBadge">{{ refertatorePendingBadge('psg') }}</span>
-                }
-              </button>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;border:1px solid var(--rr-color-border);border-radius:24px;background:var(--rr-color-surface-alt);box-shadow:var(--rr-shadow-sm);">
+              <div style="display:flex;flex-direction:column;gap:4px;min-width:0;">
+                <strong style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Filtro tipo secondario</strong>
+                <small style="color:var(--rr-color-text-secondary);line-height:1.5;">La coda resta action-first: EMG e PSG servono solo a restringere il contesto clinico attivo.</small>
+              </div>
+              <div class="dashboardSegmentTabs" style="margin:0;">
+                <button type="button" class="segmentTabBtn" [class.isActive]="activeRefertatoreTab === 'emg'" (click)="setRefertatoreTab('emg')">
+                  EMG
+                  @if (refertatorePendingBadge('emg')) {
+                    <span class="segmentBadge">{{ refertatorePendingBadge('emg') }}</span>
+                  }
+                </button>
+                <button type="button" class="segmentTabBtn" [class.isActive]="activeRefertatoreTab === 'psg'" (click)="setRefertatoreTab('psg')">
+                  PSG
+                  @if (refertatorePendingBadge('psg')) {
+                    <span class="segmentBadge">{{ refertatorePendingBadge('psg') }}</span>
+                  }
+                </button>
+              </div>
             </div>
           }
 
           @if (refertatoreSection === 'dashboard') {
-            <section class="dashboardPanel">
+            <section class="dashboardPanel" style="border-radius:28px;">
               <div class="adminSectionHead">
                 <div>
-                  <h3>{{ activeRefertatoreTab === 'emg' ? 'Dashboard EMG' : 'Dashboard PSG' }}</h3>
-                  <p>Gestisci le attivita assegnate, i referti da firmare e l'archivio del percorso selezionato.</p>
+                  <h3>Da fare ora</h3>
+                  <p>Prioritizza completamento clinico, firma e archivio del percorso attivo senza perdere il contesto operativo.</p>
                 </div>
               </div>
-              <div class="summaryCardGrid">
-                <article class="summaryMetricCard">
-                  <span>Da refertare</span>
-                  <strong>{{ draftsToCompleteByType(activeRefertatoreTab).length }}</strong>
-                  <small>Referti da completare nel percorso {{ activeRefertatoreTab | uppercase }}</small>
+              <div style="display:grid;grid-template-columns:minmax(0,1.68fr) minmax(320px,.92fr);gap:18px;">
+                <article style="display:flex;flex-direction:column;gap:16px;padding:24px;border:1px solid var(--rr-color-border);border-radius:24px;background:var(--rr-color-surface-alt);box-shadow:var(--rr-shadow-sm);">
+                  <div class="draftMetaRow" style="margin-top:0;">
+                    <span class="entryEyebrow" style="background:var(--rr-color-info-soft);color:var(--rr-color-info);">Coda operativa</span>
+                    <ng-container [ngTemplateOutlet]="typeBadgeTpl" [ngTemplateOutletContext]="{ type: activeRefertatoreTab }"></ng-container>
+                  </div>
+                  <div>
+                    <h3 style="margin:0 0 8px;font-size:28px;line-height:1.1;color:var(--rr-color-text);">La prossima azione deve essere evidente</h3>
+                    <p style="margin:0;color:var(--rr-color-text-secondary);line-height:1.6;">Il percorso {{ activeRefertatoreTab | uppercase }} resta un contesto secondario: prima vedi cosa completare, cosa firmare e cosa e gia definitivo.</p>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;">
+                    <button type="button" class="summaryMetricCard" style="align-items:flex-start;text-align:left;padding:18px 18px 16px;border-radius:20px;background:var(--rr-color-surface);cursor:pointer;" (click)="setRefertatoreSection('toReview')">
+                      <span>Da refertare</span>
+                      <strong>{{ draftsToCompleteByType(activeRefertatoreTab).length }}</strong>
+                      <small>Code cliniche assegnate da completare.</small>
+                    </button>
+                    <button type="button" class="summaryMetricCard" style="align-items:flex-start;text-align:left;padding:18px 18px 16px;border-radius:20px;background:var(--rr-color-surface);cursor:pointer;" (click)="setRefertatoreSection('documents')">
+                      <span>Da firmare</span>
+                      <strong>{{ readyForSignatureDraftsByType(activeRefertatoreTab).length }}</strong>
+                      <small>PDF firmati ancora da acquisire.</small>
+                    </button>
+                    <button type="button" class="summaryMetricCard" style="align-items:flex-start;text-align:left;padding:18px 18px 16px;border-radius:20px;background:var(--rr-color-surface);cursor:pointer;" (click)="setRefertatoreSection('archive')">
+                      <span>Archivio</span>
+                      <strong>{{ archiveRefertatoreDrafts(activeRefertatoreTab).length }}</strong>
+                      <small>Referti definitivi gia disponibili.</small>
+                    </button>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;">
+                    <div style="padding:12px 14px;border:1px solid var(--rr-color-border-soft);border-radius:16px;background:var(--rr-color-surface);">
+                      <strong style="display:block;font-size:13px;color:var(--rr-color-text);">Apri e completa</strong>
+                      <small style="display:block;margin-top:4px;color:var(--rr-color-text-muted);">Le tabelle sotto restano il luogo operativo.</small>
+                    </div>
+                    <div style="padding:12px 14px;border:1px solid var(--rr-color-border-soft);border-radius:16px;background:var(--rr-color-surface);">
+                      <strong style="display:block;font-size:13px;color:var(--rr-color-text);">Firma come fase decisiva</strong>
+                      <small style="display:block;margin-top:4px;color:var(--rr-color-text-muted);">Il preview resta preparatorio, non finale.</small>
+                    </div>
+                    <div style="padding:12px 14px;border:1px solid var(--rr-color-border-soft);border-radius:16px;background:var(--rr-color-surface);">
+                      <strong style="display:block;font-size:13px;color:var(--rr-color-text);">Archivio come esito</strong>
+                      <small style="display:block;margin-top:4px;color:var(--rr-color-text-muted);">Il firmato caricato non perde certezza per via di Drive.</small>
+                    </div>
+                  </div>
                 </article>
-                <article class="summaryMetricCard">
-                  <span>Referti da firmare</span>
-                  <strong>{{ readyForSignatureDraftsByType(activeRefertatoreTab).length }}</strong>
-                  <small>PDF firmati da acquisire nel sistema</small>
-                </article>
-                <article class="summaryMetricCard">
-                  <span>Archivio referti</span>
-                  <strong>{{ archiveRefertatoreDrafts(activeRefertatoreTab).length }}</strong>
-                  <small>Referti completati gia presenti nel tuo archivio</small>
+                <article style="display:flex;flex-direction:column;justify-content:space-between;gap:14px;padding:24px;border:1px solid var(--rr-color-border);border-radius:24px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
+                  <div>
+                    <span class="entryEyebrow" style="background:var(--rr-color-warning-soft);color:var(--rr-color-warning);">Da fare ora</span>
+                    <h3 style="margin:12px 0 8px;font-size:22px;color:var(--rr-color-text);">Muoviti per coda, non per tipo</h3>
+                    <p style="margin:0;color:var(--rr-color-text-secondary);line-height:1.6;">Le tabelle sotto restano il luogo di esecuzione. Qui sopra vedi solo quale coda merita il prossimo click e quale passaggio e davvero finale.</p>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:10px;">
+                    <button type="button" class="ghostLinkBtn" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-radius:18px;" (click)="setRefertatoreSection('toReview')">
+                      <span style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
+                        <strong style="font-size:14px;color:var(--rr-color-text);">Apri la coda clinica</strong>
+                        <small style="color:var(--rr-color-text-muted);">Referti da completare e chiudere.</small>
+                      </span>
+                      <span class="draftMetaPill">{{ draftsToCompleteByType(activeRefertatoreTab).length }}</span>
+                    </button>
+                    <button type="button" class="ghostLinkBtn" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-radius:18px;" (click)="setRefertatoreSection('documents')">
+                      <span style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
+                        <strong style="font-size:14px;color:var(--rr-color-text);">Chiudi i documenti da firmare</strong>
+                        <small style="color:var(--rr-color-text-muted);">Passaggio finale prima dell’archivio.</small>
+                      </span>
+                      <ng-container [ngTemplateOutlet]="actionBadgeTpl" [ngTemplateOutletContext]="{ kind: 'toSign' }"></ng-container>
+                    </button>
+                    <button type="button" class="ghostLinkBtn" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-radius:18px;" (click)="setRefertatoreSection('archive')">
+                      <span style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
+                        <strong style="font-size:14px;color:var(--rr-color-text);">Raggiungi l'archivio definitivo</strong>
+                        <small style="color:var(--rr-color-text-muted);">Documenti gia chiusi e consultabili.</small>
+                      </span>
+                      <span class="draftMetaPill muted">{{ archiveRefertatoreDrafts(activeRefertatoreTab).length }}</span>
+                    </button>
+                  </div>
                 </article>
               </div>
             </section>
@@ -983,8 +1635,8 @@
               @if (!personalArchiveDrafts.length) {
                 <div class="emptyStateCard">Nessun referto standard presente nel tuo archivio.</div>
               } @else {
-                <div class="draftTableWrap">
-                  <div class="draftTable draftTableHead refertatoreTableArchive">
+                <div class="draftTableWrap" style="padding:12px;border-color:var(--rr-color-border-soft);background:var(--rr-color-surface-muted);">
+                  <div class="draftTable draftTableHead refertatoreTableArchive" style="gap:16px;align-items:start;padding:14px 18px;border:1px solid var(--rr-color-border);border-radius:14px;background:var(--rr-color-surface);font-size:11px;letter-spacing:.08em;color:var(--rr-color-text-muted);">
                     <div>Paziente</div>
                     <div>Tipo</div>
                     <div>Professionista</div>
@@ -992,15 +1644,28 @@
                     <div>Azioni</div>
                   </div>
                   @for (draft of personalArchiveDrafts; track draft.id) {
-                    <div class="draftTable draftTableRow refertatoreTableArchive">
+                    <div class="draftTable draftTableRow refertatoreTableArchive" style="gap:16px;align-items:start;padding:16px 18px;margin-top:10px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
                       <div>
                         <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
                         <small>{{ formatDateValue(draft.data_nascita) }}</small>
+                        <div class="draftMetaRow" style="margin-top:8px;">
+                          @if (draft.codice_fiscale) {
+                            <span class="draftMetaText">CF {{ draft.codice_fiscale }}</span>
+                          }
+                        </div>
                       </div>
-                      <div>{{ reportTypeLabelFor(draft.tipo_referto) }}</div>
-                      <div>{{ draft.medico_refertatore || draft.assigned_refertatore_name || '-' }}</div>
-                      <div>{{ formatDateTime(draft.completed_at || draft.updated_at) }}</div>
-                      <div class="draftRowActions adminRowActions">
+                      <div>
+                        <ng-container [ngTemplateOutlet]="typeBadgeTpl" [ngTemplateOutletContext]="{ type: draft.tipo_referto }"></ng-container>
+                      </div>
+                      <div>
+                        <strong>{{ draft.medico_refertatore || draft.assigned_refertatore_name || '-' }}</strong>
+                        <small>{{ draft.specializzazione || 'Archivio personale' }}</small>
+                      </div>
+                      <div>
+                        <strong>{{ formatDateTime(draft.completed_at || draft.updated_at) }}</strong>
+                        <small>Consultazione in sola lettura</small>
+                      </div>
+                      <div class="draftRowActions adminRowActions" style="flex-direction:column;white-space:normal;">
                         <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openPersonalArchiveDraft(draft.id)">
                           {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
                         </button>
@@ -1026,15 +1691,24 @@
                 <section class="reviewerStageCard">
                   <div class="reviewerStageHead">
                     <div>
+                      <div class="draftMetaRow" style="margin-top:0;margin-bottom:10px;">
+                        <ng-container [ngTemplateOutlet]="actionBadgeTpl" [ngTemplateOutletContext]="{ kind: 'toReview' }"></ng-container>
+                        <ng-container [ngTemplateOutlet]="typeBadgeTpl" [ngTemplateOutletContext]="{ type: 'emg' }"></ng-container>
+                      </div>
                       <h4>Da completare</h4>
                       <p>Referti EMG in attesa di completamento clinico.</p>
+                    </div>
+                    <div style="min-width:170px;padding:14px 16px;border:1px solid var(--rr-color-border);border-radius:18px;background:var(--rr-color-surface-alt);">
+                      <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">In coda</span>
+                      <strong style="display:block;margin-top:6px;font-size:30px;line-height:1;color:var(--rr-color-text);">{{ draftsToCompleteByType('emg').length }}</strong>
+                      <small style="display:block;margin-top:6px;color:var(--rr-color-text-muted);">Referti da aprire e completare.</small>
                     </div>
                   </div>
                   @if (!draftsToCompleteByType('emg').length) {
                     <div class="emptyStateCard">Nessun referto EMG da completare.</div>
                   } @else {
-                    <div class="draftTableWrap">
-                      <div class="draftTable draftTableHead refertatoreTable">
+                    <div class="draftTableWrap" style="padding:12px;border-color:var(--rr-color-border-soft);background:var(--rr-color-surface-muted);">
+                      <div class="draftTable draftTableHead refertatoreTable" style="gap:16px;align-items:start;padding:14px 18px;border:1px solid var(--rr-color-border);border-radius:14px;background:var(--rr-color-surface);font-size:11px;letter-spacing:.08em;color:var(--rr-color-text-muted);">
                         <div>Paziente</div>
                         <div>Data esame</div>
                         <div>Stato</div>
@@ -1042,15 +1716,31 @@
                         <div>Azioni</div>
                       </div>
                       @for (draft of draftsToCompleteByType('emg'); track draft.id) {
-                        <div class="draftTable draftTableRow refertatoreTable">
+                        <div class="draftTable draftTableRow refertatoreTable" style="gap:16px;align-items:start;padding:16px 18px;margin-top:10px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
                           <div>
                             <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
                             <small>{{ formatDateValue(draft.data_nascita) }}</small>
+                            <div class="draftMetaRow" style="margin-top:8px;">
+                              @if (draft.codice_fiscale) {
+                                <span class="draftMetaText">CF {{ draft.codice_fiscale }}</span>
+                              }
+                            </div>
                           </div>
-                          <div>{{ formatDateValue(draft.data_esame) }}</div>
-                          <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                          <div>{{ formatDateTime(draft.updated_at) }}</div>
-                          <div class="draftRowActions adminRowActions">
+                          <div>
+                            <strong>{{ formatDateValue(draft.data_esame) }}</strong>
+                            <small>{{ draft.prestazione || 'Esame EMG assegnato' }}</small>
+                          </div>
+                          <div>
+                            <ng-container [ngTemplateOutlet]="workflowBadgeTpl" [ngTemplateOutletContext]="{ status: draft.stato }"></ng-container>
+                            <div class="draftMetaRow" style="margin-top:8px;">
+                              <ng-container [ngTemplateOutlet]="actionBadgeTpl" [ngTemplateOutletContext]="{ kind: 'toReview' }"></ng-container>
+                            </div>
+                          </div>
+                          <div>
+                            <strong>{{ formatDateTime(draft.updated_at) }}</strong>
+                            <small>Ultimo aggiornamento</small>
+                          </div>
+                          <div class="draftRowActions adminRowActions" style="flex-direction:column;white-space:normal;">
                             <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
                               {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri e completa' }}
                             </button>
@@ -1066,15 +1756,24 @@
                 <section class="reviewerStageCard">
                   <div class="reviewerStageHead">
                     <div>
+                      <div class="draftMetaRow" style="margin-top:0;margin-bottom:10px;">
+                        <ng-container [ngTemplateOutlet]="actionBadgeTpl" [ngTemplateOutletContext]="{ kind: 'toSign' }"></ng-container>
+                        <ng-container [ngTemplateOutlet]="typeBadgeTpl" [ngTemplateOutletContext]="{ type: 'emg' }"></ng-container>
+                      </div>
                       <h4>Referti da firmare</h4>
                       <p>Acquisisci il PDF firmato definitivo per chiudere il referto.</p>
+                    </div>
+                    <div style="min-width:170px;padding:14px 16px;border:1px solid var(--rr-color-border);border-radius:18px;background:var(--rr-color-surface-alt);">
+                      <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Passaggio finale</span>
+                      <strong style="display:block;margin-top:6px;font-size:30px;line-height:1;color:var(--rr-color-text);">{{ readyForSignatureDraftsByType('emg').length }}</strong>
+                      <small style="display:block;margin-top:6px;color:var(--rr-color-text-muted);">PDF firmati ancora da acquisire.</small>
                     </div>
                   </div>
                   @if (!readyForSignatureDraftsByType('emg').length) {
                     <div class="emptyStateCard">Nessun referto EMG con PDF firmato da caricare.</div>
                   } @else {
-                    <div class="draftTableWrap">
-                      <div class="draftTable draftTableHead refertatoreTableReady">
+                    <div class="draftTableWrap" style="padding:12px;border-color:var(--rr-color-border-soft);background:var(--rr-color-surface-muted);">
+                      <div class="draftTable draftTableHead refertatoreTableReady" style="gap:16px;align-items:start;padding:14px 18px;border:1px solid var(--rr-color-border);border-radius:14px;background:var(--rr-color-surface);font-size:11px;letter-spacing:.08em;color:var(--rr-color-text-muted);">
                         <div>Paziente</div>
                         <div>Data esame</div>
                         <div>Stato</div>
@@ -1082,15 +1781,31 @@
                         <div>Azioni</div>
                       </div>
                       @for (draft of readyForSignatureDraftsByType('emg'); track draft.id) {
-                        <div class="draftTable draftTableRow refertatoreTableReady">
+                        <div class="draftTable draftTableRow refertatoreTableReady" style="gap:16px;align-items:start;padding:16px 18px;margin-top:10px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
                           <div>
                             <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
                             <small>{{ formatDateValue(draft.data_nascita) }}</small>
+                            <div class="draftMetaRow" style="margin-top:8px;">
+                              @if (draft.codice_fiscale) {
+                                <span class="draftMetaText">CF {{ draft.codice_fiscale }}</span>
+                              }
+                            </div>
                           </div>
-                          <div>{{ formatDateValue(draft.data_esame) }}</div>
-                          <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                          <div>{{ formatDateTime(draft.updated_at) }}</div>
-                          <div class="draftRowActions adminRowActions">
+                          <div>
+                            <strong>{{ formatDateValue(draft.data_esame) }}</strong>
+                            <small>{{ draft.prestazione || 'PDF firmato atteso' }}</small>
+                          </div>
+                          <div>
+                            <ng-container [ngTemplateOutlet]="workflowBadgeTpl" [ngTemplateOutletContext]="{ status: draft.stato }"></ng-container>
+                            <div class="draftMetaRow" style="margin-top:8px;">
+                              <ng-container [ngTemplateOutlet]="actionBadgeTpl" [ngTemplateOutletContext]="{ kind: 'toSign' }"></ng-container>
+                            </div>
+                          </div>
+                          <div>
+                            <strong>{{ formatDateTime(draft.updated_at) }}</strong>
+                            <small>In attesa del documento definitivo</small>
+                          </div>
+                          <div class="draftRowActions adminRowActions" style="flex-direction:column;white-space:normal;">
                             <button type="button" class="btn tiny primary" (click)="openDashboardSignedPdfModal(draft)">
                               Carica PDF firmato
                             </button>
@@ -1106,15 +1821,23 @@
                 <section class="reviewerStageCard">
                   <div class="reviewerStageHead">
                     <div>
+                      <div class="draftMetaRow" style="margin-top:0;margin-bottom:10px;">
+                        <ng-container [ngTemplateOutlet]="typeBadgeTpl" [ngTemplateOutletContext]="{ type: 'emg' }"></ng-container>
+                      </div>
                       <h4>Archivio referti</h4>
                       <p>Referti EMG completati e archiviati.</p>
+                    </div>
+                    <div style="min-width:170px;padding:14px 16px;border:1px solid var(--rr-color-border);border-radius:18px;background:var(--rr-color-surface-alt);">
+                      <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Definitivi</span>
+                      <strong style="display:block;margin-top:6px;font-size:30px;line-height:1;color:var(--rr-color-text);">{{ archiveRefertatoreDrafts('emg').length }}</strong>
+                      <small style="display:block;margin-top:6px;color:var(--rr-color-text-muted);">Documenti già chiusi e consultabili.</small>
                     </div>
                   </div>
                   @if (!archiveRefertatoreDrafts('emg').length) {
                     <div class="emptyStateCard">Nessun referto EMG completato nel tuo archivio.</div>
                   } @else {
-                    <div class="draftTableWrap">
-                      <div class="draftTable draftTableHead refertatoreTableArchive">
+                    <div class="draftTableWrap" style="padding:12px;border-color:var(--rr-color-border-soft);background:var(--rr-color-surface-muted);">
+                      <div class="draftTable draftTableHead refertatoreTableArchive" style="gap:16px;align-items:start;padding:14px 18px;border:1px solid var(--rr-color-border);border-radius:14px;background:var(--rr-color-surface);font-size:11px;letter-spacing:.08em;color:var(--rr-color-text-muted);">
                         <div>Paziente</div>
                         <div>Data esame</div>
                         <div>Stato</div>
@@ -1122,15 +1845,28 @@
                         <div>Azioni</div>
                       </div>
                       @for (draft of archiveRefertatoreDrafts('emg'); track draft.id) {
-                        <div class="draftTable draftTableRow refertatoreTableArchive">
+                        <div class="draftTable draftTableRow refertatoreTableArchive" style="gap:16px;align-items:start;padding:16px 18px;margin-top:10px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
                           <div>
                             <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
                             <small>{{ formatDateValue(draft.data_nascita) }}</small>
+                            <div class="draftMetaRow" style="margin-top:8px;">
+                              @if (draft.codice_fiscale) {
+                                <span class="draftMetaText">CF {{ draft.codice_fiscale }}</span>
+                              }
+                            </div>
                           </div>
-                          <div>{{ formatDateValue(draft.data_esame) }}</div>
-                          <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                          <div>{{ formatDateTime(draft.completed_at || draft.updated_at) }}</div>
-                          <div class="draftRowActions adminRowActions">
+                          <div>
+                            <strong>{{ formatDateValue(draft.data_esame) }}</strong>
+                            <small>{{ draft.prestazione || 'Referto EMG archiviato' }}</small>
+                          </div>
+                          <div>
+                            <ng-container [ngTemplateOutlet]="workflowBadgeTpl" [ngTemplateOutletContext]="{ status: draft.stato }"></ng-container>
+                          </div>
+                          <div>
+                            <strong>{{ formatDateTime(draft.completed_at || draft.updated_at) }}</strong>
+                            <small>Documento definitivo disponibile</small>
+                          </div>
+                          <div class="draftRowActions adminRowActions" style="flex-direction:column;white-space:normal;">
                             <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
                               {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
                             </button>
@@ -1164,15 +1900,24 @@
                 <section class="reviewerStageCard">
                   <div class="reviewerStageHead">
                     <div>
+                      <div class="draftMetaRow" style="margin-top:0;margin-bottom:10px;">
+                        <ng-container [ngTemplateOutlet]="actionBadgeTpl" [ngTemplateOutletContext]="{ kind: 'toReview' }"></ng-container>
+                        <ng-container [ngTemplateOutlet]="typeBadgeTpl" [ngTemplateOutletContext]="{ type: 'psg' }"></ng-container>
+                      </div>
                       <h4>Da completare</h4>
                       <p>Referti PSG in attesa di completamento clinico.</p>
+                    </div>
+                    <div style="min-width:170px;padding:14px 16px;border:1px solid var(--rr-color-border);border-radius:18px;background:var(--rr-color-surface-alt);">
+                      <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">In coda</span>
+                      <strong style="display:block;margin-top:6px;font-size:30px;line-height:1;color:var(--rr-color-text);">{{ draftsToCompleteByType('psg').length }}</strong>
+                      <small style="display:block;margin-top:6px;color:var(--rr-color-text-muted);">Referti da aprire e completare.</small>
                     </div>
                   </div>
                   @if (!draftsToCompleteByType('psg').length) {
                     <div class="emptyStateCard">Nessun referto PSG da completare.</div>
                   } @else {
-                    <div class="draftTableWrap">
-                      <div class="draftTable draftTableHead refertatoreTable">
+                    <div class="draftTableWrap" style="padding:12px;border-color:var(--rr-color-border-soft);background:var(--rr-color-surface-muted);">
+                      <div class="draftTable draftTableHead refertatoreTable" style="gap:16px;align-items:start;padding:14px 18px;border:1px solid var(--rr-color-border);border-radius:14px;background:var(--rr-color-surface);font-size:11px;letter-spacing:.08em;color:var(--rr-color-text-muted);">
                         <div>Paziente</div>
                         <div>Data esame</div>
                         <div>Stato</div>
@@ -1180,15 +1925,31 @@
                         <div>Azioni</div>
                       </div>
                       @for (draft of draftsToCompleteByType('psg'); track draft.id) {
-                        <div class="draftTable draftTableRow refertatoreTable">
+                        <div class="draftTable draftTableRow refertatoreTable" style="gap:16px;align-items:start;padding:16px 18px;margin-top:10px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
                           <div>
                             <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
                             <small>{{ formatDateValue(draft.data_nascita) }}</small>
+                            <div class="draftMetaRow" style="margin-top:8px;">
+                              @if (draft.codice_fiscale) {
+                                <span class="draftMetaText">CF {{ draft.codice_fiscale }}</span>
+                              }
+                            </div>
                           </div>
-                          <div>{{ formatDateValue(draft.data_esame) }}</div>
-                          <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                          <div>{{ formatDateTime(draft.updated_at) }}</div>
-                          <div class="draftRowActions adminRowActions">
+                          <div>
+                            <strong>{{ formatDateValue(draft.data_esame) }}</strong>
+                            <small>{{ draft.prestazione || 'Esame PSG assegnato' }}</small>
+                          </div>
+                          <div>
+                            <ng-container [ngTemplateOutlet]="workflowBadgeTpl" [ngTemplateOutletContext]="{ status: draft.stato }"></ng-container>
+                            <div class="draftMetaRow" style="margin-top:8px;">
+                              <ng-container [ngTemplateOutlet]="actionBadgeTpl" [ngTemplateOutletContext]="{ kind: 'toReview' }"></ng-container>
+                            </div>
+                          </div>
+                          <div>
+                            <strong>{{ formatDateTime(draft.updated_at) }}</strong>
+                            <small>Ultimo aggiornamento</small>
+                          </div>
+                          <div class="draftRowActions adminRowActions" style="flex-direction:column;white-space:normal;">
                             <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
                               {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri e completa' }}
                             </button>
@@ -1204,15 +1965,24 @@
                 <section class="reviewerStageCard">
                   <div class="reviewerStageHead">
                     <div>
+                      <div class="draftMetaRow" style="margin-top:0;margin-bottom:10px;">
+                        <ng-container [ngTemplateOutlet]="actionBadgeTpl" [ngTemplateOutletContext]="{ kind: 'toSign' }"></ng-container>
+                        <ng-container [ngTemplateOutlet]="typeBadgeTpl" [ngTemplateOutletContext]="{ type: 'psg' }"></ng-container>
+                      </div>
                       <h4>Referti da firmare</h4>
                       <p>Acquisisci il PDF firmato definitivo per chiudere il referto.</p>
+                    </div>
+                    <div style="min-width:170px;padding:14px 16px;border:1px solid var(--rr-color-border);border-radius:18px;background:var(--rr-color-surface-alt);">
+                      <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Passaggio finale</span>
+                      <strong style="display:block;margin-top:6px;font-size:30px;line-height:1;color:var(--rr-color-text);">{{ readyForSignatureDraftsByType('psg').length }}</strong>
+                      <small style="display:block;margin-top:6px;color:var(--rr-color-text-muted);">PDF firmati ancora da acquisire.</small>
                     </div>
                   </div>
                   @if (!readyForSignatureDraftsByType('psg').length) {
                     <div class="emptyStateCard">Nessun referto PSG con PDF firmato da caricare.</div>
                   } @else {
-                    <div class="draftTableWrap">
-                      <div class="draftTable draftTableHead refertatoreTableReady">
+                    <div class="draftTableWrap" style="padding:12px;border-color:var(--rr-color-border-soft);background:var(--rr-color-surface-muted);">
+                      <div class="draftTable draftTableHead refertatoreTableReady" style="gap:16px;align-items:start;padding:14px 18px;border:1px solid var(--rr-color-border);border-radius:14px;background:var(--rr-color-surface);font-size:11px;letter-spacing:.08em;color:var(--rr-color-text-muted);">
                         <div>Paziente</div>
                         <div>Data esame</div>
                         <div>Stato</div>
@@ -1220,15 +1990,31 @@
                         <div>Azioni</div>
                       </div>
                       @for (draft of readyForSignatureDraftsByType('psg'); track draft.id) {
-                        <div class="draftTable draftTableRow refertatoreTableReady">
+                        <div class="draftTable draftTableRow refertatoreTableReady" style="gap:16px;align-items:start;padding:16px 18px;margin-top:10px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
                           <div>
                             <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
                             <small>{{ formatDateValue(draft.data_nascita) }}</small>
+                            <div class="draftMetaRow" style="margin-top:8px;">
+                              @if (draft.codice_fiscale) {
+                                <span class="draftMetaText">CF {{ draft.codice_fiscale }}</span>
+                              }
+                            </div>
                           </div>
-                          <div>{{ formatDateValue(draft.data_esame) }}</div>
-                          <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                          <div>{{ formatDateTime(draft.updated_at) }}</div>
-                          <div class="draftRowActions adminRowActions">
+                          <div>
+                            <strong>{{ formatDateValue(draft.data_esame) }}</strong>
+                            <small>{{ draft.prestazione || 'PDF firmato atteso' }}</small>
+                          </div>
+                          <div>
+                            <ng-container [ngTemplateOutlet]="workflowBadgeTpl" [ngTemplateOutletContext]="{ status: draft.stato }"></ng-container>
+                            <div class="draftMetaRow" style="margin-top:8px;">
+                              <ng-container [ngTemplateOutlet]="actionBadgeTpl" [ngTemplateOutletContext]="{ kind: 'toSign' }"></ng-container>
+                            </div>
+                          </div>
+                          <div>
+                            <strong>{{ formatDateTime(draft.updated_at) }}</strong>
+                            <small>In attesa del documento definitivo</small>
+                          </div>
+                          <div class="draftRowActions adminRowActions" style="flex-direction:column;white-space:normal;">
                             <button type="button" class="btn tiny primary" (click)="openDashboardSignedPdfModal(draft)">
                               Carica PDF firmato
                             </button>
@@ -1244,15 +2030,23 @@
                 <section class="reviewerStageCard">
                   <div class="reviewerStageHead">
                     <div>
+                      <div class="draftMetaRow" style="margin-top:0;margin-bottom:10px;">
+                        <ng-container [ngTemplateOutlet]="typeBadgeTpl" [ngTemplateOutletContext]="{ type: 'psg' }"></ng-container>
+                      </div>
                       <h4>Archivio referti</h4>
                       <p>Referti PSG completati e archiviati.</p>
+                    </div>
+                    <div style="min-width:170px;padding:14px 16px;border:1px solid var(--rr-color-border);border-radius:18px;background:var(--rr-color-surface-alt);">
+                      <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Definitivi</span>
+                      <strong style="display:block;margin-top:6px;font-size:30px;line-height:1;color:var(--rr-color-text);">{{ archiveRefertatoreDrafts('psg').length }}</strong>
+                      <small style="display:block;margin-top:6px;color:var(--rr-color-text-muted);">Documenti già chiusi e consultabili.</small>
                     </div>
                   </div>
                   @if (!archiveRefertatoreDrafts('psg').length) {
                     <div class="emptyStateCard">Nessun referto PSG completato nel tuo archivio.</div>
                   } @else {
-                    <div class="draftTableWrap">
-                      <div class="draftTable draftTableHead refertatoreTableArchive">
+                    <div class="draftTableWrap" style="padding:12px;border-color:var(--rr-color-border-soft);background:var(--rr-color-surface-muted);">
+                      <div class="draftTable draftTableHead refertatoreTableArchive" style="gap:16px;align-items:start;padding:14px 18px;border:1px solid var(--rr-color-border);border-radius:14px;background:var(--rr-color-surface);font-size:11px;letter-spacing:.08em;color:var(--rr-color-text-muted);">
                         <div>Paziente</div>
                         <div>Data esame</div>
                         <div>Stato</div>
@@ -1260,15 +2054,28 @@
                         <div>Azioni</div>
                       </div>
                       @for (draft of archiveRefertatoreDrafts('psg'); track draft.id) {
-                        <div class="draftTable draftTableRow refertatoreTableArchive">
+                        <div class="draftTable draftTableRow refertatoreTableArchive" style="gap:16px;align-items:start;padding:16px 18px;margin-top:10px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
                           <div>
                             <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
                             <small>{{ formatDateValue(draft.data_nascita) }}</small>
+                            <div class="draftMetaRow" style="margin-top:8px;">
+                              @if (draft.codice_fiscale) {
+                                <span class="draftMetaText">CF {{ draft.codice_fiscale }}</span>
+                              }
+                            </div>
                           </div>
-                          <div>{{ formatDateValue(draft.data_esame) }}</div>
-                          <div><span class="draftRowStatus">{{ draftStatusLabel(draft.stato) }}</span></div>
-                          <div>{{ formatDateTime(draft.completed_at || draft.updated_at) }}</div>
-                          <div class="draftRowActions adminRowActions">
+                          <div>
+                            <strong>{{ formatDateValue(draft.data_esame) }}</strong>
+                            <small>{{ draft.prestazione || 'Referto PSG archiviato' }}</small>
+                          </div>
+                          <div>
+                            <ng-container [ngTemplateOutlet]="workflowBadgeTpl" [ngTemplateOutletContext]="{ status: draft.stato }"></ng-container>
+                          </div>
+                          <div>
+                            <strong>{{ formatDateTime(draft.completed_at || draft.updated_at) }}</strong>
+                            <small>Documento definitivo disponibile</small>
+                          </div>
+                          <div class="draftRowActions adminRowActions" style="flex-direction:column;white-space:normal;">
                             <button type="button" class="btn tiny ghost" [disabled]="refertatoreOpeningDraftId === draft.id" (click)="openRefertatoreDraft(draft.id)">
                               {{ refertatoreOpeningDraftId === draft.id ? 'Apro...' : 'Apri' }}
                             </button>
@@ -1291,6 +2098,7 @@
         }
           </div>
         </div>
+        </div>
       </section>
     </main>
   } @else {
@@ -1309,22 +2117,80 @@
     <main class="main" [class.mainAppShell]="isDashboardShellMode">
       <section class="card" [class.cardAppShell]="isDashboardShellMode">
         <div class="cardHead">
-          <div class="cardHeadTop">
-            <span class="typeBadge">{{ selectedTypeLabel }}</span>
+          <div style="display:grid;grid-template-columns:minmax(0,1.45fr) minmax(280px,.9fr);gap:18px;align-items:stretch;">
+            <article style="display:flex;flex-direction:column;gap:16px;padding:20px 22px;border:1px solid var(--rr-color-border);border-radius:24px;background:var(--rr-color-surface-alt);box-shadow:var(--rr-shadow-sm);">
+              <div class="cardHeadTop" style="margin-bottom:0;justify-content:flex-start;">
+                <span class="typeBadge">{{ selectedTypeLabel }}</span>
+                <span class="draftMetaPill muted" style="text-transform:uppercase;letter-spacing:.06em;">
+                  Step {{ step + 1 }} / {{ steps.length }}
+                </span>
+              </div>
+
+              <div>
+                <h2 style="margin:0 0 8px;font-size:30px;line-height:1.1;">{{ steps[step].title }}</h2>
+                <p class="hint" style="margin-top:0;font-size:14px;line-height:1.6;color:var(--rr-color-text-secondary);">{{ stepHint() }}</p>
+              </div>
+
+              <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;">
+                <div style="padding:12px 14px;border:1px solid var(--rr-color-border-soft);border-radius:16px;background:var(--rr-color-surface);">
+                  <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Fase</span>
+                  <strong style="display:block;margin-top:6px;font-size:15px;color:var(--rr-color-text);">
+                    {{
+                      step <= 1
+                        ? 'Raccolta dati'
+                        : step === 2
+                          ? 'Impostazione contenuto'
+                          : 'Stesura finale'
+                    }}
+                  </strong>
+                </div>
+                <div style="padding:12px 14px;border:1px solid var(--rr-color-border-soft);border-radius:16px;background:var(--rr-color-surface);">
+                  <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Prossima azione</span>
+                  <strong style="display:block;margin-top:6px;font-size:15px;color:var(--rr-color-text);">{{ canProceedLabel() }}</strong>
+                </div>
+                <div style="padding:12px 14px;border:1px solid var(--rr-color-border-soft);border-radius:16px;background:var(--rr-color-surface);">
+                  <span style="display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rr-color-text-muted);">Bozza</span>
+                  <strong style="display:block;margin-top:6px;font-size:15px;color:var(--rr-color-text);">{{ currentDraftId ? 'Attiva' : 'Non ancora salvata' }}</strong>
+                </div>
+              </div>
+            </article>
+
+            <article style="display:flex;flex-direction:column;justify-content:space-between;gap:14px;padding:20px 22px;border:1px solid var(--rr-color-border);border-radius:24px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
+              <div>
+                <span class="entryEyebrow" style="background:var(--rr-color-neutral-soft);color:var(--rr-color-neutral);">
+                  {{
+                    completedReadonlyMode
+                      ? 'Consultazione'
+                      : reviewerMode
+                        ? 'Refertatore'
+                        : 'Compilazione'
+                  }}
+                </span>
+                <h3 style="margin:12px 0 8px;font-size:20px;color:var(--rr-color-text);">Orientamento del workflow</h3>
+                <p style="margin:0;color:var(--rr-color-text-secondary);line-height:1.6;">
+                  {{
+                    completedReadonlyMode
+                      ? 'Stai consultando un referto gia chiuso, con contenuti visibili in sola lettura.'
+                      : reviewerMode
+                        ? 'Il contesto resta clinico-operativo: completa il materiale assegnato senza perdere la distinzione tra sorgente e refertazione.'
+                        : 'Mantieni sempre visibili tipo referto, step corrente e prossima azione mentre costruisci la bozza.'
+                  }}
+                </p>
+              </div>
+
+              <div class="draftMetaRow" style="margin-top:0;">
+                @if (currentDraftId) {
+                  <span class="draftMetaPill">{{ completedReadonlyMode ? 'Referto archiviato' : 'Bozza attiva' }}</span>
+                  <span class="draftMetaText">ID: {{ currentDraftId }}</span>
+                } @else {
+                  <span class="draftMetaPill muted">Sessione non ancora salvata</span>
+                }
+                @if (currentDraftStatus) {
+                  <ng-container [ngTemplateOutlet]="workflowBadgeTpl" [ngTemplateOutletContext]="{ status: currentDraftStatus }"></ng-container>
+                }
+              </div>
+            </article>
           </div>
-
-          <h2>{{ steps[step].title }}</h2>
-          <p class="hint">{{ stepHint() }}</p>
-
-          @if (currentDraftId) {
-            <div class="draftMetaRow">
-              <span class="draftMetaPill">{{ completedReadonlyMode ? 'Referto archiviato' : 'Bozza attiva' }}</span>
-              <span class="draftMetaText">ID: {{ currentDraftId }}</span>
-              @if (currentDraftStatus) {
-                <span class="draftMetaPill muted">{{ currentDraftStatus }}</span>
-              }
-            </div>
-          }
         </div>
 
         <div class="cardBody">
@@ -1342,7 +2208,10 @@
                     }}
                   </p>
                   </div>
-                <span class="draftMetaPill">Completato</span>
+                <div class="draftMetaRow" style="margin-top:0;">
+                  <ng-container [ngTemplateOutlet]="workflowBadgeTpl" [ngTemplateOutletContext]="{ status: currentDraftStatus || 'firmato_caricato' }"></ng-container>
+                  <ng-container [ngTemplateOutlet]="driveBadgeTpl" [ngTemplateOutletContext]="{ saved: !!currentSignedStoredAttachment?.drive_file_id }"></ng-container>
+                </div>
               </div>
 
               @if (currentSignedStoredAttachment) {
@@ -1534,6 +2403,9 @@
             <div class="modalEyebrow">Area refertatore</div>
             <h3>Carica PDF firmato</h3>
             <p>Dopo aver firmato digitalmente il PDF esportato, caricalo qui per archiviarlo come referto definitivo.</p>
+            <div class="draftMetaRow" style="margin-top:12px;">
+              <ng-container [ngTemplateOutlet]="actionBadgeTpl" [ngTemplateOutletContext]="{ kind: 'uploadSignedPdf' }"></ng-container>
+            </div>
           </div>
           <button type="button" class="iconCloseBtn" (click)="closeDashboardSignedPdfModal()">Chiudi</button>
         </div>
@@ -1907,6 +2779,13 @@
                   : 'L\'azione non puo essere annullata dalla dashboard. Eventuali referti storici collegati resteranno conservati.'
               }}
             </p>
+            <div class="draftMetaRow" style="margin-top:12px;">
+              @if (deleteResourceTarget.kind === 'archiveDraft') {
+                <ng-container [ngTemplateOutlet]="riskBadgeTpl" [ngTemplateOutletContext]="{ kind: 'delicate' }"></ng-container>
+              } @else {
+                <ng-container [ngTemplateOutlet]="riskBadgeTpl" [ngTemplateOutletContext]="{ kind: 'destructive' }"></ng-container>
+              }
+            </div>
           </div>
           <button type="button" class="iconCloseBtn" (click)="closeDeleteResourceModal()">Chiudi</button>
         </div>
@@ -1987,7 +2866,13 @@
                   <div class="draftTable draftTableRow deliveryHistoryTable">
                     <div>{{ delivery.created_at | date: 'dd/MM/yyyy HH:mm' }}</div>
                     <div>{{ delivery.recipient_email_masked }}</div>
-                    <div><span class="draftRowStatus">{{ delivery.status === 'sent' ? 'Inviato' : 'Errore' }}</span></div>
+                    <div>
+                      @if (delivery.status === 'sent') {
+                        <ng-container [ngTemplateOutlet]="emailBadgeTpl" [ngTemplateOutletContext]="{ state: 'sent' }"></ng-container>
+                      } @else {
+                        <ng-container [ngTemplateOutlet]="actionBadgeTpl" [ngTemplateOutletContext]="{ kind: 'sendError' }"></ng-container>
+                      }
+                    </div>
                     <div>{{ delivery.subject }}</div>
                   </div>
                 }
@@ -2379,8 +3264,8 @@
               Nessuna bozza trovata con i filtri attuali.
             </div>
           } @else {
-            <div class="draftTableWrap">
-              <div class="draftTable draftTableHead">
+            <div class="draftTableWrap" style="padding:12px;border-color:var(--rr-color-border-soft);background:var(--rr-color-surface-muted);">
+              <div class="draftTable draftTableHead" style="gap:16px;align-items:start;padding:14px 18px;border:1px solid var(--rr-color-border);border-radius:14px;background:var(--rr-color-surface);font-size:11px;letter-spacing:.08em;color:var(--rr-color-text-muted);">
                 <div>Paziente</div>
                 <div>Stato</div>
                 <div>Data nascita</div>
@@ -2389,17 +3274,28 @@
               </div>
 
               @for (draft of drafts; track draft.id) {
-                <div class="draftTable draftTableRow draftTableRowCompact">
+                <div class="draftTable draftTableRow draftTableRowCompact" style="gap:16px;align-items:start;padding:16px 18px;margin-top:10px;border:1px solid var(--rr-color-border-soft);border-radius:18px;background:var(--rr-color-surface);box-shadow:var(--rr-shadow-sm);">
                   <div>
                     <strong>{{ draft.paziente_nome_completo || 'Paziente senza nome' }}</strong>
-                    @if (draft.codice_fiscale) {
-                      <small>{{ draft.codice_fiscale }}</small>
-                    }
+                    <div class="draftMetaRow" style="margin-top:8px;">
+                      <ng-container [ngTemplateOutlet]="typeBadgeTpl" [ngTemplateOutletContext]="{ type: draft.tipo_referto }"></ng-container>
+                      @if (draft.codice_fiscale) {
+                        <span class="draftMetaText">CF {{ draft.codice_fiscale }}</span>
+                      }
+                    </div>
                   </div>
-                  <div><span class="draftRowStatus">{{ draft.stato }}</span></div>
-                  <div>{{ formatDateValue(draft.data_nascita) }}</div>
-                  <div>{{ formatDateTime(draft.updated_at) }}</div>
-                  <div class="draftRowActions">
+                  <div>
+                    <ng-container [ngTemplateOutlet]="workflowBadgeTpl" [ngTemplateOutletContext]="{ status: draft.stato }"></ng-container>
+                  </div>
+                  <div>
+                    <strong>{{ formatDateValue(draft.data_nascita) }}</strong>
+                    <small>Data di nascita</small>
+                  </div>
+                  <div>
+                    <strong>{{ formatDateTime(draft.updated_at) }}</strong>
+                    <small>Ultimo aggiornamento</small>
+                  </div>
+                  <div class="draftRowActions" style="flex-direction:column;white-space:normal;">
                     <button
                       type="button"
                       class="btn tiny ghost"

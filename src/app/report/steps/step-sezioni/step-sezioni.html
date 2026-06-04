@@ -122,6 +122,10 @@
   } @else {
     <section class="panel">
       <div class="panelHead">
+        <div class="selectorEyebrowRow">
+          <span class="selectorEyebrow">Metodo di compilazione</span>
+          <span class="selectorSupport">Percorso consigliato: guidato</span>
+        </div>
         <h3>Come vuoi compilare il referto?</h3>
         <p>
           Scegli se usare una struttura guidata per sezioni oppure un unico campo
@@ -130,23 +134,37 @@
       </div>
 
       <div class="modeGrid">
-        <label class="modeCard">
+        <label class="modeCard modeCardRecommended">
           <input type="radio" [formControl]="modeControl" value="sezioni" />
 
-          <span>
+          <span class="modeCardBody">
+            <span class="modeCardTopline">
+              <span class="modeCardKicker">Percorso consigliato</span>
+              <span class="modeCardBadge">Strutturato</span>
+            </span>
             <strong>Referto guidato per sezioni</strong>
-            <small> Ideale per referti ordinati e standardizzati. </small>
+            <small>Ideale per un referto ordinato, professionale e standardizzato.</small>
+            <span class="modeCardPoints">
+              <span>Organizzazione per blocchi clinici</span>
+              <span>Maggiore controllo su contenuto e completezza</span>
+            </span>
           </span>
         </label>
 
-        <label class="modeCard">
+        <label class="modeCard modeCardSecondary">
           <input type="radio" [formControl]="modeControl" value="libero" />
 
-          <span>
+          <span class="modeCardBody">
+            <span class="modeCardTopline">
+              <span class="modeCardKicker muted">Alternativa</span>
+              <span class="modeCardBadge muted">Testo unico</span>
+            </span>
             <strong>Referto a testo libero</strong>
-            <small>
-              Ideale per scrivere tutto il referto in un unico blocco.
-            </small>
+            <small>Ideale per scrivere tutto il referto in un unico blocco, senza sezioni separate.</small>
+            <span class="modeCardPoints subdued">
+              <span>Maggiore flessibilita editoriale</span>
+              <span>Meno struttura, piu responsabilita di impaginazione clinica</span>
+            </span>
           </span>
         </label>
       </div>
@@ -155,17 +173,28 @@
     @if (modeControl.value === 'sezioni') {
       <section class="panel secondary">
         <div class="panelHead">
+          <div class="selectorEyebrowRow">
+            <span class="selectorEyebrow neutral">Sezioni del referto</span>
+            <span class="selectorSupport">{{ mandatorySectionKeys().length }} basi + {{ optionalSectionKeys().length }} facoltative</span>
+          </div>
           <h3>Quali sezioni vuoi includere?</h3>
           <p>Attiva solo le sezioni che devono comparire nel referto finale.</p>
         </div>
 
         <div class="sectionsColumns">
           <div class="sectionColumn">
+            <div class="sectionColumnHead">
+              <strong>Impianto di base</strong>
+              <small>Sezioni essenziali per un referto guidato.</small>
+            </div>
             @for (k of mandatorySectionKeys(); track k) {
-              <label class="toggle">
+              <label class="toggle toggleMandatory">
                 <input type="checkbox" [formControl]="section(k)" />
 
-                <span>
+                <span class="toggleBody">
+                  <span class="toggleMeta">
+                    <span class="toggleBadge">Base</span>
+                  </span>
                   <strong>{{ sectionLabel(k) }}</strong>
                   <small>{{ sectionDescription(k) }}</small>
                 </span>
@@ -174,11 +203,18 @@
           </div>
 
           <div class="sectionColumn">
+            <div class="sectionColumnHead">
+              <strong>Sezioni facoltative</strong>
+              <small>Attivale solo quando servono al caso clinico.</small>
+            </div>
             @for (k of optionalSectionKeys(); track k) {
               <label class="toggle">
                 <input type="checkbox" [formControl]="section(k)" />
 
-                <span>
+                <span class="toggleBody">
+                  <span class="toggleMeta">
+                    <span class="toggleBadge muted">Opzionale</span>
+                  </span>
                   <strong>{{ sectionLabel(k) }}</strong>
                   <small>{{ sectionDescription(k) }}</small>
                 </span>
@@ -190,11 +226,13 @@
     } @else {
       <section class="panel secondary">
         <div class="freeModeInfo">
+          <span class="selectorEyebrow neutral">Testo libero selezionato</span>
           <strong>Hai scelto il testo libero</strong>
           <p>
             Nel prossimo passaggio potrai scrivere il referto completo in un unico
             campo, senza suddivisione in sezioni.
           </p>
+          <small>Questa opzione resta disponibile, ma non e il percorso strutturato consigliato.</small>
         </div>
       </section>
     }

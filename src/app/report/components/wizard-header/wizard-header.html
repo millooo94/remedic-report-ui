@@ -1,45 +1,72 @@
-<!-- Top bar -->
-<header class="topbar">
-  <div class="brand">
-    <img src="remedic-logo.png" alt="logo" class="logo" />
-    <div class="subtitle">Report</div>
+<header class="wizardHeaderShell">
+  <div class="wizardHero">
+    <div class="brandBlock">
+      <div class="brand">
+        <img src="remedic-logo.png" alt="logo" class="logo" />
+        <div class="subtitle">Clinical reporting workspace</div>
+      </div>
+      <div class="wizardMetaRail">
+        <span class="wizardChip">Wizard attivo</span>
+        <span class="wizardChip muted">Step {{ step + 1 }} di {{ steps.length }}</span>
+      </div>
+    </div>
+
+    <div class="wizardCenter">
+      <div class="progressMeta">
+        <div class="progressMetaCopy">
+          <span class="progressLabel">Fase corrente</span>
+          <div class="stepTitle">{{ steps[step].title }}</div>
+        </div>
+        <div class="progressStat">
+          <strong>{{ pct }}%</strong>
+          <small>Completamento</small>
+        </div>
+      </div>
+
+      <div class="progress">
+        <div class="bar" [style.width.%]="pct"></div>
+      </div>
+    </div>
+
+    <div class="wizardActions">
+      @if (showResumeButton) {
+        <button type="button" class="resumeBtn" (click)="resumeDraft.emit()">
+          Riprendi referto
+        </button>
+      }
+
+      @if (showFlowButton) {
+        <button type="button" class="resumeBtn" (click)="changeFlow.emit()">
+          {{ flowButtonLabel }}
+        </button>
+      }
+    </div>
   </div>
 
-  <div class="progressWrap">
-    <div class="progressMeta">
-      <div class="stepTitle">{{ steps[step].title }}</div>
-      <div class="pct">{{ pct }}%</div>
-    </div>
-    <div class="progress">
-      <div class="bar" [style.width.%]="pct"></div>
-    </div>
-  </div>
-
-  @if (showResumeButton) {
-    <button type="button" class="resumeBtn" (click)="resumeDraft.emit()">
-      Riprendi referto
-    </button>
-  }
-
-  @if (showFlowButton) {
-    <button type="button" class="resumeBtn" (click)="changeFlow.emit()">
-      {{ flowButtonLabel }}
-    </button>
-  }
+  <nav class="stepper" aria-label="Avanzamento wizard">
+    @for (s of steps; track $index) {
+      <button
+        type="button"
+        class="stepPill"
+        [class.active]="$index === step"
+        [class.done]="$index < step"
+        (click)="goTo.emit($index)"
+      >
+        <span class="stepRail" aria-hidden="true"></span>
+        <span class="idx">{{ $index + 1 }}</span>
+        <span class="stepCopy">
+          <span class="stepState">
+            {{
+              $index < step
+                ? 'Completato'
+                : $index === step
+                  ? 'In corso'
+                  : 'Successivo'
+            }}
+          </span>
+          <span class="txt">{{ s.title }}</span>
+        </span>
+      </button>
+    }
+  </nav>
 </header>
-
-<!-- Stepper -->
-<nav class="stepper">
-  @for (s of steps; track $index) {
-    <button
-      type="button"
-      class="stepPill"
-      [class.active]="$index === step"
-      [class.done]="$index < step"
-      (click)="goTo.emit($index)"
-    >
-      <span class="idx">{{ $index + 1 }}</span>
-      <span class="txt">{{ s.title }}</span>
-    </button>
-  }
-</nav>
